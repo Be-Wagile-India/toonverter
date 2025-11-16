@@ -42,7 +42,7 @@ try:
 except ImportError:
     MCP_AVAILABLE = False
 
-from toonverter.analysis.analyzer import ToonAnalyzer
+from toonverter.analysis.analyzer import count_tokens
 from toonverter.core.exceptions import DecodingError
 from toonverter.decoders.toon_decoder import ToonDecoder
 from toonverter.encoders.toon_encoder import ToonEncoder
@@ -70,7 +70,6 @@ class ToonverterMCPServer:
         self.server = Server("toonverter")
         self.encoder = ToonEncoder()
         self.decoder = ToonDecoder()
-        self.analyzer = ToonAnalyzer()
 
         # Register tools
         self._register_tools()
@@ -271,8 +270,8 @@ class ToonverterMCPServer:
 
             # Calculate token savings
             json_str = json.dumps(parsed)
-            toon_tokens = self.analyzer.count_tokens(toon)
-            json_tokens = self.analyzer.count_tokens(json_str)
+            toon_tokens = count_tokens(toon)
+            json_tokens = count_tokens(json_str)
             savings = json_tokens - toon_tokens
             savings_pct = (savings / json_tokens * 100) if json_tokens > 0 else 0
 
@@ -336,7 +335,7 @@ class ToonverterMCPServer:
                 else:
                     continue
 
-                token_count = self.analyzer.count_tokens(serialized)
+                token_count = count_tokens(serialized)
                 results[fmt] = {"tokens": token_count, "bytes": len(serialized)}
 
             # Build comparison report
@@ -409,8 +408,8 @@ class ToonverterMCPServer:
             # Calculate compression stats
             json_str = json.dumps(parsed)
 
-            original_tokens = self.analyzer.count_tokens(json_str)
-            compressed_tokens = self.analyzer.count_tokens(toon)
+            original_tokens = count_tokens(json_str)
+            compressed_tokens = count_tokens(toon)
             token_savings = original_tokens - compressed_tokens
             token_savings_pct = token_savings / original_tokens * 100
 

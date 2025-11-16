@@ -10,7 +10,7 @@ except ImportError:
 
 # Pydantic integration
 try:
-    from .pydantic import pydantic_to_toon, toon_to_pydantic
+    from .pydantic_integration import pydantic_to_toon, toon_to_pydantic
 
     __all_pydantic__ = ["pydantic_to_toon", "toon_to_pydantic"]
 except ImportError:
@@ -18,7 +18,7 @@ except ImportError:
 
 # LangChain integration
 try:
-    from .langchain import langchain_to_toon, toon_to_langchain
+    from .langchain_integration import langchain_to_toon, toon_to_langchain
 
     __all_langchain__ = ["langchain_to_toon", "toon_to_langchain"]
 except ImportError:
@@ -26,7 +26,7 @@ except ImportError:
 
 # FastAPI integration
 try:
-    from .fastapi import TOONResponse
+    from .fastapi_integration import TOONResponse
 
     __all_fastapi__ = ["TOONResponse"]
 except ImportError:
@@ -34,7 +34,7 @@ except ImportError:
 
 # SQLAlchemy integration
 try:
-    from .sqlalchemy import (
+    from .sqlalchemy_integration import (
         bulk_insert_from_toon,
         bulk_query_to_toon,
         export_table_to_toon,
@@ -68,7 +68,7 @@ except ImportError:
 
 # LlamaIndex integration
 try:
-    from .llamaindex import (
+    from .llamaindex_integration import (
         bulk_documents_to_toon,
         bulk_toon_to_documents,
         extract_metadata_to_toon,
@@ -92,7 +92,7 @@ except ImportError:
 
 # Haystack integration
 try:
-    from .haystack import (
+    from .haystack_integration import (
         answers_to_toon,
         haystack_to_toon,
         toon_to_answers,
@@ -111,7 +111,7 @@ except ImportError:
 
 # DSPy integration
 try:
-    from .dspy import (
+    from .dspy_integration import (
         dataset_to_toon,
         dspy_to_toon,
         few_shot_to_toon,

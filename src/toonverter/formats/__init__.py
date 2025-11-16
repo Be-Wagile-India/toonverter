@@ -28,22 +28,28 @@ def register_default_formats() -> None:
     """Register all default format adapters with the global registry.
 
     This function is called automatically when importing toon_converter.
+    Idempotent - safe to call multiple times.
     """
     from toonverter.core.registry import registry
 
+    # Helper to register if not already registered
+    def register_if_not_exists(name: str, adapter: BaseFormatAdapter) -> None:
+        if not registry.is_supported(name):
+            registry.register(name, adapter)
+
     # Always available formats
-    registry.register("json", JsonFormatAdapter())
-    registry.register("toon", ToonFormatAdapter())
-    registry.register("csv", CsvFormatAdapter())
-    registry.register("xml", XmlFormatAdapter())
+    register_if_not_exists("json", JsonFormatAdapter())
+    register_if_not_exists("toon", ToonFormatAdapter())
+    register_if_not_exists("csv", CsvFormatAdapter())
+    register_if_not_exists("xml", XmlFormatAdapter())
 
     # Optional formats (with graceful degradation)
     try:
-        registry.register("yaml", YamlFormatAdapter())
+        register_if_not_exists("yaml", YamlFormatAdapter())
     except ImportError:
         pass  # YAML support not available
 
     try:
-        registry.register("toml", TomlFormatAdapter())
+        register_if_not_exists("toml", TomlFormatAdapter())
     except ImportError:
         pass  # TOML support not available

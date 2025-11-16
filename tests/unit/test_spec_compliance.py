@@ -5,8 +5,9 @@ from https://github.com/toon-format/spec
 """
 
 import pytest
-from src.toonverter.decoders.toon_decoder import ToonDecoder
-from src.toonverter.encoders.toon_encoder import ToonEncoder
+
+from toonverter.decoders.toon_decoder import ToonDecoder
+from toonverter.encoders.toon_encoder import ToonEncoder
 
 
 class TestEmptyDocuments:

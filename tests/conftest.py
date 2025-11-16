@@ -3,6 +3,25 @@
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def reset_registry():
+    """Reset the format registry before each test to avoid singleton state issues."""
+    from toonverter.core.registry import registry
+
+    # Clear registry before test
+    registry.clear()
+
+    # Re-register default formats
+    from toonverter.formats import register_default_formats
+
+    register_default_formats()
+
+    yield
+
+    # Clear after test
+    registry.clear()
+
+
 @pytest.fixture
 def sample_dict():
     """Sample dictionary for testing."""
