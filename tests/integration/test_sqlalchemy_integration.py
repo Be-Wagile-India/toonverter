@@ -10,10 +10,10 @@ from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, create_engi
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
+from toonverter import decode
 from toonverter.integrations.sqlalchemy_integration import (
-    query_to_toon,
     bulk_query_to_toon,
-    toon_to_sqlalchemy,
+    query_to_toon,
     sqlalchemy_to_toon,
 )
 
@@ -72,7 +72,7 @@ class TestSQLAlchemyModelSerialization:
         user_original = User(id=1, name="Bob", age=25, active=False)
 
         toon = sqlalchemy_to_toon(user_original)
-        user_dict = from_toon(toon)
+        user_dict = decode(toon)
 
         assert user_dict["name"] == "Bob"
         assert user_dict["age"] == 25

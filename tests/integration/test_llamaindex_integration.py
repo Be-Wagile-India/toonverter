@@ -6,7 +6,7 @@ import pytest
 # Skip if llama-index not installed
 pytest.importorskip("llama_index")
 
-from toonverter.integrations.llamaindex_integration import toon_to_llamaindex, llamaindex_to_toon
+from toonverter.integrations.llamaindex_integration import llamaindex_to_toon, toon_to_llamaindex
 
 
 class TestLlamaIndexNodes:

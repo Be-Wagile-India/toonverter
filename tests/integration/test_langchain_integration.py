@@ -7,10 +7,10 @@ import pytest
 pytest.importorskip("langchain")
 
 from toonverter.integrations.langchain_integration import (
-    toon_to_langchain,
     from_toon_messages,
     langchain_to_toon,
     to_toon_messages,
+    toon_to_langchain,
 )
 
 

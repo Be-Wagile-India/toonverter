@@ -9,7 +9,7 @@ pytest.importorskip("pydantic")
 
 from pydantic import BaseModel
 
-from toonverter.integrations.pydantic_integration import toon_to_pydantic, pydantic_to_toon
+from toonverter.integrations.pydantic_integration import pydantic_to_toon, toon_to_pydantic
 
 
 class User(BaseModel):

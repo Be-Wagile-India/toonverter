@@ -8,7 +8,7 @@ pytest.importorskip("instructor")
 
 from pydantic import BaseModel
 
-from toonverter.integrations.instructor_integration import toon_to_response, response_to_toon
+from toonverter.integrations.instructor_integration import response_to_toon, toon_to_response
 
 
 class UserResponse(BaseModel):

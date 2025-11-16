@@ -6,7 +6,7 @@ import pytest
 # Skip if haystack-ai not installed
 pytest.importorskip("haystack")
 
-from toonverter.integrations.haystack_integration import toon_to_haystack, haystack_to_toon
+from toonverter.integrations.haystack_integration import haystack_to_toon, toon_to_haystack
 
 
 class TestHaystackDocuments:

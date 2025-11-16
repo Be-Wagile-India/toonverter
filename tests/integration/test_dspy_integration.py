@@ -6,7 +6,7 @@ import pytest
 # Skip if dspy-ai not installed
 pytest.importorskip("dspy")
 
-from toonverter.integrations.dspy_integration import toon_to_dspy, dspy_to_toon
+from toonverter.integrations.dspy_integration import dspy_to_toon, toon_to_dspy
 
 
 class TestDSPyExamples:
