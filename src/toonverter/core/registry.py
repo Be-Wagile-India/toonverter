@@ -30,9 +30,15 @@ class DefaultFormatRegistry(FormatRegistry):
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
-                    cls._instance._adapters: dict[str, FormatAdapter] = {}
+                    cls._instance._adapters = {}
                     cls._instance._adapter_lock = threading.RLock()
         return cls._instance
+
+    def __init__(self) -> None:
+        """Initialize instance attributes (idempotent for singleton)."""
+        if not hasattr(self, "_adapters"):
+            self._adapters: dict[str, FormatAdapter] = {}
+            self._adapter_lock: threading.RLock = threading.RLock()
 
     def register(self, format_name: str, adapter: FormatAdapter) -> None:
         """Register a format adapter.
@@ -49,7 +55,7 @@ class DefaultFormatRegistry(FormatRegistry):
             raise ValueError(msg)
 
         if not isinstance(adapter, FormatAdapter):
-            msg = f"Adapter must be a FormatAdapter instance, got {type(adapter)}"
+            msg = f"Adapter must be a FormatAdapter instance, got {type(adapter)}"  # type: ignore[unreachable]
             raise TypeError(msg)
 
         format_name = format_name.lower()
