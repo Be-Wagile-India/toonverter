@@ -1,0 +1,45 @@
+# Development dependencies
+-r requirements.txt
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-asyncio>=0.21.0
+pytest-xdist>=3.3.0
+hypothesis>=6.80.0
+pytest-benchmark>=4.0.0
+memory-profiler>=0.61.0
+
+# Type checking
+mypy>=1.7.0
+types-PyYAML>=6.0.0
+types-toml>=0.10.0
+
+# Linting and formatting
+ruff>=0.1.0
+
+# Pre-commit hooks
+pre-commit>=3.5.0
+
+# Version management
+bump2version>=1.0.1
+
+# Optional format support
+PyYAML>=6.0
+toml>=0.10.2
+
+# Optional integrations
+pandas>=2.0.0
+pydantic>=2.0.0
+langchain>=0.1.0
+fastapi>=0.100.0
+
+# CLI support
+click>=8.1.0
+rich>=13.0.0
+
+# Documentation
+sphinx>=7.2.0
+sphinx-rtd-theme>=2.0.0
+sphinx-autodoc-typehints>=1.25.0
+myst-parser>=2.0.0

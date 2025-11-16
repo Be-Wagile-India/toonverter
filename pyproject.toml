@@ -1,0 +1,372 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "toonverter"
+version = "1.0.0"
+description = "Token-Optimized Object Notation (TOON) converter for efficient LLM data serialization"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "TOON Converter Contributors", email = "noreply@example.com"}
+]
+maintainers = [
+    {name = "TOON Converter Contributors", email = "noreply@example.com"}
+]
+keywords = [
+    "llm",
+    "token-optimization",
+    "data-serialization",
+    "toon",
+    "json",
+    "yaml",
+    "toml",
+    "csv",
+    "xml",
+    "langchain",
+    "llamaindex",
+    "haystack",
+    "dspy",
+    "instructor",
+    "rag",
+    "mcp",
+    "machine-learning",
+    "ai",
+    "nlp",
+    "prompt-optimization"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Markup",
+    "Typing :: Typed"
+]
+
+dependencies = [
+    "typing-extensions>=4.8.0",
+    "tiktoken>=0.5.0",
+    # Core format support (always included)
+    "PyYAML>=6.0",
+    "tomli>=2.0.0; python_version<'3.11'",
+]
+
+[project.optional-dependencies]
+# Individual framework integrations
+pandas = ["pandas>=2.0.0"]
+pydantic = ["pydantic>=2.0.0"]
+langchain = ["langchain>=0.1.0"]
+fastapi = ["fastapi>=0.100.0", "pydantic>=2.0.0"]
+sqlalchemy = ["sqlalchemy>=2.0.0"]
+mcp = ["mcp>=0.9.0"]
+llamaindex = ["llama-index>=0.10.0"]
+haystack = ["haystack-ai>=2.0.0"]
+dspy = ["dspy-ai>=2.4.0"]
+instructor = ["instructor>=1.0.0", "pydantic>=2.0.0"]
+
+# Grouped integrations - AI/ML frameworks
+ai = [
+    "llama-index>=0.10.0",
+    "haystack-ai>=2.0.0",
+    "dspy-ai>=2.4.0",
+    "instructor>=1.0.0",
+    "pydantic>=2.0.0",
+]
+
+# Grouped integrations - Data science
+data = [
+    "pandas>=2.0.0",
+    "sqlalchemy>=2.0.0",
+]
+
+# Grouped integrations - Web frameworks
+web = [
+    "fastapi>=0.100.0",
+    "pydantic>=2.0.0",
+]
+
+# Grouped integrations - LLM tools
+llm = [
+    "langchain>=0.1.0",
+    "mcp>=0.9.0",
+]
+
+# All integrations
+integrations = [
+    "pandas>=2.0.0",
+    "pydantic>=2.0.0",
+    "langchain>=0.1.0",
+    "fastapi>=0.100.0",
+    "sqlalchemy>=2.0.0",
+    "mcp>=0.9.0",
+    "llama-index>=0.10.0",
+    "haystack-ai>=2.0.0",
+    "dspy-ai>=2.4.0",
+    "instructor>=1.0.0",
+]
+
+# CLI support
+cli = [
+    "click>=8.1.0",
+    "rich>=13.0.0",
+]
+
+# Development dependencies
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-xdist>=3.3.0",
+    "hypothesis>=6.80.0",
+    "mypy>=1.7.0",
+    "ruff>=0.1.0",
+    "pre-commit>=3.5.0",
+    "bump2version>=1.0.1",
+    "types-PyYAML>=6.0.0",
+    "types-toml>=0.10.0",
+]
+
+# Documentation dependencies
+docs = [
+    "sphinx>=7.2.0",
+    "sphinx-rtd-theme>=2.0.0",
+    "sphinx-autodoc-typehints>=1.25.0",
+    "myst-parser>=2.0.0",
+]
+
+# Performance benchmarking
+benchmark = [
+    "pytest-benchmark>=4.0.0",
+    "memory-profiler>=0.61.0",
+]
+
+# All optional dependencies (including dev tools)
+all = [
+    "toonverter[integrations,cli,dev,docs,benchmark]",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/toonverter"
+Documentation = "https://toonverter.readthedocs.io"
+Repository = "https://github.com/yourusername/toonverter"
+"Bug Tracker" = "https://github.com/yourusername/toonverter/issues"
+Changelog = "https://github.com/yourusername/toonverter/blob/main/CHANGELOG.md"
+
+[project.scripts]
+toonverter = "toonverter.cli.main:cli"
+
+[project.entry-points."toonverter.plugins"]
+# Plugin entry points for third-party extensions
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["toonverter*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+toonverter = ["py.typed"]
+
+# Ruff configuration - linting and formatting
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "DTZ",    # flake8-datetimez
+    "T10",    # flake8-debugger
+    "EM",     # flake8-errmsg
+    "ISC",    # flake8-implicit-str-concat
+    "ICN",    # flake8-import-conventions
+    "G",      # flake8-logging-format
+    "PIE",    # flake8-pie
+    "T20",    # flake8-print
+    "PT",     # flake8-pytest-style
+    "Q",      # flake8-quotes
+    "RSE",    # flake8-raise
+    "RET",    # flake8-return
+    "SIM",    # flake8-simplify
+    "TID",    # flake8-tidy-imports
+    "TCH",    # flake8-type-checking
+    "ARG",    # flake8-unused-arguments
+    "PTH",    # flake8-use-pathlib
+    "ERA",    # eradicate
+    "PL",     # pylint
+    "TRY",    # tryceratops
+    "RUF",    # ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "PLR0913", # too many arguments
+    "PLR2004", # magic value in comparison
+    "TRY003",  # long exception message
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "PLR2004",  # magic values in tests
+    "S101",     # assert usage
+    "ARG",      # unused arguments in fixtures
+]
+"__init__.py" = [
+    "F401",     # unused imports (re-exports)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["toonverter"]
+force-single-line = false
+lines-after-imports = 2
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+# MyPy configuration
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+strict_optional = true
+strict_equality = true
+show_error_codes = true
+show_column_numbers = true
+pretty = true
+
+[[tool.mypy.overrides]]
+module = [
+    "tiktoken.*",
+    "yaml.*",
+    "toml.*",
+    "tomli.*",
+    "pandas.*",
+    "pydantic.*",
+    "langchain.*",
+    "fastapi.*",
+    "sqlalchemy.*",
+    "mcp.*",
+    "llama_index.*",
+    "haystack.*",
+    "dspy.*",
+    "instructor.*",
+    "hypothesis.*",
+]
+ignore_missing_imports = true
+
+# Pytest configuration
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=toonverter",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "--cov-branch",
+    "--cov-fail-under=95",
+    "-ra",
+    "-vv",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow tests",
+    "benchmark: Performance benchmarks",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+branch = true
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+# Bump2version configuration
+[tool.bumpversion]
+current_version = "0.1.0"
+commit = true
+tag = true
+tag_name = "v{new_version}"
+message = "Bump version: {current_version} → {new_version}"
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "src/toonverter/__version__.py"
+search = '__version__ = "{current_version}"'
+replace = '__version__ = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "CHANGELOG.md"
+search = "## [Unreleased]"
+replace = "## [Unreleased]\n\n## [{new_version}] - {now:%Y-%m-%d}"

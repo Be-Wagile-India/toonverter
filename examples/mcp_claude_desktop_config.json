@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "toonverter": {
+      "command": "python",
+      "args": [
+        "-m",
+        "toonverter.integrations.mcp_server"
+      ],
+      "env": {}
+    }
+  }
+}
