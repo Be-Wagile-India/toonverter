@@ -1,10 +1,11 @@
 """Multi-format token comparison."""
 
-from typing import Any, Optional
+from typing import Any
 
-from ..core.exceptions import FormatNotSupportedError
-from ..core.registry import registry
-from ..core.types import ComparisonReport, EncodeOptions, TokenAnalysis
+from toonverter.core.exceptions import FormatNotSupportedError
+from toonverter.core.registry import registry
+from toonverter.core.types import ComparisonReport, EncodeOptions, TokenAnalysis
+
 from .analyzer import TiktokenCounter
 
 
@@ -24,7 +25,7 @@ class FormatComparator:
         self,
         data: Any,
         formats: list[str],
-        encode_options: Optional[dict[str, EncodeOptions]] = None,
+        encode_options: dict[str, EncodeOptions] | None = None,
     ) -> ComparisonReport:
         """Compare token usage across formats.
 
@@ -44,7 +45,8 @@ class FormatComparator:
 
         for format_name in formats:
             if not registry.is_supported(format_name):
-                raise FormatNotSupportedError(f"Format '{format_name}' is not supported")
+                msg = f"Format '{format_name}' is not supported"
+                raise FormatNotSupportedError(msg)
 
             adapter = registry.get(format_name)
             options = encode_options.get(format_name)
@@ -89,22 +91,18 @@ class FormatComparator:
         savings = ((worst.token_count - best.token_count) / worst.token_count) * 100
 
         recommendations.append(
-            f"Use '{best.format}' format for optimal token efficiency "
-            f"({best.token_count} tokens)"
+            f"Use '{best.format}' format for optimal token efficiency ({best.token_count} tokens)"
         )
 
         if savings > 20:
             recommendations.append(
-                f"Switching from '{worst.format}' to '{best.format}' "
-                f"saves {savings:.1f}% tokens"
+                f"Switching from '{worst.format}' to '{best.format}' saves {savings:.1f}% tokens"
             )
 
         # Check for TOON format
         toon_analysis = next((a for a in analyses if a.format == "toon"), None)
         if toon_analysis and toon_analysis.token_count == best.token_count:
-            recommendations.append(
-                "TOON format provides optimal token efficiency for this data"
-            )
+            recommendations.append("TOON format provides optimal token efficiency for this data")
 
         # Check for tabular data opportunity
         json_analysis = next((a for a in analyses if a.format == "json"), None)
@@ -121,7 +119,7 @@ def compare(
     data: Any,
     formats: list[str],
     model: str = "gpt-4",
-    encode_options: Optional[dict[str, EncodeOptions]] = None,
+    encode_options: dict[str, EncodeOptions] | None = None,
 ) -> ComparisonReport:
     """Convenience function to compare formats.
 

@@ -2,10 +2,11 @@
 
 import pytest
 
+
 # Skip if dspy-ai not installed
 pytest.importorskip("dspy")
 
-from toonverter.integrations.dspy_integration import to_toon_example, from_toon_example
+from toonverter.integrations.dspy_integration import from_toon_example, to_toon_example
 
 
 class TestDSPyExamples:
@@ -16,15 +17,12 @@ class TestDSPyExamples:
         try:
             import dspy
 
-            example = dspy.Example(
-                question="What is 2+2?",
-                answer="4"
-            )
+            example = dspy.Example(question="What is 2+2?", answer="4")
 
             toon = to_toon_example(example)
 
-            assert '2+2' in toon
-            assert '4' in toon
+            assert "2+2" in toon
+            assert "4" in toon
         except (ImportError, AttributeError):
             pytest.skip("DSPy Example not available")
 
@@ -33,10 +31,7 @@ class TestDSPyExamples:
         try:
             import dspy
 
-            example_original = dspy.Example(
-                input="test input",
-                output="test output"
-            )
+            example_original = dspy.Example(input="test input", output="test output")
 
             toon = to_toon_example(example_original)
             example_result = from_toon_example(toon)
@@ -54,11 +49,13 @@ class TestDSPyExamples:
             examples = [
                 dspy.Example(question="Q1", answer="A1"),
                 dspy.Example(question="Q2", answer="A2"),
-                dspy.Example(question="Q3", answer="A3")
+                dspy.Example(question="Q3", answer="A3"),
             ]
 
             toon = to_toon_example(examples)
 
-            assert 'Q1' in toon and 'Q2' in toon and 'Q3' in toon
+            assert "Q1" in toon
+            assert "Q2" in toon
+            assert "Q3" in toon
         except (ImportError, AttributeError):
             pytest.skip("DSPy not available")

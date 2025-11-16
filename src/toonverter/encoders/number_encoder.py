@@ -38,9 +38,8 @@ class NumberEncoder:
             'null'
         """
         # Handle special float values -> null
-        if isinstance(n, float):
-            if math.isnan(n) or math.isinf(n):
-                return "null"
+        if isinstance(n, float) and (math.isnan(n) or math.isinf(n)):
+            return "null"
 
         # Handle negative zero -> 0
         if n == 0:
@@ -145,4 +144,5 @@ class NumberEncoder:
         try:
             return float(s)
         except ValueError as e:
-            raise ValueError(f"Invalid number: {s}") from e
+            msg = f"Invalid number: {s}"
+            raise ValueError(msg) from e

@@ -22,11 +22,14 @@ Basic usage:
     example = toon_to_dspy(toon_str)
 """
 
-from typing import Any, Dict, List, Optional, Iterator, Union
-from ..encoders.toon_encoder import ToonEncoder
-from ..decoders.toon_decoder import ToonDecoder
-from ..core.spec import ToonEncodeOptions, ToonDecodeOptions
-from ..core.exceptions import ConversionError
+from collections.abc import Iterator
+from typing import Any, Union
+
+from toonverter.core.exceptions import ConversionError
+from toonverter.core.spec import ToonDecodeOptions, ToonEncodeOptions
+from toonverter.decoders.toon_decoder import ToonDecoder
+from toonverter.encoders.toon_encoder import ToonEncoder
+
 
 try:
     import dspy
@@ -40,19 +43,17 @@ except ImportError:
 def _check_dspy():
     """Check if DSPy is available."""
     if not DSPY_AVAILABLE:
-        raise ImportError(
-            "DSPy is not installed. "
-            "Install with: pip install toonverter[dspy]"
-        )
+        msg = "DSPy is not installed. Install with: pip install toonverter[dspy]"
+        raise ImportError(msg)
 
 
 # =============================================================================
 # EXAMPLE CONVERSION
 # =============================================================================
 
+
 def dspy_to_toon(
-    obj: Union['Example', 'Prediction', Dict[str, Any]],
-    options: Optional[ToonEncodeOptions] = None
+    obj: Union["Example", "Prediction", dict[str, Any]], options: ToonEncodeOptions | None = None
 ) -> str:
     """Convert DSPy Example, Prediction, or dict to TOON format.
 
@@ -82,20 +83,22 @@ def dspy_to_toon(
         elif isinstance(obj, dict):
             data = obj
         else:
-            raise ConversionError(f"Unsupported type: {type(obj)}")
+            msg = f"Unsupported type: {type(obj)}"
+            raise ConversionError(msg)
 
         return encoder.encode(data)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert DSPy object to TOON: {e}")
+        msg = f"Failed to convert DSPy object to TOON: {e}"
+        raise ConversionError(msg)
 
 
 def toon_to_dspy(
     toon_str: str,
     obj_type: str = "example",
-    with_inputs: Optional[List[str]] = None,
-    options: Optional[ToonDecodeOptions] = None
-) -> Union['Example', 'Prediction', Dict[str, Any]]:
+    with_inputs: list[str] | None = None,
+    options: ToonDecodeOptions | None = None,
+) -> Union["Example", "Prediction", dict[str, Any]]:
     """Convert TOON format to DSPy Example, Prediction, or dict.
 
     Args:
@@ -121,25 +124,24 @@ def toon_to_dspy(
 
         if obj_type == "example":
             return _dict_to_example(data, with_inputs)
-        elif obj_type == "prediction":
+        if obj_type == "prediction":
             return _dict_to_prediction(data)
-        elif obj_type == "dict":
+        if obj_type == "dict":
             return data
-        else:
-            raise ConversionError(f"Unsupported object type: {obj_type}")
+        msg = f"Unsupported object type: {obj_type}"
+        raise ConversionError(msg)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to DSPy object: {e}")
+        msg = f"Failed to convert TOON to DSPy object: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # DATASET CONVERSION
 # =============================================================================
 
-def dataset_to_toon(
-    examples: List['Example'],
-    options: Optional[ToonEncodeOptions] = None
-) -> str:
+
+def dataset_to_toon(examples: list["Example"], options: ToonEncodeOptions | None = None) -> str:
     """Convert DSPy dataset (list of Examples) to TOON array format.
 
     Args:
@@ -170,14 +172,13 @@ def dataset_to_toon(
         return encoder.encode(data_list)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert dataset to TOON: {e}")
+        msg = f"Failed to convert dataset to TOON: {e}"
+        raise ConversionError(msg)
 
 
 def toon_to_dataset(
-    toon_str: str,
-    with_inputs: Optional[List[str]] = None,
-    options: Optional[ToonDecodeOptions] = None
-) -> List['Example']:
+    toon_str: str, with_inputs: list[str] | None = None, options: ToonDecodeOptions | None = None
+) -> list["Example"]:
     """Convert TOON array format to DSPy dataset (list of Examples).
 
     Args:
@@ -201,22 +202,23 @@ def toon_to_dataset(
         data_list = decoder.decode(toon_str)
 
         if not isinstance(data_list, list):
-            raise ConversionError("Expected TOON array format")
+            msg = "Expected TOON array format"
+            raise ConversionError(msg)
 
         return [_dict_to_example(data, with_inputs) for data in data_list]
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to dataset: {e}")
+        msg = f"Failed to convert TOON to dataset: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # STREAMING OPERATIONS
 # =============================================================================
 
+
 def stream_dataset_to_toon(
-    examples: List['Example'],
-    chunk_size: int = 100,
-    options: Optional[ToonEncodeOptions] = None
+    examples: list["Example"], chunk_size: int = 100, options: ToonEncodeOptions | None = None
 ) -> Iterator[str]:
     """Stream large datasets to TOON in chunks.
 
@@ -241,21 +243,22 @@ def stream_dataset_to_toon(
         encoder = ToonEncoder(options)
 
         for i in range(0, len(examples), chunk_size):
-            chunk = examples[i:i + chunk_size]
+            chunk = examples[i : i + chunk_size]
             data_list = [_example_to_dict(ex) for ex in chunk]
             yield encoder.encode(data_list)
 
     except Exception as e:
-        raise ConversionError(f"Failed to stream dataset to TOON: {e}")
+        msg = f"Failed to stream dataset to TOON: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # PREDICTIONS CONVERSION
 # =============================================================================
 
+
 def predictions_to_toon(
-    predictions: List['Prediction'],
-    options: Optional[ToonEncodeOptions] = None
+    predictions: list["Prediction"], options: ToonEncodeOptions | None = None
 ) -> str:
     """Convert DSPy Prediction objects to TOON format.
 
@@ -283,13 +286,13 @@ def predictions_to_toon(
         return encoder.encode(data_list)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert predictions to TOON: {e}")
+        msg = f"Failed to convert predictions to TOON: {e}"
+        raise ConversionError(msg)
 
 
 def toon_to_predictions(
-    toon_str: str,
-    options: Optional[ToonDecodeOptions] = None
-) -> List['Prediction']:
+    toon_str: str, options: ToonDecodeOptions | None = None
+) -> list["Prediction"]:
     """Convert TOON format to DSPy Prediction objects.
 
     Args:
@@ -306,22 +309,25 @@ def toon_to_predictions(
         data_list = decoder.decode(toon_str)
 
         if not isinstance(data_list, list):
-            raise ConversionError("Expected TOON array format")
+            msg = "Expected TOON array format"
+            raise ConversionError(msg)
 
         return [_dict_to_prediction(data) for data in data_list]
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to predictions: {e}")
+        msg = f"Failed to convert TOON to predictions: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # FEW-SHOT EXAMPLES
 # =============================================================================
 
+
 def few_shot_to_toon(
-    examples: List['Example'],
-    max_examples: Optional[int] = None,
-    options: Optional[ToonEncodeOptions] = None
+    examples: list["Example"],
+    max_examples: int | None = None,
+    options: ToonEncodeOptions | None = None,
 ) -> str:
     """Convert few-shot examples to compact TOON format.
 
@@ -354,49 +360,50 @@ def few_shot_to_toon(
         return encoder.encode(data_list)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert few-shot examples to TOON: {e}")
+        msg = f"Failed to convert few-shot examples to TOON: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
 
-def _example_to_dict(example: 'Example') -> Dict[str, Any]:
+
+def _example_to_dict(example: "Example") -> dict[str, Any]:
     """Convert DSPy Example to dictionary."""
     # Example objects store data in their __dict__
     data = {}
 
     # Get all attributes except internal ones
     for key, value in example.__dict__.items():
-        if not key.startswith('_'):
+        if not key.startswith("_"):
             data[key] = value
 
     return data
 
 
-def _dict_to_example(data: Dict[str, Any], with_inputs: Optional[List[str]] = None) -> 'Example':
+def _dict_to_example(data: dict[str, Any], with_inputs: list[str] | None = None) -> "Example":
     """Convert dictionary to DSPy Example."""
     if with_inputs:
         # Create example with specified inputs
         return Example(**data).with_inputs(*with_inputs)
-    else:
-        # Create example without specifying inputs
-        return Example(**data)
+    # Create example without specifying inputs
+    return Example(**data)
 
 
-def _prediction_to_dict(prediction: 'Prediction') -> Dict[str, Any]:
+def _prediction_to_dict(prediction: "Prediction") -> dict[str, Any]:
     """Convert DSPy Prediction to dictionary."""
     data = {}
 
     # Get all attributes except internal ones
     for key, value in prediction.__dict__.items():
-        if not key.startswith('_'):
+        if not key.startswith("_"):
             data[key] = value
 
     return data
 
 
-def _dict_to_prediction(data: Dict[str, Any]) -> 'Prediction':
+def _dict_to_prediction(data: dict[str, Any]) -> "Prediction":
     """Convert dictionary to DSPy Prediction."""
     return Prediction(**data)
 
@@ -405,10 +412,9 @@ def _dict_to_prediction(data: Dict[str, Any]) -> 'Prediction':
 # SIGNATURE OPERATIONS
 # =============================================================================
 
+
 def signature_examples_to_toon(
-    signature_name: str,
-    examples: List['Example'],
-    options: Optional[ToonEncodeOptions] = None
+    signature_name: str, examples: list["Example"], options: ToonEncodeOptions | None = None
 ) -> str:
     """Convert signature examples to TOON with metadata.
 
@@ -432,22 +438,23 @@ def signature_examples_to_toon(
         data = {
             "signature": signature_name,
             "count": len(examples),
-            "examples": [_example_to_dict(ex) for ex in examples]
+            "examples": [_example_to_dict(ex) for ex in examples],
         }
 
         return encoder.encode(data)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert signature examples to TOON: {e}")
+        msg = f"Failed to convert signature examples to TOON: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # OPTIMIZATION TRACES
 # =============================================================================
 
+
 def optimization_trace_to_toon(
-    trace: List[Dict[str, Any]],
-    options: Optional[ToonEncodeOptions] = None
+    trace: list[dict[str, Any]], options: ToonEncodeOptions | None = None
 ) -> str:
     """Convert DSPy optimization trace to TOON format.
 
@@ -473,7 +480,8 @@ def optimization_trace_to_toon(
         return encoder.encode(trace)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert optimization trace to TOON: {e}")
+        msg = f"Failed to convert optimization trace to TOON: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
@@ -481,14 +489,14 @@ def optimization_trace_to_toon(
 # =============================================================================
 
 __all__ = [
-    "dspy_to_toon",
-    "toon_to_dspy",
     "dataset_to_toon",
-    "toon_to_dataset",
-    "stream_dataset_to_toon",
-    "predictions_to_toon",
-    "toon_to_predictions",
+    "dspy_to_toon",
     "few_shot_to_toon",
-    "signature_examples_to_toon",
     "optimization_trace_to_toon",
+    "predictions_to_toon",
+    "signature_examples_to_toon",
+    "stream_dataset_to_toon",
+    "toon_to_dataset",
+    "toon_to_dspy",
+    "toon_to_predictions",
 ]

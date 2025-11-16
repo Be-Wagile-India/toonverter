@@ -1,8 +1,9 @@
 """Comprehensive tests for XML format adapter."""
 
 import pytest
+
+from toonverter.core.exceptions import DecodingError
 from toonverter.formats.xml_format import XmlFormatAdapter as XMLFormat
-from toonverter.core.exceptions import EncodingError, DecodingError
 
 
 class TestXMLEncoding:
@@ -18,7 +19,8 @@ class TestXMLEncoding:
         result = self.adapter.encode(data, None)
         assert "<root>" in result
         assert "<name>Alice</name>" in result
-        assert "<age" in result and ">30</age>" in result
+        assert "<age" in result
+        assert ">30</age>" in result
 
     def test_encode_nested_dict(self):
         """Test encoding nested dictionary."""

@@ -1,9 +1,11 @@
 """Comprehensive tests for format adapter registry."""
 
-import pytest
 import threading
-from toonverter.core.registry import DefaultFormatRegistry, get_registry
+
+import pytest
+
 from toonverter.core.exceptions import FormatNotSupportedError
+from toonverter.core.registry import DefaultFormatRegistry, get_registry
 from toonverter.formats.json_format import JsonFormatAdapter
 from toonverter.formats.yaml_format import YamlFormatAdapter
 
@@ -129,6 +131,7 @@ class TestDefaultFormatRegistry:
 
     def test_concurrent_registration(self):
         """Test thread-safe concurrent registration."""
+
         def register_format(name):
             try:
                 adapter = JsonFormatAdapter()

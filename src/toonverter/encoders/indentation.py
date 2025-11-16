@@ -6,7 +6,7 @@ TOON uses indentation-based structure like YAML:
 - Consistent indentation required
 """
 
-from ..core.spec import INDENT_CHAR, DEFAULT_INDENT_SIZE
+from toonverter.core.spec import DEFAULT_INDENT_SIZE, INDENT_CHAR
 
 
 class IndentationManager:
@@ -26,7 +26,8 @@ class IndentationManager:
             ValueError: If indent_size is less than 1
         """
         if indent_size < 1:
-            raise ValueError("indent_size must be at least 1")
+            msg = "indent_size must be at least 1"
+            raise ValueError(msg)
 
         self.indent_size = indent_size
         self.current_depth = 0
@@ -49,8 +50,7 @@ class IndentationManager:
             >>> mgr.indent(2)
             '    '
         """
-        if depth < 0:
-            depth = 0
+        depth = max(depth, 0)
         return INDENT_CHAR * (depth * self.indent_size)
 
     def push(self) -> int:
@@ -144,10 +144,8 @@ def detect_indentation(line: str) -> int:
         if char == " ":
             spaces += 1
         elif char == "\t":
-            raise ValueError(
-                "Tab characters are not allowed for indentation in TOON format. "
-                "Use spaces only."
-            )
+            msg = "Tab characters are not allowed for indentation in TOON format. Use spaces only."
+            raise ValueError(msg)
         else:
             break
 
@@ -181,8 +179,7 @@ def calculate_depth(spaces: int, indent_size: int = DEFAULT_INDENT_SIZE) -> int:
         return 0
 
     # Calculate depth
-    depth = spaces // indent_size
+    return spaces // indent_size
 
     # In strict mode, check for exact multiples
     # For now, we allow non-exact multiples (truncate)
-    return depth

@@ -1,10 +1,11 @@
 """TOON format adapter."""
 
-from typing import Any, Optional
+from typing import Any
 
-from ..core.types import DecodeOptions, EncodeOptions
-from ..decoders import decode as toon_decode
-from ..encoders import encode as toon_encode
+from toonverter.core.types import DecodeOptions, EncodeOptions
+from toonverter.decoders import decode as toon_decode
+from toonverter.encoders import encode as toon_encode
+
 from .base import BaseFormatAdapter
 
 
@@ -15,7 +16,7 @@ class ToonFormatAdapter(BaseFormatAdapter):
         """Initialize TOON format adapter."""
         super().__init__("toon")
 
-    def encode(self, data: Any, options: Optional[EncodeOptions] = None) -> str:
+    def encode(self, data: Any, options: EncodeOptions | None = None) -> str:
         """Encode data to TOON format.
 
         Args:
@@ -27,7 +28,7 @@ class ToonFormatAdapter(BaseFormatAdapter):
         """
         return toon_encode(data, options)
 
-    def decode(self, data_str: str, options: Optional[DecodeOptions] = None) -> Any:
+    def decode(self, data_str: str, options: DecodeOptions | None = None) -> Any:
         """Decode TOON format to Python data.
 
         Args:

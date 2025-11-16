@@ -1,8 +1,6 @@
 """Comprehensive tests for token analyzer."""
 
-import pytest
-from toonverter.analysis.analyzer import TiktokenCounter, count_tokens, analyze_text
-from toonverter.core.exceptions import TokenCountError
+from toonverter.analysis.analyzer import TiktokenCounter, analyze_text, count_tokens
 
 
 class TestTiktokenCounter:

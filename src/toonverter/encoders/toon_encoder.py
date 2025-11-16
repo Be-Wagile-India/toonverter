@@ -6,8 +6,9 @@ according to the official TOON specification from github.com/toon-format/spec
 
 from typing import Any
 
-from ..core.exceptions import EncodingError, ValidationError
-from ..core.spec import ArrayForm, RootForm, ToonEncodeOptions, ToonValue
+from toonverter.core.exceptions import EncodingError, ValidationError
+from toonverter.core.spec import ArrayForm, RootForm, ToonEncodeOptions, ToonValue
+
 from .array_encoder import ArrayEncoder
 from .indentation import IndentationManager
 from .key_folding import KeyFolder
@@ -63,7 +64,8 @@ class ToonEncoder:
         try:
             return self._encode_root(data)
         except (TypeError, ValueError, RecursionError) as e:
-            raise EncodingError(f"Failed to encode data: {e}") from e
+            msg = f"Failed to encode data: {e}"
+            raise EncodingError(msg) from e
 
     def _encode_root(self, data: ToonValue) -> str:
         """Encode root-level data.
@@ -80,16 +82,16 @@ class ToonEncoder:
             # Single primitive value
             return self._encode_value(data)
 
-        elif root_form == RootForm.ARRAY:
+        if root_form == RootForm.ARRAY:
             # Root-level array
             assert isinstance(data, list)
             return self._encode_root_array(data)
 
-        else:  # RootForm.OBJECT
-            # Root-level object (default)
-            assert isinstance(data, dict)
-            lines = self.encode_object(data, depth=0)
-            return "\n".join(lines)
+        # RootForm.OBJECT
+        # Root-level object (default)
+        assert isinstance(data, dict)
+        lines = self.encode_object(data, depth=0)
+        return "\n".join(lines)
 
     def _detect_root_form(self, data: ToonValue) -> RootForm:
         """Detect the form of root data.
@@ -102,11 +104,10 @@ class ToonEncoder:
         """
         if isinstance(data, dict):
             return RootForm.OBJECT
-        elif isinstance(data, list):
+        if isinstance(data, list):
             return RootForm.ARRAY
-        else:
-            # Primitive
-            return RootForm.PRIMITIVE
+        # Primitive
+        return RootForm.PRIMITIVE
 
     def _encode_root_array(self, arr: list[Any]) -> str:
         """Encode root-level array.
@@ -124,12 +125,12 @@ class ToonEncoder:
 
         if form == ArrayForm.INLINE:
             return self.array_enc.encode_root_array_inline(arr)
-        elif form == ArrayForm.TABULAR:
+        if form == ArrayForm.TABULAR:
             lines = self.array_enc.encode_root_array_tabular(arr)
             return "\n".join(lines)
-        else:  # ArrayForm.LIST
-            lines = self.array_enc.encode_root_array_list(arr, self)
-            return "\n".join(lines)
+        # ArrayForm.LIST
+        lines = self.array_enc.encode_root_array_list(arr, self)
+        return "\n".join(lines)
 
     def encode_object(self, obj: dict[str, Any], depth: int) -> list[str]:
         """Encode object with indentation.
@@ -203,10 +204,10 @@ class ToonEncoder:
         if form == ArrayForm.INLINE:
             line = self.array_enc.encode_inline(key, arr, depth)
             return [line]
-        elif form == ArrayForm.TABULAR:
+        if form == ArrayForm.TABULAR:
             return self.array_enc.encode_tabular(key, arr, depth)
-        else:  # ArrayForm.LIST
-            return self.array_enc.encode_list(key, arr, depth, self)
+        # ArrayForm.LIST
+        return self.array_enc.encode_list(key, arr, depth, self)
 
     def _encode_value(self, val: Any) -> str:
         """Encode a single value (primitive).
@@ -219,14 +220,14 @@ class ToonEncoder:
         """
         if val is None:
             return "null"
-        elif isinstance(val, bool):
+        if isinstance(val, bool):
             return "true" if val else "false"
-        elif isinstance(val, (int, float)):
+        if isinstance(val, (int, float)):
             return self.num_enc.encode(val)
-        elif isinstance(val, str):
+        if isinstance(val, str):
             return self.str_enc.encode(val)
-        else:
-            raise ValidationError(f"Unsupported type for TOON encoding: {type(val).__name__}")
+        msg = f"Unsupported type for TOON encoding: {type(val).__name__}"
+        raise ValidationError(msg)
 
 
 def encode(data: ToonValue, options: ToonEncodeOptions | None = None) -> str:

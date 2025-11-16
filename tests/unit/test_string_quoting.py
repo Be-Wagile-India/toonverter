@@ -1,8 +1,7 @@
 """Comprehensive tests for string quoting rules."""
 
-import pytest
-from toonverter.encoders.string_encoder import StringEncoder
 from toonverter.core.spec import Delimiter
+from toonverter.encoders.string_encoder import StringEncoder
 
 
 class TestQuotingRequired:
@@ -108,7 +107,7 @@ class TestEscapeSequences:
     def test_backslash_escaped(self):
         """Backslashes must be escaped."""
         result = self.encoder.encode("path\\to\\file")
-        assert '\\\\' in result
+        assert "\\\\" in result
 
     def test_quote_escaped(self):
         """Quotes must be escaped."""
@@ -118,14 +117,14 @@ class TestEscapeSequences:
     def test_newline_escaped(self):
         """Newlines must be escaped."""
         result = self.encoder.encode("line1\nline2")
-        assert '\\n' in result
+        assert "\\n" in result
 
     def test_tab_escaped(self):
         """Tabs must be escaped."""
         result = self.encoder.encode("col1\tcol2")
-        assert '\\t' in result
+        assert "\\t" in result
 
     def test_carriage_return_escaped(self):
         """Carriage returns must be escaped."""
         result = self.encoder.encode("text\rmore")
-        assert '\\r' in result
+        assert "\\r" in result

@@ -1,7 +1,5 @@
 """Unit tests for public API."""
 
-import pytest
-
 import toonverter as toon
 
 

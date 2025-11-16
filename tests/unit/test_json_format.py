@@ -1,9 +1,11 @@
 """Comprehensive tests for JSON format adapter."""
 
-import pytest
 import json
+
+import pytest
+
+from toonverter.core.exceptions import DecodingError
 from toonverter.formats.json_format import JsonFormatAdapter as JSONFormat
-from toonverter.core.exceptions import EncodingError, DecodingError
 
 
 class TestJSONEncoding:
@@ -22,15 +24,7 @@ class TestJSONEncoding:
 
     def test_encode_nested_dict(self):
         """Test encoding nested dictionary."""
-        data = {
-            "user": {
-                "name": "Alice",
-                "details": {
-                    "age": 30,
-                    "city": "NYC"
-                }
-            }
-        }
+        data = {"user": {"name": "Alice", "details": {"age": 30, "city": "NYC"}}}
         result = self.adapter.encode(data, {})
         decoded = json.loads(result)
         assert decoded == data
@@ -51,7 +45,7 @@ class TestJSONEncoding:
             "bool": True,
             "null": None,
             "list": [1, 2, 3],
-            "dict": {"key": "value"}
+            "dict": {"key": "value"},
         }
         result = self.adapter.encode(data, {})
         decoded = json.loads(result)
@@ -128,7 +122,7 @@ class TestJSONDecoding:
 
     def test_decode_empty_object(self):
         """Test decoding empty object."""
-        json_str = '{}'
+        json_str = "{}"
         result = self.adapter.decode(json_str, {})
         assert result == {}
 
@@ -170,7 +164,7 @@ class TestJSONDecoding:
     def test_decode_malformed_json(self):
         """Test decoding malformed JSON."""
         with pytest.raises(DecodingError):
-            self.adapter.decode('not json at all', {})
+            self.adapter.decode("not json at all", {})
 
     def test_decode_trailing_comma(self):
         """Test decoding with trailing comma fails."""
@@ -197,12 +191,9 @@ class TestJSONRoundtrip:
         data = {
             "users": [
                 {"id": 1, "name": "Alice", "tags": ["python", "ai"]},
-                {"id": 2, "name": "Bob", "tags": ["javascript", "web"]}
+                {"id": 2, "name": "Bob", "tags": ["javascript", "web"]},
             ],
-            "metadata": {
-                "count": 2,
-                "active": True
-            }
+            "metadata": {"count": 2, "active": True},
         }
         encoded = self.adapter.encode(data, {})
         decoded = self.adapter.decode(encoded, {})
@@ -217,7 +208,7 @@ class TestJSONRoundtrip:
             "boolean": True,
             "null": None,
             "list": [1, 2, 3],
-            "dict": {"nested": "value"}
+            "dict": {"nested": "value"},
         }
         encoded = self.adapter.encode(data, {})
         decoded = self.adapter.decode(encoded, {})

@@ -5,9 +5,10 @@ TOON specification at https://github.com/toon-format/spec
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Literal, Optional
+from typing import Literal
+
 
 # Spec version
 TOON_SPEC_VERSION = "2.0"
@@ -16,6 +17,7 @@ TOON_SPEC_URL = "https://github.com/toon-format/spec"
 # Indentation
 DEFAULT_INDENT_SIZE = 2
 INDENT_CHAR = " "  # Space only, tabs are forbidden for indentation
+
 
 # Delimiters
 class Delimiter(Enum):
@@ -30,18 +32,19 @@ class Delimiter(Enum):
         """Parse delimiter from string."""
         if s == ",":
             return cls.COMMA
-        elif s == "\t":
+        if s == "\t":
             return cls.TAB
-        elif s == "|":
+        if s == "|":
             return cls.PIPE
-        else:
-            raise ValueError(f"Invalid delimiter: {s!r}")
+        msg = f"Invalid delimiter: {s!r}"
+        raise ValueError(msg)
 
     def __str__(self) -> str:
         return self.value
 
 
 DEFAULT_DELIMITER = Delimiter.COMMA
+
 
 # Array forms
 class ArrayForm(Enum):
@@ -124,9 +127,11 @@ class ToonEncodeOptions:
     def __post_init__(self) -> None:
         """Validate options."""
         if self.indent_size < 1:
-            raise ValueError("indent_size must be at least 1")
+            msg = "indent_size must be at least 1"
+            raise ValueError(msg)
         if self.key_folding not in ("safe", "none"):
-            raise ValueError("key_folding must be 'safe' or 'none'")
+            msg = "key_folding must be 'safe' or 'none'"
+            raise ValueError(msg)
 
 
 @dataclass
@@ -156,23 +161,21 @@ class ArrayHeader:
     """
 
     length: int
-    fields: Optional[list[str]] = None
+    fields: list[str] | None = None
     delimiter: Delimiter = DEFAULT_DELIMITER
     form: ArrayForm = ArrayForm.LIST
 
     def validate_row_count(self, actual_count: int) -> None:
         """Validate that row count matches declared length."""
         if self.length != actual_count:
-            raise ValueError(
-                f"Array length mismatch: declared {self.length}, got {actual_count}"
-            )
+            msg = f"Array length mismatch: declared {self.length}, got {actual_count}"
+            raise ValueError(msg)
 
     def validate_field_count(self, actual_count: int) -> None:
         """Validate that field count matches row width."""
         if self.fields is not None and len(self.fields) != actual_count:
-            raise ValueError(
-                f"Field count mismatch: declared {len(self.fields)}, got {actual_count}"
-            )
+            msg = f"Field count mismatch: declared {len(self.fields)}, got {actual_count}"
+            raise ValueError(msg)
 
 
 @dataclass

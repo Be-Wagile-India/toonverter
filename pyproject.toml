@@ -219,10 +219,21 @@ select = [
     "RUF",    # ruff-specific rules
 ]
 ignore = [
-    "E501",   # line too long (handled by formatter)
+    "E501",    # line too long (handled by formatter)
     "PLR0913", # too many arguments
     "PLR2004", # magic value in comparison
+    "PLR0911", # too many return statements
+    "PLR0912", # too many branches
+    "PLR0915", # too many statements
     "TRY003",  # long exception message
+    "TRY300",  # try-except-else pattern (stylistic)
+    "TRY301",  # abstract raise (stylistic preference)
+    "SIM105",  # contextlib.suppress (readability with try-except-pass)
+    "SIM102",  # nested if statements (readability preference)
+    "RUF022",  # __all__ sorting (keep logical grouping with comments)
+    "RUF034",  # useless if-else (false positives)
+    "B027",    # empty methods in abstract base (intentional hooks)
+    "B904",    # raise from (lower priority for now)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -230,9 +241,48 @@ ignore = [
     "PLR2004",  # magic values in tests
     "S101",     # assert usage
     "ARG",      # unused arguments in fixtures
+    "PLC0415",  # imports not at top (test-specific imports)
+    "PT018",    # composite assertions (readability in tests)
+    "E741",     # ambiguous variable names (short names in comprehensions)
+    "PTH",      # use pathlib (tests use standard open for simplicity)
+    "N802",     # function name conventions (test method names)
+    "N806",     # variable name conventions (SQLAlchemy Session)
 ]
 "__init__.py" = [
     "F401",     # unused imports (re-exports)
+    "ARG",      # unused arguments in API (kept for future compatibility)
+]
+"src/toonverter/cli/*.py" = [
+    "PLC0415",  # lazy imports in CLI (intentional for performance)
+    "ARG001",   # unused arguments (CLI signatures)
+]
+"tests/unit/test_toml_format.py" = [
+    "F401",     # unused imports (checking availability)
+]
+"tests/integration/test_pydantic_integration.py" = [
+    "PT011",    # broad exceptions in test (intentional)
+    "B017",     # broad assert exceptions (intentional)
+]
+"src/toonverter/integrations/*.py" = [
+    "PLC0415",  # imports in functions (lazy loading for optional deps)
+    "F401",     # unused imports (checking availability)
+    "ARG002",   # unused options arguments (API compatibility)
+    "PLE0605",  # __all__ format (dynamic construction)
+]
+"src/toonverter/formats/__init__.py" = [
+    "PLC0415",  # import in function (intentional for registry)
+]
+"src/toonverter/formats/toml_format.py" = [
+    "ARG002",   # unused options (API compatibility)
+]
+"src/toonverter/integrations/haystack.py" = [
+    "ARG001",   # unused include_embeddings (future use)
+]
+"src/toonverter/integrations/instructor_integration.py" = [
+    "PLW2901",  # loop variable override (intentional unpacking)
+]
+"src/toonverter/integrations/mcp_server.py" = [
+    "E722",     # bare except for JSON parsing (intentional fallback)
 ]
 
 [tool.ruff.lint.isort]

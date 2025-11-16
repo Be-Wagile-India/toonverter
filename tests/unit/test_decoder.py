@@ -19,6 +19,7 @@ class TestToonDecoder:
     def test_decode_list(self):
         """Test decoding of list."""
         from toonverter.encoders import ToonEncoder
+
         encoder = ToonEncoder()
         decoder = ToonDecoder()
 
@@ -31,14 +32,12 @@ class TestToonDecoder:
     def test_decode_tabular(self):
         """Test decoding of tabular data."""
         from toonverter.encoders import ToonEncoder
+
         encoder = ToonEncoder()
         decoder = ToonDecoder()
 
         # Use encoder to generate correct tabular TOON syntax
-        data = [
-            {"name": "Alice", "age": 30},
-            {"name": "Bob", "age": 25}
-        ]
+        data = [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
         toon_str = encoder.encode(data)
         result = decoder.decode(toon_str)
         assert isinstance(result, list)
@@ -49,6 +48,7 @@ class TestToonDecoder:
     def test_decode_nested(self):
         """Test decoding of nested structure."""
         from toonverter.encoders import ToonEncoder
+
         encoder = ToonEncoder()
         decoder = ToonDecoder()
 
@@ -60,7 +60,7 @@ class TestToonDecoder:
         assert "python" in result["tags"]
 
     @pytest.mark.parametrize(
-        "toon_str,expected",
+        ("toon_str", "expected"),
         [
             ("true", True),
             ("false", False),

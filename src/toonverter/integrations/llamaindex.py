@@ -22,16 +22,25 @@ Basic usage:
     document = toon_to_llamaindex(toon_str)
 """
 
-from typing import Any, Dict, List, Optional, Iterator, Union
-from ..encoders.toon_encoder import ToonEncoder
-from ..decoders.toon_decoder import ToonDecoder
-from ..core.spec import ToonEncodeOptions, ToonDecodeOptions
-from ..core.exceptions import ConversionError
+from collections.abc import Iterator
+from typing import Any, Union
+
+from toonverter.core.exceptions import ConversionError
+from toonverter.core.spec import ToonDecodeOptions, ToonEncodeOptions
+from toonverter.decoders.toon_decoder import ToonDecoder
+from toonverter.encoders.toon_encoder import ToonEncoder
+
 
 try:
     from llama_index.core import Document
-    from llama_index.core.schema import BaseNode, TextNode, ImageNode, IndexNode
-    from llama_index.core.schema import NodeRelationship, RelatedNodeInfo
+    from llama_index.core.schema import (
+        BaseNode,
+        ImageNode,
+        IndexNode,
+        NodeRelationship,
+        RelatedNodeInfo,
+        TextNode,
+    )
 
     LLAMAINDEX_AVAILABLE = True
 except ImportError:
@@ -41,20 +50,19 @@ except ImportError:
 def _check_llamaindex():
     """Check if LlamaIndex is available."""
     if not LLAMAINDEX_AVAILABLE:
-        raise ImportError(
-            "LlamaIndex is not installed. "
-            "Install with: pip install toonverter[llamaindex]"
-        )
+        msg = "LlamaIndex is not installed. Install with: pip install toonverter[llamaindex]"
+        raise ImportError(msg)
 
 
 # =============================================================================
 # DOCUMENT CONVERSION
 # =============================================================================
 
+
 def llamaindex_to_toon(
-    obj: Union['Document', 'BaseNode'],
+    obj: Union["Document", "BaseNode"],
     include_relationships: bool = False,
-    options: Optional[ToonEncodeOptions] = None
+    options: ToonEncodeOptions | None = None,
 ) -> str:
     """Convert LlamaIndex Document or Node to TOON format.
 
@@ -82,14 +90,13 @@ def llamaindex_to_toon(
         return encoder.encode(data)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert LlamaIndex object to TOON: {e}")
+        msg = f"Failed to convert LlamaIndex object to TOON: {e}"
+        raise ConversionError(msg)
 
 
 def toon_to_llamaindex(
-    toon_str: str,
-    node_type: str = "document",
-    options: Optional[ToonDecodeOptions] = None
-) -> Union['Document', 'BaseNode']:
+    toon_str: str, node_type: str = "document", options: ToonDecodeOptions | None = None
+) -> Union["Document", "BaseNode"]:
     """Convert TOON format to LlamaIndex Document or Node.
 
     Args:
@@ -114,17 +121,19 @@ def toon_to_llamaindex(
         return _dict_to_obj(data, node_type)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to LlamaIndex object: {e}")
+        msg = f"Failed to convert TOON to LlamaIndex object: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # BULK OPERATIONS
 # =============================================================================
 
+
 def bulk_documents_to_toon(
-    documents: List[Union['Document', 'BaseNode']],
+    documents: list[Union["Document", "BaseNode"]],
     include_relationships: bool = False,
-    options: Optional[ToonEncodeOptions] = None
+    options: ToonEncodeOptions | None = None,
 ) -> str:
     """Convert multiple LlamaIndex documents to TOON array format.
 
@@ -152,14 +161,13 @@ def bulk_documents_to_toon(
         return encoder.encode(data_list)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert documents to TOON: {e}")
+        msg = f"Failed to convert documents to TOON: {e}"
+        raise ConversionError(msg)
 
 
 def bulk_toon_to_documents(
-    toon_str: str,
-    node_type: str = "document",
-    options: Optional[ToonDecodeOptions] = None
-) -> List[Union['Document', 'BaseNode']]:
+    toon_str: str, node_type: str = "document", options: ToonDecodeOptions | None = None
+) -> list[Union["Document", "BaseNode"]]:
     """Convert TOON array format to multiple LlamaIndex documents.
 
     Args:
@@ -183,19 +191,21 @@ def bulk_toon_to_documents(
         data_list = decoder.decode(toon_str)
 
         if not isinstance(data_list, list):
-            raise ConversionError("Expected TOON array format")
+            msg = "Expected TOON array format"
+            raise ConversionError(msg)
 
         return [_dict_to_obj(data, node_type) for data in data_list]
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to documents: {e}")
+        msg = f"Failed to convert TOON to documents: {e}"
+        raise ConversionError(msg)
 
 
 def stream_documents_to_toon(
-    documents: List[Union['Document', 'BaseNode']],
+    documents: list[Union["Document", "BaseNode"]],
     chunk_size: int = 100,
     include_relationships: bool = False,
-    options: Optional[ToonEncodeOptions] = None
+    options: ToonEncodeOptions | None = None,
 ) -> Iterator[str]:
     """Stream large document collections to TOON in chunks.
 
@@ -221,22 +231,22 @@ def stream_documents_to_toon(
         encoder = ToonEncoder(options)
 
         for i in range(0, len(documents), chunk_size):
-            chunk = documents[i:i + chunk_size]
+            chunk = documents[i : i + chunk_size]
             data_list = [_obj_to_dict(doc, include_relationships) for doc in chunk]
             yield encoder.encode(data_list)
 
     except Exception as e:
-        raise ConversionError(f"Failed to stream documents to TOON: {e}")
+        msg = f"Failed to stream documents to TOON: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # INDEX OPERATIONS
 # =============================================================================
 
+
 def index_to_toon(
-    index: Any,
-    include_storage: bool = False,
-    options: Optional[ToonEncodeOptions] = None
+    index: Any, include_storage: bool = False, options: ToonEncodeOptions | None = None
 ) -> str:
     """Export LlamaIndex index structure to TOON format.
 
@@ -280,16 +290,17 @@ def index_to_toon(
         return encoder.encode(data)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert index to TOON: {e}")
+        msg = f"Failed to convert index to TOON: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # METADATA OPERATIONS
 # =============================================================================
 
+
 def extract_metadata_to_toon(
-    documents: List[Union['Document', 'BaseNode']],
-    options: Optional[ToonEncodeOptions] = None
+    documents: list[Union["Document", "BaseNode"]], options: ToonEncodeOptions | None = None
 ) -> str:
     """Extract only metadata from documents to TOON format.
 
@@ -323,85 +334,85 @@ def extract_metadata_to_toon(
         return encoder.encode(metadata_list)
 
     except Exception as e:
-        raise ConversionError(f"Failed to extract metadata to TOON: {e}")
+        msg = f"Failed to extract metadata to TOON: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
 
+
 def _obj_to_dict(
-    obj: Union['Document', 'BaseNode'],
-    include_relationships: bool = False
-) -> Dict[str, Any]:
+    obj: Union["Document", "BaseNode"], include_relationships: bool = False
+) -> dict[str, Any]:
     """Convert LlamaIndex object to dictionary."""
     data = {}
 
     # Add text content
-    if hasattr(obj, 'text'):
-        data['text'] = obj.text or ""
+    if hasattr(obj, "text"):
+        data["text"] = obj.text or ""
 
     # Add document-specific fields
     if isinstance(obj, Document):
         if obj.id_:
-            data['id'] = obj.id_
+            data["id"] = obj.id_
         if obj.metadata:
-            data['metadata'] = dict(obj.metadata)
-        if hasattr(obj, 'excluded_embed_metadata_keys') and obj.excluded_embed_metadata_keys:
-            data['excluded_embed_metadata_keys'] = list(obj.excluded_embed_metadata_keys)
-        if hasattr(obj, 'excluded_llm_metadata_keys') and obj.excluded_llm_metadata_keys:
-            data['excluded_llm_metadata_keys'] = list(obj.excluded_llm_metadata_keys)
+            data["metadata"] = dict(obj.metadata)
+        if hasattr(obj, "excluded_embed_metadata_keys") and obj.excluded_embed_metadata_keys:
+            data["excluded_embed_metadata_keys"] = list(obj.excluded_embed_metadata_keys)
+        if hasattr(obj, "excluded_llm_metadata_keys") and obj.excluded_llm_metadata_keys:
+            data["excluded_llm_metadata_keys"] = list(obj.excluded_llm_metadata_keys)
 
     # Add node-specific fields
     elif isinstance(obj, BaseNode):
-        data['node_type'] = type(obj).__name__
+        data["node_type"] = type(obj).__name__
 
         if obj.id_:
-            data['id'] = obj.id_
+            data["id"] = obj.id_
         if obj.metadata:
-            data['metadata'] = dict(obj.metadata)
+            data["metadata"] = dict(obj.metadata)
 
         # Add node-specific attributes
         if isinstance(obj, TextNode):
-            if hasattr(obj, 'start_char_idx') and obj.start_char_idx is not None:
-                data['start_char_idx'] = obj.start_char_idx
-            if hasattr(obj, 'end_char_idx') and obj.end_char_idx is not None:
-                data['end_char_idx'] = obj.end_char_idx
+            if hasattr(obj, "start_char_idx") and obj.start_char_idx is not None:
+                data["start_char_idx"] = obj.start_char_idx
+            if hasattr(obj, "end_char_idx") and obj.end_char_idx is not None:
+                data["end_char_idx"] = obj.end_char_idx
 
         elif isinstance(obj, ImageNode):
-            if hasattr(obj, 'image') and obj.image:
-                data['image'] = obj.image
-            if hasattr(obj, 'image_path') and obj.image_path:
-                data['image_path'] = obj.image_path
+            if hasattr(obj, "image") and obj.image:
+                data["image"] = obj.image
+            if hasattr(obj, "image_path") and obj.image_path:
+                data["image_path"] = obj.image_path
 
         elif isinstance(obj, IndexNode):
-            if hasattr(obj, 'index_id') and obj.index_id:
-                data['index_id'] = obj.index_id
+            if hasattr(obj, "index_id") and obj.index_id:
+                data["index_id"] = obj.index_id
 
         # Add relationships if requested
-        if include_relationships and hasattr(obj, 'relationships') and obj.relationships:
+        if include_relationships and hasattr(obj, "relationships") and obj.relationships:
             rels = {}
             for rel_type, rel_info in obj.relationships.items():
                 if isinstance(rel_info, RelatedNodeInfo):
                     rels[rel_type.value] = {
-                        'node_id': rel_info.node_id,
-                        'metadata': rel_info.metadata or {}
+                        "node_id": rel_info.node_id,
+                        "metadata": rel_info.metadata or {},
                     }
             if rels:
-                data['relationships'] = rels
+                data["relationships"] = rels
 
     return data
 
 
 def _dict_to_obj(
-    data: Dict[str, Any],
-    node_type: str = "document"
-) -> Union['Document', 'BaseNode']:
+    data: dict[str, Any], node_type: str = "document"
+) -> Union["Document", "BaseNode"]:
     """Convert dictionary to LlamaIndex object."""
     # Get text content
-    text = data.get('text', '')
-    metadata = data.get('metadata', {})
-    doc_id = data.get('id')
+    text = data.get("text", "")
+    metadata = data.get("metadata", {})
+    doc_id = data.get("id")
 
     # Create appropriate object type
     if node_type == "document":
@@ -409,45 +420,38 @@ def _dict_to_obj(
             text=text,
             metadata=metadata,
             id_=doc_id,
-            excluded_embed_metadata_keys=data.get('excluded_embed_metadata_keys'),
-            excluded_llm_metadata_keys=data.get('excluded_llm_metadata_keys')
+            excluded_embed_metadata_keys=data.get("excluded_embed_metadata_keys"),
+            excluded_llm_metadata_keys=data.get("excluded_llm_metadata_keys"),
         )
 
-    elif node_type == "text":
+    if node_type == "text":
         return TextNode(
             text=text,
             metadata=metadata,
             id_=doc_id,
-            start_char_idx=data.get('start_char_idx'),
-            end_char_idx=data.get('end_char_idx')
+            start_char_idx=data.get("start_char_idx"),
+            end_char_idx=data.get("end_char_idx"),
         )
 
-    elif node_type == "image":
+    if node_type == "image":
         return ImageNode(
             text=text,
             metadata=metadata,
             id_=doc_id,
-            image=data.get('image'),
-            image_path=data.get('image_path')
+            image=data.get("image"),
+            image_path=data.get("image_path"),
         )
 
-    elif node_type == "index":
-        return IndexNode(
-            text=text,
-            metadata=metadata,
-            id_=doc_id,
-            index_id=data.get('index_id')
-        )
+    if node_type == "index":
+        return IndexNode(text=text, metadata=metadata, id_=doc_id, index_id=data.get("index_id"))
 
-    else:
-        # Try to detect from data
-        detected_type = data.get('node_type', 'TextNode')
-        if 'ImageNode' in detected_type:
-            return _dict_to_obj(data, "image")
-        elif 'IndexNode' in detected_type:
-            return _dict_to_obj(data, "index")
-        else:
-            return _dict_to_obj(data, "text")
+    # Try to detect from data
+    detected_type = data.get("node_type", "TextNode")
+    if "ImageNode" in detected_type:
+        return _dict_to_obj(data, "image")
+    if "IndexNode" in detected_type:
+        return _dict_to_obj(data, "index")
+    return _dict_to_obj(data, "text")
 
 
 # =============================================================================
@@ -455,11 +459,11 @@ def _dict_to_obj(
 # =============================================================================
 
 __all__ = [
-    "llamaindex_to_toon",
-    "toon_to_llamaindex",
     "bulk_documents_to_toon",
     "bulk_toon_to_documents",
-    "stream_documents_to_toon",
-    "index_to_toon",
     "extract_metadata_to_toon",
+    "index_to_toon",
+    "llamaindex_to_toon",
+    "stream_documents_to_toon",
+    "toon_to_llamaindex",
 ]

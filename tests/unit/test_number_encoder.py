@@ -1,7 +1,7 @@
 """Comprehensive tests for number encoder."""
 
 import pytest
-import math
+
 from toonverter.encoders.number_encoder import NumberEncoder
 
 
@@ -53,15 +53,15 @@ class TestNumberEncoderEncoding:
 
     def test_encode_nan_becomes_null(self):
         """Test NaN becomes null."""
-        assert self.encoder.encode(float('nan')) == "null"
+        assert self.encoder.encode(float("nan")) == "null"
 
     def test_encode_positive_infinity_becomes_null(self):
         """Test positive infinity becomes null."""
-        assert self.encoder.encode(float('inf')) == "null"
+        assert self.encoder.encode(float("inf")) == "null"
 
     def test_encode_negative_infinity_becomes_null(self):
         """Test negative infinity becomes null."""
-        assert self.encoder.encode(float('-inf')) == "null"
+        assert self.encoder.encode(float("-inf")) == "null"
 
     def test_encode_small_decimal(self):
         """Test encoding small decimal numbers."""

@@ -29,38 +29,36 @@ Usage:
 """
 
 import asyncio
-import json
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 
 try:
     from mcp.server import Server
     from mcp.server.stdio import stdio_server
-    from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
+    from mcp.types import EmbeddedResource, ImageContent, TextContent, Tool
 
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False
 
-from ..encoders.toon_encoder import ToonEncoder
-from ..decoders.toon_decoder import ToonDecoder
-from ..analysis.analyzer import ToonAnalyzer
-from ..core.exceptions import ConversionError, DecodingError, EncodingError
-from .. import __version__
+from toonverter.analysis.analyzer import ToonAnalyzer
+from toonverter.core.exceptions import DecodingError
+from toonverter.decoders.toon_decoder import ToonDecoder
+from toonverter.encoders.toon_encoder import ToonEncoder
 
 
 def _check_mcp():
     """Check if MCP is available."""
     if not MCP_AVAILABLE:
-        raise ImportError(
-            "MCP is not installed. "
-            "Install with: pip install toonverter[mcp]"
-        )
+        msg = "MCP is not installed. Install with: pip install toonverter[mcp]"
+        raise ImportError(msg)
 
 
 # =============================================================================
 # MCP SERVER
 # =============================================================================
+
 
 class ToonverterMCPServer:
     """MCP server exposing toonverter functionality."""
@@ -82,7 +80,7 @@ class ToonverterMCPServer:
 
         # Tool 1: Convert between formats
         @self.server.list_tools()
-        async def list_tools() -> List[Tool]:
+        async def list_tools() -> list[Tool]:
             """List available tools."""
             return [
                 Tool(
@@ -94,23 +92,20 @@ class ToonverterMCPServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "data": {
-                                "type": "string",
-                                "description": "Input data to convert"
-                            },
+                            "data": {"type": "string", "description": "Input data to convert"},
                             "from_format": {
                                 "type": "string",
                                 "enum": ["json", "yaml", "toml", "csv", "xml", "toon"],
-                                "description": "Source format"
+                                "description": "Source format",
                             },
                             "to_format": {
                                 "type": "string",
                                 "enum": ["json", "yaml", "toml", "csv", "xml", "toon"],
-                                "description": "Target format"
-                            }
+                                "description": "Target format",
+                            },
                         },
-                        "required": ["data", "from_format", "to_format"]
-                    }
+                        "required": ["data", "from_format", "to_format"],
+                    },
                 ),
                 Tool(
                     name="toonverter_encode",
@@ -123,11 +118,11 @@ class ToonverterMCPServer:
                         "properties": {
                             "data": {
                                 "type": "string",
-                                "description": "Data to encode (JSON string or data)"
+                                "description": "Data to encode (JSON string or data)",
                             }
                         },
-                        "required": ["data"]
-                    }
+                        "required": ["data"],
+                    },
                 ),
                 Tool(
                     name="toonverter_decode",
@@ -137,11 +132,11 @@ class ToonverterMCPServer:
                         "properties": {
                             "toon": {
                                 "type": "string",
-                                "description": "TOON formatted string to decode"
+                                "description": "TOON formatted string to decode",
                             }
                         },
-                        "required": ["toon"]
-                    }
+                        "required": ["toon"],
+                    },
                 ),
                 Tool(
                     name="toonverter_analyze",
@@ -154,19 +149,19 @@ class ToonverterMCPServer:
                         "properties": {
                             "data": {
                                 "type": "string",
-                                "description": "Data to analyze (JSON string)"
+                                "description": "Data to analyze (JSON string)",
                             },
                             "compare_formats": {
                                 "type": "array",
                                 "items": {
                                     "type": "string",
-                                    "enum": ["json", "yaml", "toml", "toon"]
+                                    "enum": ["json", "yaml", "toml", "toon"],
                                 },
-                                "description": "Formats to compare (default: json, toon)"
-                            }
+                                "description": "Formats to compare (default: json, toon)",
+                            },
                         },
-                        "required": ["data"]
-                    }
+                        "required": ["data"],
+                    },
                 ),
                 Tool(
                     name="toonverter_validate",
@@ -174,18 +169,15 @@ class ToonverterMCPServer:
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "toon": {
-                                "type": "string",
-                                "description": "TOON string to validate"
-                            },
+                            "toon": {"type": "string", "description": "TOON string to validate"},
                             "strict": {
                                 "type": "boolean",
                                 "description": "Enable strict validation mode",
-                                "default": True
-                            }
+                                "default": True,
+                            },
                         },
-                        "required": ["toon"]
-                    }
+                        "required": ["toon"],
+                    },
                 ),
                 Tool(
                     name="toonverter_compress",
@@ -198,23 +190,21 @@ class ToonverterMCPServer:
                         "properties": {
                             "data": {
                                 "type": "string",
-                                "description": "Data to compress (JSON string)"
+                                "description": "Data to compress (JSON string)",
                             }
                         },
-                        "required": ["data"]
-                    }
+                        "required": ["data"],
+                    },
                 ),
             ]
 
         @self.server.call_tool()
-        async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
+        async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             """Handle tool calls."""
             try:
                 if name == "toonverter_convert":
                     result = await self._convert(
-                        arguments["data"],
-                        arguments["from_format"],
-                        arguments["to_format"]
+                        arguments["data"], arguments["from_format"], arguments["to_format"]
                     )
                 elif name == "toonverter_encode":
                     result = await self._encode(arguments["data"])
@@ -222,14 +212,10 @@ class ToonverterMCPServer:
                     result = await self._decode(arguments["toon"])
                 elif name == "toonverter_analyze":
                     result = await self._analyze(
-                        arguments["data"],
-                        arguments.get("compare_formats", ["json", "toon"])
+                        arguments["data"], arguments.get("compare_formats", ["json", "toon"])
                     )
                 elif name == "toonverter_validate":
-                    result = await self._validate(
-                        arguments["toon"],
-                        arguments.get("strict", True)
-                    )
+                    result = await self._validate(arguments["toon"], arguments.get("strict", True))
                 elif name == "toonverter_compress":
                     result = await self._compress(arguments["data"])
                 else:
@@ -238,7 +224,7 @@ class ToonverterMCPServer:
                 return [TextContent(type="text", text=result)]
 
             except Exception as e:
-                error_msg = f"Error executing {name}: {str(e)}"
+                error_msg = f"Error executing {name}: {e!s}"
                 return [TextContent(type="text", text=error_msg)]
 
     # =========================================================================
@@ -249,7 +235,7 @@ class ToonverterMCPServer:
         """Convert between formats."""
         try:
             # Import format adapters dynamically
-            from ..formats import get_format_adapter
+            from toonverter.formats import get_format_adapter
 
             # Parse input format
             source_adapter = get_format_adapter(from_format)
@@ -266,7 +252,7 @@ class ToonverterMCPServer:
             )
 
         except Exception as e:
-            return f"❌ Conversion failed: {str(e)}"
+            return f"❌ Conversion failed: {e!s}"
 
     async def _encode(self, data: str) -> str:
         """Encode data to TOON."""
@@ -274,6 +260,7 @@ class ToonverterMCPServer:
             # Try to parse as JSON first
             try:
                 import json
+
                 parsed = json.loads(data)
             except:
                 # If not JSON, treat as plain string
@@ -298,7 +285,7 @@ class ToonverterMCPServer:
             )
 
         except Exception as e:
-            return f"❌ Encoding failed: {str(e)}"
+            return f"❌ Encoding failed: {e!s}"
 
     async def _decode(self, toon: str) -> str:
         """Decode TOON to JSON."""
@@ -308,17 +295,15 @@ class ToonverterMCPServer:
 
             # Convert to JSON
             import json
+
             result = json.dumps(data, indent=2)
 
-            return (
-                f"✅ Decoded from TOON format\n\n"
-                f"Result (JSON):\n{result}"
-            )
+            return f"✅ Decoded from TOON format\n\nResult (JSON):\n{result}"
 
         except Exception as e:
-            return f"❌ Decoding failed: {str(e)}"
+            return f"❌ Decoding failed: {e!s}"
 
-    async def _analyze(self, data: str, compare_formats: List[str]) -> str:
+    async def _analyze(self, data: str, compare_formats: list[str]) -> str:
         """Analyze token usage."""
         try:
             import json
@@ -335,12 +320,14 @@ class ToonverterMCPServer:
                 elif fmt == "yaml":
                     try:
                         import yaml
+
                         serialized = yaml.dump(parsed, default_flow_style=False)
                     except ImportError:
                         continue
                 elif fmt == "toml":
                     try:
                         import tomli_w
+
                         serialized = tomli_w.dumps(parsed)
                     except ImportError:
                         continue
@@ -350,10 +337,7 @@ class ToonverterMCPServer:
                     continue
 
                 token_count = self.analyzer.count_tokens(serialized)
-                results[fmt] = {
-                    "tokens": token_count,
-                    "bytes": len(serialized)
-                }
+                results[fmt] = {"tokens": token_count, "bytes": len(serialized)}
 
             # Build comparison report
             report_lines = ["📊 Token Usage Analysis\n"]
@@ -371,19 +355,19 @@ class ToonverterMCPServer:
                 json_tokens = results["json"]["tokens"]
                 toon_tokens = results["toon"]["tokens"]
                 savings = json_tokens - toon_tokens
-                savings_pct = (savings / json_tokens * 100)
+                savings_pct = savings / json_tokens * 100
 
                 report_lines.append(f"\n💰 TOON Savings: {savings} tokens ({savings_pct:.1f}%)")
 
             return "\n".join(report_lines)
 
         except Exception as e:
-            return f"❌ Analysis failed: {str(e)}"
+            return f"❌ Analysis failed: {e!s}"
 
     async def _validate(self, toon: str, strict: bool) -> str:
         """Validate TOON format."""
         try:
-            from ..core.spec import ToonDecodeOptions
+            from toonverter.core.spec import ToonDecodeOptions
 
             # Try to decode with strict validation
             options = ToonDecodeOptions(strict=strict)
@@ -402,9 +386,9 @@ class ToonverterMCPServer:
             )
 
         except DecodingError as e:
-            return f"❌ Validation failed: {str(e)}\n\nThe TOON format contains errors."
+            return f"❌ Validation failed: {e!s}\n\nThe TOON format contains errors."
         except Exception as e:
-            return f"❌ Validation error: {str(e)}"
+            return f"❌ Validation error: {e!s}"
 
     async def _compress(self, data: str) -> str:
         """Compress data for minimum tokens."""
@@ -415,7 +399,7 @@ class ToonverterMCPServer:
             parsed = json.loads(data)
 
             # Encode to TOON (automatically optimizes)
-            from ..core.spec import ToonEncodeOptions
+            from toonverter.core.spec import ToonEncodeOptions
 
             # Use compact preset
             options = ToonEncodeOptions()
@@ -428,12 +412,12 @@ class ToonverterMCPServer:
             original_tokens = self.analyzer.count_tokens(json_str)
             compressed_tokens = self.analyzer.count_tokens(toon)
             token_savings = original_tokens - compressed_tokens
-            token_savings_pct = (token_savings / original_tokens * 100)
+            token_savings_pct = token_savings / original_tokens * 100
 
             original_bytes = len(json_str)
             compressed_bytes = len(toon)
             byte_savings = original_bytes - compressed_bytes
-            byte_savings_pct = (byte_savings / original_bytes * 100)
+            byte_savings_pct = byte_savings / original_bytes * 100
 
             return (
                 f"✅ Data compressed to TOON format\n\n"
@@ -447,7 +431,7 @@ class ToonverterMCPServer:
             )
 
         except Exception as e:
-            return f"❌ Compression failed: {str(e)}"
+            return f"❌ Compression failed: {e!s}"
 
     # =========================================================================
     # SERVER LIFECYCLE
@@ -457,15 +441,14 @@ class ToonverterMCPServer:
         """Run the MCP server."""
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(
-                read_stream,
-                write_stream,
-                self.server.create_initialization_options()
+                read_stream, write_stream, self.server.create_initialization_options()
             )
 
 
 # =============================================================================
 # CLI ENTRY POINT
 # =============================================================================
+
 
 async def main():
     """Main entry point for MCP server."""
@@ -480,9 +463,8 @@ def cli():
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\nShutting down toonverter MCP server...", file=sys.stderr)
-    except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        pass
+    except Exception:
         sys.exit(1)
 
 

@@ -1,14 +1,17 @@
 """Comprehensive tests for YAML format adapter."""
 
 import pytest
+
+
 try:
     import yaml
+
     YAML_AVAILABLE = True
 except ImportError:
     YAML_AVAILABLE = False
 
-from toonverter.formats.yaml_format import YamlFormatAdapter as YAMLFormat
 from toonverter.core.exceptions import DecodingError
+from toonverter.formats.yaml_format import YamlFormatAdapter as YAMLFormat
 
 
 @pytest.mark.skipif(not YAML_AVAILABLE, reason="PyYAML not installed")
@@ -42,13 +45,7 @@ class TestYAMLEncoding:
 
     def test_encode_mixed_types(self):
         """Test encoding mixed types."""
-        data = {
-            "string": "hello",
-            "number": 42,
-            "float": 3.14,
-            "bool": True,
-            "null": None
-        }
+        data = {"string": "hello", "number": 42, "float": 3.14, "bool": True, "null": None}
         result = self.adapter.encode(data, {})
         decoded = yaml.safe_load(result)
         assert decoded == data
@@ -130,11 +127,8 @@ class TestYAMLRoundtrip:
     def test_roundtrip_complex(self):
         """Test complex roundtrip."""
         data = {
-            "users": [
-                {"name": "Alice", "age": 30},
-                {"name": "Bob", "age": 25}
-            ],
-            "metadata": {"count": 2}
+            "users": [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}],
+            "metadata": {"count": 2},
         }
         encoded = self.adapter.encode(data, {})
         decoded = self.adapter.decode(encoded, {})

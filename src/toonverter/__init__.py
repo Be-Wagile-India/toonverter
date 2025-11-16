@@ -18,13 +18,13 @@ from .core import (
     ComparisonReport,
     ConversionError,
     ConversionResult,
-    DecodingError,
     DecodeOptions,
-    EncodingError,
+    DecodingError,
     EncodeOptions,
+    EncodingError,
     FormatNotSupportedError,
-    ToonConverterError,
     TokenAnalysis,
+    ToonConverterError,
     ValidationError,
     registry,
 )
@@ -34,6 +34,7 @@ from .encoders import ToonEncoder
 from .formats import register_default_formats
 from .plugins import load_plugins
 from .utils import read_file, write_file
+
 
 # Initialize package
 register_default_formats()
@@ -150,7 +151,7 @@ def decode(data_str: str, from_format: str = "toon", **options: Any) -> Any:
 
 
 def analyze(
-    data: Any, from_format: str = "json", compare_formats: Optional[list[str]] = None
+    data: Any, from_format: str = "json", compare_formats: list[str] | None = None
 ) -> ComparisonReport:
     """Analyze token usage across formats.
 
@@ -367,45 +368,45 @@ class Analyzer:
 
 
 __all__ = [
-    # Version info
-    "__version__",
-    "__author__",
-    "__license__",
-    # Level 1 Facade API
-    "convert",
-    "encode",
-    "decode",
-    "analyze",
-    "load",
-    "save",
-    "list_formats",
-    "is_supported",
+    "Analyzer",
+    "ComparisonReport",
+    "ConversionError",
+    "ConversionResult",
     # Level 2 OOP API
     "Converter",
-    "Encoder",
+    "DecodeOptions",
     "Decoder",
-    "Analyzer",
-    "ToonEncoder",
-    "ToonDecoder",
-    "FormatComparator",
-    "TiktokenCounter",
+    "DecodingError",
     # Types
     "EncodeOptions",
-    "DecodeOptions",
-    "ConversionResult",
+    "Encoder",
+    "EncodingError",
+    "FormatComparator",
+    "FormatNotSupportedError",
+    "TiktokenCounter",
     "TokenAnalysis",
-    "ComparisonReport",
     # Exceptions
     "ToonConverterError",
-    "ConversionError",
-    "EncodingError",
-    "DecodingError",
+    "ToonDecoder",
+    "ToonEncoder",
     "ValidationError",
-    "FormatNotSupportedError",
+    "__author__",
+    "__license__",
+    # Version info
+    "__version__",
+    "analyze",
+    "compare",
+    # Level 1 Facade API
+    "convert",
+    "count_tokens",
+    "decode",
+    "encode",
+    "get_registry",
+    "is_supported",
+    "list_formats",
+    "load",
+    "load_plugins",
     # Utilities
     "registry",
-    "get_registry",
-    "load_plugins",
-    "count_tokens",
-    "compare",
+    "save",
 ]

@@ -1,10 +1,10 @@
 """Base format adapter implementation."""
 
 from abc import ABC
-from typing import Any, Optional
+from typing import Any
 
-from ..core.interfaces import FormatAdapter
-from ..core.types import DecodeOptions, EncodeOptions
+from toonverter.core.interfaces import FormatAdapter
+from toonverter.core.types import DecodeOptions, EncodeOptions
 
 
 class BaseFormatAdapter(FormatAdapter, ABC):
@@ -35,7 +35,7 @@ class BaseFormatAdapter(FormatAdapter, ABC):
         """
         return False
 
-    def _get_encode_kwargs(self, options: Optional[EncodeOptions]) -> dict[str, Any]:
+    def _get_encode_kwargs(self, options: EncodeOptions | None) -> dict[str, Any]:
         """Convert EncodeOptions to format-specific encoding arguments.
 
         Args:
@@ -53,7 +53,7 @@ class BaseFormatAdapter(FormatAdapter, ABC):
             "ensure_ascii": options.ensure_ascii,
         }
 
-    def _get_decode_kwargs(self, options: Optional[DecodeOptions]) -> dict[str, Any]:
+    def _get_decode_kwargs(self, options: DecodeOptions | None) -> dict[str, Any]:
         """Convert DecodeOptions to format-specific decoding arguments.
 
         Args:

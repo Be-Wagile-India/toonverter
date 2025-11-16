@@ -1,11 +1,12 @@
 """Pydantic model integration."""
 
-from typing import Any, Optional, Type, TypeVar
+from typing import Any, TypeVar
 
-from ..core.exceptions import ConversionError
-from ..core.types import DecodeOptions, EncodeOptions
-from ..decoders import decode
-from ..encoders import encode
+from toonverter.core.exceptions import ConversionError
+from toonverter.core.types import DecodeOptions, EncodeOptions
+from toonverter.decoders import decode
+from toonverter.encoders import encode
+
 
 # Optional dependency
 try:
@@ -19,9 +20,7 @@ except ImportError:
 T = TypeVar("T", bound="BaseModel")
 
 
-def pydantic_to_toon(
-    model: "BaseModel", options: Optional[EncodeOptions] = None
-) -> str:
+def pydantic_to_toon(model: "BaseModel", options: EncodeOptions | None = None) -> str:
     """Convert Pydantic model to TOON format.
 
     Args:
@@ -44,19 +43,19 @@ def pydantic_to_toon(
         >>> toon_str = pydantic_to_toon(user)
     """
     if not PYDANTIC_AVAILABLE:
-        raise ImportError(
-            "pydantic is required. Install with: pip install toon-converter[integrations]"
-        )
+        msg = "pydantic is required. Install with: pip install toon-converter[integrations]"
+        raise ImportError(msg)
 
     try:
         data = model.model_dump()
         return encode(data, options)
     except Exception as e:
-        raise ConversionError(f"Failed to convert Pydantic model to TOON: {e}") from e
+        msg = f"Failed to convert Pydantic model to TOON: {e}"
+        raise ConversionError(msg) from e
 
 
 def toon_to_pydantic(
-    toon_str: str, model_class: Type[T], options: Optional[DecodeOptions] = None
+    toon_str: str, model_class: type[T], options: DecodeOptions | None = None
 ) -> T:
     """Convert TOON format to Pydantic model.
 
@@ -81,12 +80,12 @@ def toon_to_pydantic(
         >>> user = toon_to_pydantic(toon_str, User)
     """
     if not PYDANTIC_AVAILABLE:
-        raise ImportError(
-            "pydantic is required. Install with: pip install toon-converter[integrations]"
-        )
+        msg = "pydantic is required. Install with: pip install toon-converter[integrations]"
+        raise ImportError(msg)
 
     try:
         data = decode(toon_str, options)
         return model_class(**data)
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to Pydantic model: {e}") from e
+        msg = f"Failed to convert TOON to Pydantic model: {e}"
+        raise ConversionError(msg) from e

@@ -1,9 +1,10 @@
 """FastAPI integration."""
 
-from typing import Any, Optional
+from typing import Any
 
-from ..core.types import EncodeOptions
-from ..encoders import encode
+from toonverter.core.types import EncodeOptions
+from toonverter.encoders import encode
+
 
 # Optional dependency
 try:
@@ -28,9 +29,9 @@ class TOONResponse(Response):
         self,
         content: Any,
         status_code: int = 200,
-        headers: Optional[dict[str, str]] = None,
-        media_type: Optional[str] = None,
-        encode_options: Optional[EncodeOptions] = None,
+        headers: dict[str, str] | None = None,
+        media_type: str | None = None,
+        encode_options: EncodeOptions | None = None,
     ) -> None:
         """Initialize TOON response.
 
@@ -45,15 +46,11 @@ class TOONResponse(Response):
             ImportError: If fastapi is not installed
         """
         if not FASTAPI_AVAILABLE:
-            raise ImportError(
-                "fastapi is required. Install with: pip install toon-converter[integrations]"
-            )
+            msg = "fastapi is required. Install with: pip install toon-converter[integrations]"
+            raise ImportError(msg)
 
         # Encode content to TOON format
-        if isinstance(content, str):
-            toon_content = content
-        else:
-            toon_content = encode(content, encode_options)
+        toon_content = content if isinstance(content, str) else encode(content, encode_options)
 
         super().__init__(
             content=toon_content, status_code=status_code, headers=headers, media_type=media_type

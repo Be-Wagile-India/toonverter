@@ -2,10 +2,11 @@
 
 import json
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Any
 
-from ..core.exceptions import DecodingError, EncodingError
-from ..core.types import DecodeOptions, EncodeOptions
+from toonverter.core.exceptions import DecodingError, EncodingError
+from toonverter.core.types import DecodeOptions, EncodeOptions
+
 from .base import BaseFormatAdapter
 
 
@@ -33,7 +34,7 @@ class JsonFormatAdapter(BaseFormatAdapter):
         """Initialize JSON format adapter."""
         super().__init__("json")
 
-    def encode(self, data: Any, options: Optional[EncodeOptions] = None) -> str:
+    def encode(self, data: Any, options: EncodeOptions | None = None) -> str:
         """Encode data to JSON format.
 
         Args:
@@ -55,9 +56,10 @@ class JsonFormatAdapter(BaseFormatAdapter):
 
             return json.dumps(data, cls=DateTimeEncoder, **kwargs)
         except (TypeError, ValueError) as e:
-            raise EncodingError(f"Failed to encode to JSON: {e}") from e
+            msg = f"Failed to encode to JSON: {e}"
+            raise EncodingError(msg) from e
 
-    def decode(self, data_str: str, options: Optional[DecodeOptions] = None) -> Any:
+    def decode(self, data_str: str, options: DecodeOptions | None = None) -> Any:
         """Decode JSON format to Python data.
 
         Args:
@@ -75,7 +77,8 @@ class JsonFormatAdapter(BaseFormatAdapter):
         except json.JSONDecodeError as e:
             if options and not options.strict:
                 return data_str
-            raise DecodingError(f"Failed to decode JSON: {e}") from e
+            msg = f"Failed to decode JSON: {e}"
+            raise DecodingError(msg) from e
 
     def validate(self, data_str: str) -> bool:
         """Validate JSON format string.

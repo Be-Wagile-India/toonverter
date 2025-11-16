@@ -1,6 +1,8 @@
 """Analysis report generation."""
 
-from ..core.types import ComparisonReport, TokenAnalysis
+import json
+
+from toonverter.core.types import ComparisonReport, TokenAnalysis
 
 
 class ReportFormatter:
@@ -53,8 +55,7 @@ class ReportFormatter:
             savings = ((worst_count - analysis.token_count) / worst_count) * 100
             marker = " ← Best" if analysis.format == report.best_format else ""
             lines.append(
-                f"{analysis.format:<15} {analysis.token_count:<10} "
-                f"{savings:>9.1f}%{marker}"
+                f"{analysis.format:<15} {analysis.token_count:<10} {savings:>9.1f}%{marker}"
             )
 
         lines.append("")
@@ -122,8 +123,5 @@ def format_report(report: ComparisonReport, format: str = "text", detailed: bool
     formatter = ReportFormatter()
 
     if format == "json":
-        import json
-
         return json.dumps(formatter.format_json(report), indent=2)
-    else:
-        return formatter.format_comparison(report, detailed)
+    return formatter.format_comparison(report, detailed)

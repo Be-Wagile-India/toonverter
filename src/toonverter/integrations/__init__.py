@@ -35,14 +35,14 @@ except ImportError:
 # SQLAlchemy integration
 try:
     from .sqlalchemy import (
-        sqlalchemy_to_toon,
-        toon_to_sqlalchemy,
-        query_to_toon,
-        bulk_query_to_toon,
-        schema_to_toon,
-        table_to_toon,
         bulk_insert_from_toon,
+        bulk_query_to_toon,
         export_table_to_toon,
+        query_to_toon,
+        schema_to_toon,
+        sqlalchemy_to_toon,
+        table_to_toon,
+        toon_to_sqlalchemy,
     )
 
     __all_sqlalchemy__ = [
@@ -69,13 +69,13 @@ except ImportError:
 # LlamaIndex integration
 try:
     from .llamaindex import (
-        llamaindex_to_toon,
-        toon_to_llamaindex,
         bulk_documents_to_toon,
         bulk_toon_to_documents,
-        stream_documents_to_toon,
-        index_to_toon,
         extract_metadata_to_toon,
+        index_to_toon,
+        llamaindex_to_toon,
+        stream_documents_to_toon,
+        toon_to_llamaindex,
     )
 
     __all_llamaindex__ = [
@@ -93,11 +93,12 @@ except ImportError:
 # Haystack integration
 try:
     from .haystack import (
-        haystack_to_toon,
-        toon_to_haystack,
         answers_to_toon,
+        haystack_to_toon,
         toon_to_answers,
+        toon_to_haystack,
     )
+
     # Note: Avoid name conflicts with LlamaIndex by using module-qualified imports
     __all_haystack__ = [
         "haystack_to_toon",
@@ -111,16 +112,16 @@ except ImportError:
 # DSPy integration
 try:
     from .dspy import (
-        dspy_to_toon,
-        toon_to_dspy,
         dataset_to_toon,
-        toon_to_dataset,
-        stream_dataset_to_toon,
-        predictions_to_toon,
-        toon_to_predictions,
+        dspy_to_toon,
         few_shot_to_toon,
-        signature_examples_to_toon,
         optimization_trace_to_toon,
+        predictions_to_toon,
+        signature_examples_to_toon,
+        stream_dataset_to_toon,
+        toon_to_dataset,
+        toon_to_dspy,
+        toon_to_predictions,
     )
 
     __all_dspy__ = [
@@ -141,16 +142,16 @@ except ImportError:
 # Instructor integration
 try:
     from .instructor_integration import (
-        response_to_toon,
-        toon_to_response,
         bulk_responses_to_toon,
         bulk_toon_to_responses,
-        stream_responses_to_toon,
-        schema_to_toon,
-        validation_results_to_toon,
-        extraction_batch_to_toon,
-        toon_to_extraction_batch,
         cache_response,
+        extraction_batch_to_toon,
+        response_to_toon,
+        schema_to_toon,
+        stream_responses_to_toon,
+        toon_to_extraction_batch,
+        toon_to_response,
+        validation_results_to_toon,
     )
 
     __all_instructor__ = [
@@ -168,4 +169,15 @@ try:
 except ImportError:
     __all_instructor__ = []
 
-__all__ = __all_pandas__ + __all_pydantic__ + __all_langchain__ + __all_fastapi__ + __all_sqlalchemy__ + __all_mcp__ + __all_llamaindex__ + __all_haystack__ + __all_dspy__ + __all_instructor__
+__all__ = (
+    __all_pandas__
+    + __all_pydantic__
+    + __all_langchain__
+    + __all_fastapi__
+    + __all_sqlalchemy__
+    + __all_mcp__
+    + __all_llamaindex__
+    + __all_haystack__
+    + __all_dspy__
+    + __all_instructor__
+)

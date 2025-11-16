@@ -2,10 +2,11 @@
 
 import pytest
 
+
 # Skip if llama-index not installed
 pytest.importorskip("llama_index")
 
-from toonverter.integrations.llamaindex_integration import to_toon_node, from_toon_node
+from toonverter.integrations.llamaindex_integration import from_toon_node, to_toon_node
 
 
 class TestLlamaIndexNodes:
@@ -16,16 +17,12 @@ class TestLlamaIndexNodes:
         try:
             from llama_index.core.schema import TextNode
 
-            node = TextNode(
-                text="This is test content",
-                metadata={"source": "test"},
-                id_="node1"
-            )
+            node = TextNode(text="This is test content", metadata={"source": "test"}, id_="node1")
 
             toon = to_toon_node(node)
 
-            assert 'test content' in toon
-            assert 'test' in toon
+            assert "test content" in toon
+            assert "test" in toon
         except ImportError:
             pytest.skip("LlamaIndex TextNode not available")
 
@@ -34,11 +31,7 @@ class TestLlamaIndexNodes:
         try:
             from llama_index.core.schema import TextNode
 
-            node_original = TextNode(
-                text="Content",
-                metadata={"key": "value"},
-                id_="test_node"
-            )
+            node_original = TextNode(text="Content", metadata={"key": "value"}, id_="test_node")
 
             toon = to_toon_node(node_original)
             node_result = from_toon_node(toon)
@@ -56,11 +49,13 @@ class TestLlamaIndexNodes:
             nodes = [
                 TextNode(text="Node 1", id_="1"),
                 TextNode(text="Node 2", id_="2"),
-                TextNode(text="Node 3", id_="3")
+                TextNode(text="Node 3", id_="3"),
             ]
 
             toon = to_toon_node(nodes)
 
-            assert 'Node 1' in toon and 'Node 2' in toon and 'Node 3' in toon
+            assert "Node 1" in toon
+            assert "Node 2" in toon
+            assert "Node 3" in toon
         except ImportError:
             pytest.skip("LlamaIndex not available")

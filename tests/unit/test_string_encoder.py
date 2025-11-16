@@ -1,8 +1,9 @@
 """Comprehensive tests for string encoder."""
 
 import pytest
-from toonverter.encoders.string_encoder import StringEncoder
+
 from toonverter.core.spec import Delimiter
+from toonverter.encoders.string_encoder import StringEncoder
 
 
 class TestStringEncoderEncoding:

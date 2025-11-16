@@ -2,17 +2,20 @@
 
 import pytest
 
+
 # Skip if fastapi not installed
 pytest.importorskip("fastapi")
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
+
 from toonverter.integrations.fastapi_integration import TOONResponse
 
 
 class User(BaseModel):
     """Test User model."""
+
     id: int
     name: str
 
@@ -29,10 +32,7 @@ def get_user():
 @app.get("/users", response_class=TOONResponse)
 def get_users():
     """Test endpoint returning list as TOON."""
-    return [
-        {"id": 1, "name": "Alice"},
-        {"id": 2, "name": "Bob"}
-    ]
+    return [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]
 
 
 class TestFastAPIIntegration:
@@ -49,8 +49,8 @@ class TestFastAPIIntegration:
         assert response.status_code == 200
         content = response.text
 
-        assert 'Alice' in content
-        assert '1' in content
+        assert "Alice" in content
+        assert "1" in content
 
     def test_toon_response_array(self):
         """Test TOON response for array."""
@@ -59,5 +59,6 @@ class TestFastAPIIntegration:
         assert response.status_code == 200
         content = response.text
 
-        assert '[2]' in content
-        assert 'Alice' in content and 'Bob' in content
+        assert "[2]" in content
+        assert "Alice" in content
+        assert "Bob" in content

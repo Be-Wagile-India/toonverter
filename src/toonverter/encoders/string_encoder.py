@@ -4,11 +4,11 @@ Implements the string quoting and escaping rules from the official TOON specific
 Strings are only quoted when necessary to avoid ambiguity.
 """
 
-from ..core.spec import (
-    RESERVED_WORDS,
+from toonverter.core.spec import (
+    ESCAPE_CHARS,
     NUMBER_PATTERN,
     QUOTE_REQUIRED_CHARS,
-    ESCAPE_CHARS,
+    RESERVED_WORDS,
     Delimiter,
 )
 
@@ -93,10 +93,7 @@ class StringEncoder:
 
         # Equals dash or starts with dash (could be confused with list item)
         # Per TOON v2.0 spec: always quote strings equal to or starting with "-"
-        if s == "-" or s.startswith("-"):
-            return True
-
-        return False
+        return bool(s == "-" or s.startswith("-"))
 
     def _quote_and_escape(self, s: str) -> str:
         """Add quotes and escape special characters.
@@ -170,7 +167,8 @@ class StringEncoder:
         while i < len(s):
             if s[i] == "\\":
                 if i + 1 >= len(s):
-                    raise ValueError("Unterminated escape sequence at end of string")
+                    msg = "Unterminated escape sequence at end of string"
+                    raise ValueError(msg)
 
                 next_char = s[i + 1]
 
@@ -186,10 +184,11 @@ class StringEncoder:
                 elif next_char == "t":
                     result.append("\t")
                 else:
-                    raise ValueError(
+                    msg = (
                         f"Invalid escape sequence: \\{next_char}. "
-                        f"Only \\\\, \\\", \\n, \\r, \\t are allowed."
+                        f'Only \\\\, \\", \\n, \\r, \\t are allowed.'
                     )
+                    raise ValueError(msg)
 
                 i += 2
             else:

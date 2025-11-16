@@ -1,8 +1,9 @@
 """Comprehensive tests for CSV format adapter."""
 
 import pytest
+
+from toonverter.core.exceptions import EncodingError
 from toonverter.formats.csv_format import CsvFormatAdapter as CSVFormat
-from toonverter.core.exceptions import EncodingError, DecodingError
 
 
 class TestCSVEncoding:
@@ -14,10 +15,7 @@ class TestCSVEncoding:
 
     def test_encode_simple_table(self):
         """Test encoding simple table."""
-        data = [
-            {"name": "Alice", "age": 30},
-            {"name": "Bob", "age": 25}
-        ]
+        data = [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
         result = self.adapter.encode(data, None)
         assert "name,age" in result
         assert "Alice,30" in result
@@ -25,10 +23,7 @@ class TestCSVEncoding:
 
     def test_encode_with_headers(self):
         """Test encoding with explicit headers."""
-        data = [
-            {"name": "Alice", "city": "NYC"},
-            {"name": "Bob", "city": "LA"}
-        ]
+        data = [{"name": "Alice", "city": "NYC"}, {"name": "Bob", "city": "LA"}]
         result = self.adapter.encode(data, None)
         lines = result.strip().split("\n")
         assert len(lines) == 3  # header + 2 rows
@@ -62,12 +57,9 @@ class TestCSVEncoding:
 
     def test_encode_numeric_values(self):
         """Test encoding numeric values."""
-        data = [
-            {"id": 1, "value": 100.5},
-            {"id": 2, "value": 200.75}
-        ]
+        data = [{"id": 1, "value": 100.5}, {"id": 2, "value": 200.75}]
         result = self.adapter.encode(data, None)
-        assert "100.5" in result or "100.5" in result.replace('"', '')
+        assert "100.5" in result or "100.5" in result.replace('"', "")
 
     def test_encode_non_list_data(self):
         """Test encoding non-list data raises error."""
@@ -132,20 +124,14 @@ class TestCSVRoundtrip:
 
     def test_roundtrip_simple(self):
         """Test simple roundtrip."""
-        data = [
-            {"name": "Alice", "age": "30"},
-            {"name": "Bob", "age": "25"}
-        ]
+        data = [{"name": "Alice", "age": "30"}, {"name": "Bob", "age": "25"}]
         encoded = self.adapter.encode(data, None)
         decoded = self.adapter.decode(encoded, None)
         assert decoded == data
 
     def test_roundtrip_preserves_headers(self):
         """Test roundtrip preserves headers."""
-        data = [
-            {"col1": "A", "col2": "B"},
-            {"col1": "C", "col2": "D"}
-        ]
+        data = [{"col1": "A", "col2": "B"}, {"col1": "C", "col2": "D"}]
         encoded = self.adapter.encode(data, None)
         decoded = self.adapter.decode(encoded, None)
         assert set(decoded[0].keys()) == {"col1", "col2"}

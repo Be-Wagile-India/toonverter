@@ -22,11 +22,14 @@ Basic usage:
     response = toon_to_response(toon_str, ResponseModel)
 """
 
-from typing import Any, Dict, List, Optional, Iterator, Type, Union
-from ..encoders.toon_encoder import ToonEncoder
-from ..decoders.toon_decoder import ToonDecoder
-from ..core.spec import ToonEncodeOptions, ToonDecodeOptions
-from ..core.exceptions import ConversionError
+from collections.abc import Iterator
+from typing import Any
+
+from toonverter.core.exceptions import ConversionError
+from toonverter.core.spec import ToonDecodeOptions, ToonEncodeOptions
+from toonverter.decoders.toon_decoder import ToonDecoder
+from toonverter.encoders.toon_encoder import ToonEncoder
+
 
 try:
     from pydantic import BaseModel, ValidationError
@@ -39,20 +42,17 @@ except ImportError:
 def _check_pydantic():
     """Check if Pydantic is available."""
     if not PYDANTIC_AVAILABLE:
-        raise ImportError(
-            "Pydantic is not installed. "
-            "Install with: pip install toonverter[instructor]"
-        )
+        msg = "Pydantic is not installed. Install with: pip install toonverter[instructor]"
+        raise ImportError(msg)
 
 
 # =============================================================================
 # RESPONSE MODEL CONVERSION
 # =============================================================================
 
+
 def response_to_toon(
-    response: 'BaseModel',
-    include_metadata: bool = False,
-    options: Optional[ToonEncodeOptions] = None
+    response: "BaseModel", include_metadata: bool = False, options: ToonEncodeOptions | None = None
 ) -> str:
     """Convert Instructor response model (Pydantic) to TOON format.
 
@@ -80,24 +80,20 @@ def response_to_toon(
         encoder = ToonEncoder(options)
 
         if include_metadata:
-            data = {
-                "_model": response.__class__.__name__,
-                "_data": response.model_dump()
-            }
+            data = {"_model": response.__class__.__name__, "_data": response.model_dump()}
         else:
             data = response.model_dump()
 
         return encoder.encode(data)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert response to TOON: {e}")
+        msg = f"Failed to convert response to TOON: {e}"
+        raise ConversionError(msg)
 
 
 def toon_to_response(
-    toon_str: str,
-    model_class: Type['BaseModel'],
-    options: Optional[ToonDecodeOptions] = None
-) -> 'BaseModel':
+    toon_str: str, model_class: type["BaseModel"], options: ToonDecodeOptions | None = None
+) -> "BaseModel":
     """Convert TOON format to Instructor response model (Pydantic).
 
     Args:
@@ -128,19 +124,22 @@ def toon_to_response(
         return model_class(**data)
 
     except ValidationError as e:
-        raise ConversionError(f"Validation failed: {e}")
+        msg = f"Validation failed: {e}"
+        raise ConversionError(msg)
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to response: {e}")
+        msg = f"Failed to convert TOON to response: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # BULK OPERATIONS
 # =============================================================================
 
+
 def bulk_responses_to_toon(
-    responses: List['BaseModel'],
+    responses: list["BaseModel"],
     include_metadata: bool = False,
-    options: Optional[ToonEncodeOptions] = None
+    options: ToonEncodeOptions | None = None,
 ) -> str:
     """Convert multiple Instructor responses to TOON array format.
 
@@ -169,8 +168,7 @@ def bulk_responses_to_toon(
 
         if include_metadata:
             data_list = [
-                {"_model": r.__class__.__name__, "_data": r.model_dump()}
-                for r in responses
+                {"_model": r.__class__.__name__, "_data": r.model_dump()} for r in responses
             ]
         else:
             data_list = [r.model_dump() for r in responses]
@@ -178,14 +176,13 @@ def bulk_responses_to_toon(
         return encoder.encode(data_list)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert responses to TOON: {e}")
+        msg = f"Failed to convert responses to TOON: {e}"
+        raise ConversionError(msg)
 
 
 def bulk_toon_to_responses(
-    toon_str: str,
-    model_class: Type['BaseModel'],
-    options: Optional[ToonDecodeOptions] = None
-) -> List['BaseModel']:
+    toon_str: str, model_class: type["BaseModel"], options: ToonDecodeOptions | None = None
+) -> list["BaseModel"]:
     """Convert TOON array format to multiple Instructor responses.
 
     Args:
@@ -209,7 +206,8 @@ def bulk_toon_to_responses(
         data_list = decoder.decode(toon_str)
 
         if not isinstance(data_list, list):
-            raise ConversionError("Expected TOON array format")
+            msg = "Expected TOON array format"
+            raise ConversionError(msg)
 
         responses = []
         for data in data_list:
@@ -221,16 +219,18 @@ def bulk_toon_to_responses(
         return responses
 
     except ValidationError as e:
-        raise ConversionError(f"Validation failed: {e}")
+        msg = f"Validation failed: {e}"
+        raise ConversionError(msg)
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to responses: {e}")
+        msg = f"Failed to convert TOON to responses: {e}"
+        raise ConversionError(msg)
 
 
 def stream_responses_to_toon(
-    responses: List['BaseModel'],
+    responses: list["BaseModel"],
     chunk_size: int = 100,
     include_metadata: bool = False,
-    options: Optional[ToonEncodeOptions] = None
+    options: ToonEncodeOptions | None = None,
 ) -> Iterator[str]:
     """Stream large response collections to TOON in chunks.
 
@@ -256,12 +256,11 @@ def stream_responses_to_toon(
         encoder = ToonEncoder(options)
 
         for i in range(0, len(responses), chunk_size):
-            chunk = responses[i:i + chunk_size]
+            chunk = responses[i : i + chunk_size]
 
             if include_metadata:
                 data_list = [
-                    {"_model": r.__class__.__name__, "_data": r.model_dump()}
-                    for r in chunk
+                    {"_model": r.__class__.__name__, "_data": r.model_dump()} for r in chunk
                 ]
             else:
                 data_list = [r.model_dump() for r in chunk]
@@ -269,17 +268,16 @@ def stream_responses_to_toon(
             yield encoder.encode(data_list)
 
     except Exception as e:
-        raise ConversionError(f"Failed to stream responses to TOON: {e}")
+        msg = f"Failed to stream responses to TOON: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # SCHEMA OPERATIONS
 # =============================================================================
 
-def schema_to_toon(
-    model_class: Type['BaseModel'],
-    options: Optional[ToonEncodeOptions] = None
-) -> str:
+
+def schema_to_toon(model_class: type["BaseModel"], options: ToonEncodeOptions | None = None) -> str:
     """Export Pydantic model schema to TOON format.
 
     Useful for documentation and schema sharing.
@@ -306,16 +304,17 @@ def schema_to_toon(
         return encoder.encode(schema)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert schema to TOON: {e}")
+        msg = f"Failed to convert schema to TOON: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # VALIDATION RESULTS
 # =============================================================================
 
+
 def validation_results_to_toon(
-    results: List[Dict[str, Any]],
-    options: Optional[ToonEncodeOptions] = None
+    results: list[dict[str, Any]], options: ToonEncodeOptions | None = None
 ) -> str:
     """Convert validation results to TOON format.
 
@@ -340,17 +339,19 @@ def validation_results_to_toon(
         return encoder.encode(results)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert validation results to TOON: {e}")
+        msg = f"Failed to convert validation results to TOON: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # INSTRUCTOR-SPECIFIC OPERATIONS
 # =============================================================================
 
+
 def extraction_batch_to_toon(
-    extractions: List['BaseModel'],
-    source_metadata: Optional[Dict[str, Any]] = None,
-    options: Optional[ToonEncodeOptions] = None
+    extractions: list["BaseModel"],
+    source_metadata: dict[str, Any] | None = None,
+    options: ToonEncodeOptions | None = None,
 ) -> str:
     """Convert batch extraction results to TOON format.
 
@@ -379,10 +380,7 @@ def extraction_batch_to_toon(
     try:
         encoder = ToonEncoder(options)
 
-        data = {
-            "extractions": [ex.model_dump() for ex in extractions],
-            "count": len(extractions)
-        }
+        data = {"extractions": [ex.model_dump() for ex in extractions], "count": len(extractions)}
 
         if source_metadata:
             data["metadata"] = source_metadata
@@ -390,14 +388,13 @@ def extraction_batch_to_toon(
         return encoder.encode(data)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert extraction batch to TOON: {e}")
+        msg = f"Failed to convert extraction batch to TOON: {e}"
+        raise ConversionError(msg)
 
 
 def toon_to_extraction_batch(
-    toon_str: str,
-    model_class: Type['BaseModel'],
-    options: Optional[ToonDecodeOptions] = None
-) -> Dict[str, Any]:
+    toon_str: str, model_class: type["BaseModel"], options: ToonDecodeOptions | None = None
+) -> dict[str, Any]:
     """Convert TOON format to extraction batch results.
 
     Args:
@@ -421,36 +418,37 @@ def toon_to_extraction_batch(
         data = decoder.decode(toon_str)
 
         if not isinstance(data, dict) or "extractions" not in data:
-            raise ConversionError("Expected extraction batch format")
+            msg = "Expected extraction batch format"
+            raise ConversionError(msg)
 
         # Convert extractions to model instances
-        extractions = [
-            model_class(**ex_data)
-            for ex_data in data["extractions"]
-        ]
+        extractions = [model_class(**ex_data) for ex_data in data["extractions"]]
 
         return {
             "extractions": extractions,
             "count": data.get("count", len(extractions)),
-            "metadata": data.get("metadata", {})
+            "metadata": data.get("metadata", {}),
         }
 
     except ValidationError as e:
-        raise ConversionError(f"Validation failed: {e}")
+        msg = f"Validation failed: {e}"
+        raise ConversionError(msg)
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to extraction batch: {e}")
+        msg = f"Failed to convert TOON to extraction batch: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # RESPONSE CACHING
 # =============================================================================
 
+
 def cache_response(
-    response: 'BaseModel',
+    response: "BaseModel",
     cache_key: str,
-    ttl: Optional[int] = None,
-    options: Optional[ToonEncodeOptions] = None
-) -> Dict[str, Any]:
+    ttl: int | None = None,
+    options: ToonEncodeOptions | None = None,
+) -> dict[str, Any]:
     """Create a cacheable TOON representation of response.
 
     Args:
@@ -478,7 +476,7 @@ def cache_response(
             "key": cache_key,
             "model": response.__class__.__name__,
             "toon": toon_data,
-            "cached_at": int(time.time())
+            "cached_at": int(time.time()),
         }
 
         if ttl:
@@ -488,7 +486,8 @@ def cache_response(
         return cache_entry
 
     except Exception as e:
-        raise ConversionError(f"Failed to create cache entry: {e}")
+        msg = f"Failed to create cache entry: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
@@ -496,14 +495,14 @@ def cache_response(
 # =============================================================================
 
 __all__ = [
-    "response_to_toon",
-    "toon_to_response",
     "bulk_responses_to_toon",
     "bulk_toon_to_responses",
-    "stream_responses_to_toon",
-    "schema_to_toon",
-    "validation_results_to_toon",
-    "extraction_batch_to_toon",
-    "toon_to_extraction_batch",
     "cache_response",
+    "extraction_batch_to_toon",
+    "response_to_toon",
+    "schema_to_toon",
+    "stream_responses_to_toon",
+    "toon_to_extraction_batch",
+    "toon_to_response",
+    "validation_results_to_toon",
 ]

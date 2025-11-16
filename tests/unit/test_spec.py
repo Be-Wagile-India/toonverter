@@ -1,19 +1,20 @@
 """Comprehensive tests for TOON specification types and constants."""
 
 import pytest
+
 from toonverter.core.spec import (
-    Delimiter,
-    ArrayForm,
-    RootForm,
-    ToonEncodeOptions,
-    ToonDecodeOptions,
-    ArrayHeader,
-    KeyPath,
-    RESERVED_WORDS,
-    NUMBER_PATTERN,
-    KEY_SEGMENT_PATTERN,
-    DEFAULT_INDENT_SIZE,
     DEFAULT_DELIMITER,
+    DEFAULT_INDENT_SIZE,
+    KEY_SEGMENT_PATTERN,
+    NUMBER_PATTERN,
+    RESERVED_WORDS,
+    ArrayForm,
+    ArrayHeader,
+    Delimiter,
+    KeyPath,
+    RootForm,
+    ToonDecodeOptions,
+    ToonEncodeOptions,
 )
 
 
@@ -179,11 +180,7 @@ class TestArrayHeader:
 
     def test_array_header_with_fields(self):
         """Test array header with fields."""
-        header = ArrayHeader(
-            length=3,
-            fields=["name", "age", "city"],
-            form=ArrayForm.TABULAR
-        )
+        header = ArrayHeader(length=3, fields=["name", "age", "city"], form=ArrayForm.TABULAR)
 
         assert header.length == 3
         assert header.fields == ["name", "age", "city"]

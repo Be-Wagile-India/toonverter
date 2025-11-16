@@ -7,19 +7,20 @@ the Strategy pattern.
 from .base import BaseFormatAdapter
 from .csv_format import CsvFormatAdapter
 from .json_format import JsonFormatAdapter
-from .toon_format import ToonFormatAdapter
 from .toml_format import TomlFormatAdapter
+from .toon_format import ToonFormatAdapter
 from .xml_format import XmlFormatAdapter
 from .yaml_format import YamlFormatAdapter
 
+
 __all__ = [
     "BaseFormatAdapter",
-    "JsonFormatAdapter",
-    "YamlFormatAdapter",
-    "TomlFormatAdapter",
     "CsvFormatAdapter",
-    "XmlFormatAdapter",
+    "JsonFormatAdapter",
+    "TomlFormatAdapter",
     "ToonFormatAdapter",
+    "XmlFormatAdapter",
+    "YamlFormatAdapter",
 ]
 
 
@@ -28,7 +29,7 @@ def register_default_formats() -> None:
 
     This function is called automatically when importing toon_converter.
     """
-    from ..core.registry import registry
+    from toonverter.core.registry import registry
 
     # Always available formats
     registry.register("json", JsonFormatAdapter())

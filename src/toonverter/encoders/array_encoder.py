@@ -8,7 +8,8 @@ Implements the three array forms from TOON v2.0 specification:
 
 from typing import Any
 
-from ..core.spec import ArrayForm, Delimiter
+from toonverter.core.spec import ArrayForm
+
 from .indentation import IndentationManager
 from .number_encoder import NumberEncoder
 from .string_encoder import StringEncoder
@@ -71,9 +72,7 @@ class ArrayEncoder:
             if all(set(item.keys()) == first_keys for item in arr[1:]):
                 # Check if all values are primitives
                 all_values_primitive = all(
-                    self._is_primitive(val)
-                    for item in arr
-                    for val in item.values()
+                    self._is_primitive(val) for item in arr for val in item.values()
                 )
                 if all_values_primitive:
                     return ArrayForm.TABULAR
@@ -154,9 +153,7 @@ class ArrayEncoder:
 
         return lines
 
-    def encode_list(
-        self, key: str, arr: list[Any], depth: int, value_encoder: Any
-    ) -> list[str]:
+    def encode_list(self, key: str, arr: list[Any], depth: int, value_encoder: Any) -> list[str]:
         """Encode list array with - notation.
 
         Args:
@@ -204,7 +201,9 @@ class ArrayEncoder:
                         lines.append(f"{item_indent}- [{len(item)}]: {nested_inline}")
                     else:
                         # List or tabular form - needs full recursion
-                        nested_lines = self._encode_nested_array_item(item, depth + 1, value_encoder)
+                        nested_lines = self._encode_nested_array_item(
+                            item, depth + 1, value_encoder
+                        )
                         lines.extend(nested_lines)
             else:
                 # Primitive item
@@ -309,15 +308,14 @@ class ArrayEncoder:
         """
         if val is None:
             return "null"
-        elif isinstance(val, bool):
+        if isinstance(val, bool):
             return "true" if val else "false"
-        elif isinstance(val, (int, float)):
+        if isinstance(val, (int, float)):
             return self.num_enc.encode(val)
-        elif isinstance(val, str):
+        if isinstance(val, str):
             return self.str_enc.encode(val)
-        else:
-            # Fallback: convert to string
-            return self.str_enc.encode(str(val))
+        # Fallback: convert to string
+        return self.str_enc.encode(str(val))
 
     def _encode_inline_values(self, arr: list[Any]) -> str:
         """Encode array values as inline comma-separated string.

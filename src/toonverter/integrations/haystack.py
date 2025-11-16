@@ -22,11 +22,14 @@ Basic usage:
     document = toon_to_haystack(toon_str)
 """
 
-from typing import Any, Dict, List, Optional, Iterator, Union
-from ..encoders.toon_encoder import ToonEncoder
-from ..decoders.toon_decoder import ToonDecoder
-from ..core.spec import ToonEncodeOptions, ToonDecodeOptions
-from ..core.exceptions import ConversionError
+from collections.abc import Iterator
+from typing import Any, Union
+
+from toonverter.core.exceptions import ConversionError
+from toonverter.core.spec import ToonDecodeOptions, ToonEncodeOptions
+from toonverter.decoders.toon_decoder import ToonDecoder
+from toonverter.encoders.toon_encoder import ToonEncoder
+
 
 try:
     from haystack import Document
@@ -40,20 +43,19 @@ except ImportError:
 def _check_haystack():
     """Check if Haystack is available."""
     if not HAYSTACK_AVAILABLE:
-        raise ImportError(
-            "Haystack is not installed. "
-            "Install with: pip install toonverter[haystack]"
-        )
+        msg = "Haystack is not installed. Install with: pip install toonverter[haystack]"
+        raise ImportError(msg)
 
 
 # =============================================================================
 # DOCUMENT CONVERSION
 # =============================================================================
 
+
 def haystack_to_toon(
-    obj: Union['Document', 'Answer'],
+    obj: Union["Document", "Answer"],
     include_embeddings: bool = False,
-    options: Optional[ToonEncodeOptions] = None
+    options: ToonEncodeOptions | None = None,
 ) -> str:
     """Convert Haystack Document or Answer to TOON format.
 
@@ -83,19 +85,19 @@ def haystack_to_toon(
         elif isinstance(obj, Answer):
             data = _answer_to_dict(obj, include_embeddings)
         else:
-            raise ConversionError(f"Unsupported type: {type(obj)}")
+            msg = f"Unsupported type: {type(obj)}"
+            raise ConversionError(msg)
 
         return encoder.encode(data)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert Haystack object to TOON: {e}")
+        msg = f"Failed to convert Haystack object to TOON: {e}"
+        raise ConversionError(msg)
 
 
 def toon_to_haystack(
-    toon_str: str,
-    obj_type: str = "document",
-    options: Optional[ToonDecodeOptions] = None
-) -> Union['Document', 'Answer']:
+    toon_str: str, obj_type: str = "document", options: ToonDecodeOptions | None = None
+) -> Union["Document", "Answer"]:
     """Convert TOON format to Haystack Document or Answer.
 
     Args:
@@ -120,23 +122,25 @@ def toon_to_haystack(
 
         if obj_type == "document":
             return _dict_to_document(data)
-        elif obj_type == "answer":
+        if obj_type == "answer":
             return _dict_to_answer(data)
-        else:
-            raise ConversionError(f"Unsupported object type: {obj_type}")
+        msg = f"Unsupported object type: {obj_type}"
+        raise ConversionError(msg)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to Haystack object: {e}")
+        msg = f"Failed to convert TOON to Haystack object: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # BULK OPERATIONS
 # =============================================================================
 
+
 def bulk_documents_to_toon(
-    documents: List['Document'],
+    documents: list["Document"],
     include_embeddings: bool = False,
-    options: Optional[ToonEncodeOptions] = None
+    options: ToonEncodeOptions | None = None,
 ) -> str:
     """Convert multiple Haystack documents to TOON array format.
 
@@ -164,13 +168,13 @@ def bulk_documents_to_toon(
         return encoder.encode(data_list)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert documents to TOON: {e}")
+        msg = f"Failed to convert documents to TOON: {e}"
+        raise ConversionError(msg)
 
 
 def bulk_toon_to_documents(
-    toon_str: str,
-    options: Optional[ToonDecodeOptions] = None
-) -> List['Document']:
+    toon_str: str, options: ToonDecodeOptions | None = None
+) -> list["Document"]:
     """Convert TOON array format to multiple Haystack documents.
 
     Args:
@@ -193,19 +197,21 @@ def bulk_toon_to_documents(
         data_list = decoder.decode(toon_str)
 
         if not isinstance(data_list, list):
-            raise ConversionError("Expected TOON array format")
+            msg = "Expected TOON array format"
+            raise ConversionError(msg)
 
         return [_dict_to_document(data) for data in data_list]
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to documents: {e}")
+        msg = f"Failed to convert TOON to documents: {e}"
+        raise ConversionError(msg)
 
 
 def stream_documents_to_toon(
-    documents: List['Document'],
+    documents: list["Document"],
     chunk_size: int = 100,
     include_embeddings: bool = False,
-    options: Optional[ToonEncodeOptions] = None
+    options: ToonEncodeOptions | None = None,
 ) -> Iterator[str]:
     """Stream large document collections to TOON in chunks.
 
@@ -231,22 +237,24 @@ def stream_documents_to_toon(
         encoder = ToonEncoder(options)
 
         for i in range(0, len(documents), chunk_size):
-            chunk = documents[i:i + chunk_size]
+            chunk = documents[i : i + chunk_size]
             data_list = [_document_to_dict(doc, include_embeddings) for doc in chunk]
             yield encoder.encode(data_list)
 
     except Exception as e:
-        raise ConversionError(f"Failed to stream documents to TOON: {e}")
+        msg = f"Failed to stream documents to TOON: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # ANSWER CONVERSION
 # =============================================================================
 
+
 def answers_to_toon(
-    answers: List['Answer'],
+    answers: list["Answer"],
     include_embeddings: bool = False,
-    options: Optional[ToonEncodeOptions] = None
+    options: ToonEncodeOptions | None = None,
 ) -> str:
     """Convert Haystack Answer objects to TOON format.
 
@@ -275,13 +283,11 @@ def answers_to_toon(
         return encoder.encode(data_list)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert answers to TOON: {e}")
+        msg = f"Failed to convert answers to TOON: {e}"
+        raise ConversionError(msg)
 
 
-def toon_to_answers(
-    toon_str: str,
-    options: Optional[ToonDecodeOptions] = None
-) -> List['Answer']:
+def toon_to_answers(toon_str: str, options: ToonDecodeOptions | None = None) -> list["Answer"]:
     """Convert TOON format to Haystack Answer objects.
 
     Args:
@@ -298,21 +304,23 @@ def toon_to_answers(
         data_list = decoder.decode(toon_str)
 
         if not isinstance(data_list, list):
-            raise ConversionError("Expected TOON array format")
+            msg = "Expected TOON array format"
+            raise ConversionError(msg)
 
         return [_dict_to_answer(data) for data in data_list]
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to answers: {e}")
+        msg = f"Failed to convert TOON to answers: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # METADATA OPERATIONS
 # =============================================================================
 
+
 def extract_metadata_to_toon(
-    documents: List['Document'],
-    options: Optional[ToonEncodeOptions] = None
+    documents: list["Document"], options: ToonEncodeOptions | None = None
 ) -> str:
     """Extract only metadata from documents to TOON format.
 
@@ -346,138 +354,136 @@ def extract_metadata_to_toon(
         return encoder.encode(metadata_list)
 
     except Exception as e:
-        raise ConversionError(f"Failed to extract metadata to TOON: {e}")
+        msg = f"Failed to extract metadata to TOON: {e}"
+        raise ConversionError(msg)
 
 
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
 
-def _document_to_dict(doc: 'Document', include_embeddings: bool = False) -> Dict[str, Any]:
+
+def _document_to_dict(doc: "Document", include_embeddings: bool = False) -> dict[str, Any]:
     """Convert Haystack Document to dictionary."""
     data = {}
 
     # Add content
     if doc.content:
-        data['content'] = doc.content
+        data["content"] = doc.content
 
     # Add content type
     if doc.content_type:
-        data['content_type'] = doc.content_type
+        data["content_type"] = doc.content_type
 
     # Add ID
     if doc.id:
-        data['id'] = doc.id
+        data["id"] = doc.id
 
     # Add metadata
     if doc.meta:
-        data['meta'] = dict(doc.meta)
+        data["meta"] = dict(doc.meta)
 
     # Add score if present
-    if hasattr(doc, 'score') and doc.score is not None:
-        data['score'] = doc.score
+    if hasattr(doc, "score") and doc.score is not None:
+        data["score"] = doc.score
 
     # Add embedding if requested
-    if include_embeddings and hasattr(doc, 'embedding') and doc.embedding is not None:
-        data['embedding'] = doc.embedding.tolist() if hasattr(doc.embedding, 'tolist') else list(doc.embedding)
+    if include_embeddings and hasattr(doc, "embedding") and doc.embedding is not None:
+        data["embedding"] = (
+            doc.embedding.tolist() if hasattr(doc.embedding, "tolist") else list(doc.embedding)
+        )
 
     return data
 
 
-def _dict_to_document(data: Dict[str, Any]) -> 'Document':
+def _dict_to_document(data: dict[str, Any]) -> "Document":
     """Convert dictionary to Haystack Document."""
     # Extract fields
-    content = data.get('content', '')
-    content_type = data.get('content_type', 'text')
-    doc_id = data.get('id')
-    meta = data.get('meta', {})
-    score = data.get('score')
-    embedding = data.get('embedding')
+    content = data.get("content", "")
+    content_type = data.get("content_type", "text")
+    doc_id = data.get("id")
+    meta = data.get("meta", {})
+    score = data.get("score")
+    embedding = data.get("embedding")
 
     # Create document
-    doc = Document(
+    return Document(
         content=content,
         content_type=content_type,
         id=doc_id,
         meta=meta,
         score=score,
-        embedding=embedding
+        embedding=embedding,
     )
 
-    return doc
 
-
-def _answer_to_dict(answer: 'Answer', include_embeddings: bool = False) -> Dict[str, Any]:
+def _answer_to_dict(answer: "Answer", include_embeddings: bool = False) -> dict[str, Any]:
     """Convert Haystack Answer to dictionary."""
     data = {}
 
     # Add answer text
     if answer.answer:
-        data['answer'] = answer.answer
+        data["answer"] = answer.answer
 
     # Add type
     if answer.type:
-        data['type'] = answer.type
+        data["type"] = answer.type
 
     # Add score
     if answer.score is not None:
-        data['score'] = answer.score
+        data["score"] = answer.score
 
     # Add context
     if answer.context:
-        data['context'] = answer.context
+        data["context"] = answer.context
 
     # Add offsets
     if answer.offsets_in_document:
-        data['offsets_in_document'] = [
-            {'start': span.start, 'end': span.end}
-            for span in answer.offsets_in_document
+        data["offsets_in_document"] = [
+            {"start": span.start, "end": span.end} for span in answer.offsets_in_document
         ]
 
     if answer.offsets_in_context:
-        data['offsets_in_context'] = [
-            {'start': span.start, 'end': span.end}
-            for span in answer.offsets_in_context
+        data["offsets_in_context"] = [
+            {"start": span.start, "end": span.end} for span in answer.offsets_in_context
         ]
 
     # Add document ID
     if answer.document_id:
-        data['document_id'] = answer.document_id
+        data["document_id"] = answer.document_id
 
     # Add metadata
     if answer.meta:
-        data['meta'] = dict(answer.meta)
+        data["meta"] = dict(answer.meta)
 
     return data
 
 
-def _dict_to_answer(data: Dict[str, Any]) -> 'Answer':
+def _dict_to_answer(data: dict[str, Any]) -> "Answer":
     """Convert dictionary to Haystack Answer."""
     # Extract fields
-    answer_text = data.get('answer', '')
-    answer_type = data.get('type', 'extractive')
-    score = data.get('score')
-    context = data.get('context')
-    document_id = data.get('document_id')
-    meta = data.get('meta', {})
+    answer_text = data.get("answer", "")
+    answer_type = data.get("type", "extractive")
+    score = data.get("score")
+    context = data.get("context")
+    document_id = data.get("document_id")
+    meta = data.get("meta", {})
 
     # Convert offsets
     offsets_in_document = None
-    if 'offsets_in_document' in data:
+    if "offsets_in_document" in data:
         offsets_in_document = [
-            Span(start=offset['start'], end=offset['end'])
-            for offset in data['offsets_in_document']
+            Span(start=offset["start"], end=offset["end"]) for offset in data["offsets_in_document"]
         ]
 
     offsets_in_context = None
-    if 'offsets_in_context' in data:
+    if "offsets_in_context" in data:
         offsets_in_context = [
-            Span(start=offset['start'], end=offset['end'])
-            for offset in data['offsets_in_context']
+            Span(start=offset["start"], end=offset["end"]) for offset in data["offsets_in_context"]
         ]
 
     # Create answer
-    answer = Answer(
+    return Answer(
         answer=answer_text,
         type=answer_type,
         score=score,
@@ -485,10 +491,8 @@ def _dict_to_answer(data: Dict[str, Any]) -> 'Answer':
         offsets_in_document=offsets_in_document,
         offsets_in_context=offsets_in_context,
         document_id=document_id,
-        meta=meta
+        meta=meta,
     )
-
-    return answer
 
 
 # =============================================================================
@@ -496,12 +500,12 @@ def _dict_to_answer(data: Dict[str, Any]) -> 'Answer':
 # =============================================================================
 
 __all__ = [
-    "haystack_to_toon",
-    "toon_to_haystack",
+    "answers_to_toon",
     "bulk_documents_to_toon",
     "bulk_toon_to_documents",
-    "stream_documents_to_toon",
-    "answers_to_toon",
-    "toon_to_answers",
     "extract_metadata_to_toon",
+    "haystack_to_toon",
+    "stream_documents_to_toon",
+    "toon_to_answers",
+    "toon_to_haystack",
 ]

@@ -1,6 +1,5 @@
 """Comprehensive tests for key folding."""
 
-import pytest
 from toonverter.encoders.key_folding import KeyFolder
 
 
@@ -51,7 +50,7 @@ class TestCanFoldChain:
         folder = KeyFolder(enabled=True)
         obj = {"a": 1}
 
-        can_fold, chain = folder.can_fold_chain(obj)
+        can_fold, _chain = folder.can_fold_chain(obj)
 
         assert can_fold is False
 
@@ -60,7 +59,7 @@ class TestCanFoldChain:
         folder = KeyFolder(enabled=True)
         obj = {"a": 1, "b": 2}
 
-        can_fold, chain = folder.can_fold_chain(obj)
+        can_fold, _chain = folder.can_fold_chain(obj)
 
         assert can_fold is False
 
@@ -79,7 +78,7 @@ class TestCanFoldChain:
         folder = KeyFolder(enabled=True)
         obj = {"a": {"b-c": {"d": 1}}}  # Hyphen not allowed
 
-        can_fold, chain = folder.can_fold_chain(obj)
+        can_fold, _chain = folder.can_fold_chain(obj)
 
         # Should stop at invalid segment
         assert can_fold is False
@@ -89,7 +88,7 @@ class TestCanFoldChain:
         folder = KeyFolder(enabled=True)
         obj = {"a": {"b.c": 1}}  # Contains separator
 
-        can_fold, chain = folder.can_fold_chain(obj)
+        can_fold, _chain = folder.can_fold_chain(obj)
 
         # Should stop at key with separator
         assert can_fold is False
@@ -200,10 +199,7 @@ class TestDetectFoldableKeys:
     def test_detect_multiple_foldable(self):
         """Test detecting multiple foldable chains."""
         folder = KeyFolder(enabled=True)
-        obj = {
-            "a": {"b": 1},
-            "c": {"d": {"e": 2}}
-        }
+        obj = {"a": {"b": 1}, "c": {"d": {"e": 2}}}
 
         result = folder.detect_foldable_keys(obj)
 
@@ -233,11 +229,7 @@ class TestDetectFoldableKeys:
     def test_detect_mixed_content(self):
         """Test detecting with mix of foldable and non-foldable."""
         folder = KeyFolder(enabled=True)
-        obj = {
-            "foldable": {"key": 1},
-            "simple": 2,
-            "complex": {"a": 1, "b": 2}
-        }
+        obj = {"foldable": {"key": 1}, "simple": 2, "complex": {"a": 1, "b": 2}}
 
         result = folder.detect_foldable_keys(obj)
 
@@ -436,7 +428,7 @@ class TestEdgeCases:
         folder = KeyFolder(enabled=True)
         obj = {}
 
-        can_fold, chain = folder.can_fold_chain(obj)
+        can_fold, _chain = folder.can_fold_chain(obj)
         assert can_fold is False
 
         result = folder.detect_foldable_keys(obj)

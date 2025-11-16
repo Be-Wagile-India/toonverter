@@ -2,11 +2,13 @@
 
 import pytest
 
+
 # Skip if pandas not installed
 pytest.importorskip("pandas")
 
 import pandas as pd
-from toonverter.integrations.pandas_integration import to_toon, from_toon
+
+from toonverter.integrations.pandas_integration import from_toon, to_toon
 
 
 class TestPandasDataFrameConversion:
@@ -14,22 +16,16 @@ class TestPandasDataFrameConversion:
 
     def test_simple_dataframe_to_toon(self):
         """Test converting simple DataFrame to TOON."""
-        df = pd.DataFrame({
-            'name': ['Alice', 'Bob', 'Carol'],
-            'age': [30, 25, 35]
-        })
+        df = pd.DataFrame({"name": ["Alice", "Bob", "Carol"], "age": [30, 25, 35]})
 
         toon = to_toon(df)
 
         # Should use tabular format
-        assert '[3]{name,age}:' in toon or '[3]{age,name}:' in toon
+        assert "[3]{name,age}:" in toon or "[3]{age,name}:" in toon
 
     def test_simple_dataframe_roundtrip(self):
         """Test DataFrame roundtrip."""
-        df_original = pd.DataFrame({
-            'id': [1, 2, 3],
-            'value': ['a', 'b', 'c']
-        })
+        df_original = pd.DataFrame({"id": [1, 2, 3], "value": ["a", "b", "c"]})
 
         toon = to_toon(df_original)
         df_result = from_toon(toon)
@@ -40,12 +36,14 @@ class TestPandasDataFrameConversion:
 
     def test_dataframe_with_various_types(self):
         """Test DataFrame with different column types."""
-        df = pd.DataFrame({
-            'int_col': [1, 2, 3],
-            'float_col': [1.1, 2.2, 3.3],
-            'str_col': ['a', 'b', 'c'],
-            'bool_col': [True, False, True]
-        })
+        df = pd.DataFrame(
+            {
+                "int_col": [1, 2, 3],
+                "float_col": [1.1, 2.2, 3.3],
+                "str_col": ["a", "b", "c"],
+                "bool_col": [True, False, True],
+            }
+        )
 
         toon = to_toon(df)
         df_result = from_toon(toon)
@@ -63,26 +61,20 @@ class TestPandasDataFrameConversion:
 
     def test_dataframe_with_index(self):
         """Test DataFrame with custom index."""
-        df = pd.DataFrame(
-            {'value': [10, 20, 30]},
-            index=['a', 'b', 'c']
-        )
+        df = pd.DataFrame({"value": [10, 20, 30]}, index=["a", "b", "c"])
 
         toon = to_toon(df, include_index=True)
 
         # Should include index
-        assert 'a' in toon or 'index' in toon.lower()
+        assert "a" in toon or "index" in toon.lower()
 
     def test_large_dataframe(self):
         """Test large DataFrame."""
-        df = pd.DataFrame({
-            'id': range(1000),
-            'value': [f'item_{i}' for i in range(1000)]
-        })
+        df = pd.DataFrame({"id": range(1000), "value": [f"item_{i}" for i in range(1000)]})
 
         toon = to_toon(df)
 
-        assert '[1000]{' in toon
+        assert "[1000]{" in toon
 
 
 class TestPandasSeriesConversion:
@@ -90,16 +82,16 @@ class TestPandasSeriesConversion:
 
     def test_simple_series_to_toon(self):
         """Test converting Series to TOON."""
-        s = pd.Series([1, 2, 3, 4, 5], name='numbers')
+        s = pd.Series([1, 2, 3, 4, 5], name="numbers")
 
         toon = to_toon(s)
 
         # Should be an inline array
-        assert '[5]:' in toon
+        assert "[5]:" in toon
 
     def test_series_roundtrip(self):
         """Test Series roundtrip."""
-        s_original = pd.Series(['a', 'b', 'c'], name='letters')
+        s_original = pd.Series(["a", "b", "c"], name="letters")
 
         toon = to_toon(s_original)
         s_result = from_toon(toon, as_series=True)
@@ -112,25 +104,20 @@ class TestPandasOptions:
 
     def test_orient_option(self):
         """Test different orient options."""
-        df = pd.DataFrame({
-            'a': [1, 2],
-            'b': [3, 4]
-        })
+        df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
 
         # Test records orient (list of dicts)
-        toon_records = to_toon(df, orient='records')
-        assert '[2]' in toon_records
+        toon_records = to_toon(df, orient="records")
+        assert "[2]" in toon_records
 
         # Test columns orient
-        toon_columns = to_toon(df, orient='columns')
-        assert 'a' in toon_columns and 'b' in toon_columns
+        toon_columns = to_toon(df, orient="columns")
+        assert "a" in toon_columns
+        assert "b" in toon_columns
 
     def test_compression_option(self):
         """Test compression option for large DataFrames."""
-        df = pd.DataFrame({
-            'x': list(range(100)),
-            'y': list(range(100, 200))
-        })
+        df = pd.DataFrame({"x": list(range(100)), "y": list(range(100, 200))})
 
         # Default (no compression)
         toon_normal = to_toon(df)

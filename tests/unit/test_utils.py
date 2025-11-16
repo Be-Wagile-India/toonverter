@@ -1,15 +1,16 @@
 """Comprehensive tests for utility modules."""
 
-import pytest
-import tempfile
 from pathlib import Path
+
+import pytest
+
+from toonverter.core.exceptions import FileOperationError, ValidationError
 from toonverter.utils.io import read_file, write_file
 from toonverter.utils.validation import (
+    validate_data_not_empty,
     validate_file_exists,
     validate_format_name,
-    validate_data_not_empty
 )
-from toonverter.core.exceptions import FileOperationError, ValidationError
 
 
 class TestFileIO:

@@ -1,19 +1,23 @@
 """Comprehensive tests for TOML format adapter."""
 
 import pytest
+
+
 try:
     import tomli
     import tomli_w
+
     TOML_AVAILABLE = True
 except ImportError:
     try:
         import toml
+
         TOML_AVAILABLE = True
     except ImportError:
         TOML_AVAILABLE = False
 
-from toonverter.formats.toml_format import TomlFormatAdapter as TOMLFormat
 from toonverter.core.exceptions import DecodingError
+from toonverter.formats.toml_format import TomlFormatAdapter as TOMLFormat
 
 
 @pytest.mark.skipif(not TOML_AVAILABLE, reason="TOML library not installed")
@@ -47,12 +51,7 @@ class TestTOMLEncoding:
 
     def test_encode_mixed_types(self):
         """Test encoding mixed types."""
-        data = {
-            "string": "hello",
-            "number": 42,
-            "float": 3.14,
-            "bool": True
-        }
+        data = {"string": "hello", "number": 42, "float": 3.14, "bool": True}
         result = self.adapter.encode(data, {})
         # Just verify it encodes without error
         assert result
@@ -74,7 +73,7 @@ class TestTOMLDecoding:
 
     def test_decode_section(self):
         """Test decoding section."""
-        toml_str = "[database]\nhost = \"localhost\"\nport = 5432"
+        toml_str = '[database]\nhost = "localhost"\nport = 5432'
         result = self.adapter.decode(toml_str, {})
         assert result == {"database": {"host": "localhost", "port": 5432}}
 

@@ -10,43 +10,44 @@ Features:
 - Bulk operations with batching
 """
 
+from collections.abc import Iterator
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Any, Dict, Iterator, List, Optional, Type, Union
+from typing import Any
+
 
 try:
-    from sqlalchemy import inspect, MetaData, Table
-    from sqlalchemy.orm import Session, DeclarativeMeta
-    from sqlalchemy.engine import Row, Result
+    from sqlalchemy import MetaData, Table, inspect
+    from sqlalchemy.engine import Result, Row
+    from sqlalchemy.orm import DeclarativeMeta, Session
 
     SQLALCHEMY_AVAILABLE = True
 except ImportError:
     SQLALCHEMY_AVAILABLE = False
 
-from ..encoders.toon_encoder import ToonEncoder
-from ..decoders.toon_decoder import ToonDecoder
-from ..core.spec import ToonEncodeOptions, ToonDecodeOptions
-from ..core.exceptions import ConversionError
+from toonverter.core.exceptions import ConversionError
+from toonverter.core.spec import ToonDecodeOptions, ToonEncodeOptions
+from toonverter.decoders.toon_decoder import ToonDecoder
+from toonverter.encoders.toon_encoder import ToonEncoder
 
 
 def _check_sqlalchemy():
     """Check if SQLAlchemy is available."""
     if not SQLALCHEMY_AVAILABLE:
-        raise ImportError(
-            "SQLAlchemy is not installed. "
-            "Install with: pip install toonverter[sqlalchemy]"
-        )
+        msg = "SQLAlchemy is not installed. Install with: pip install toonverter[sqlalchemy]"
+        raise ImportError(msg)
 
 
 # =============================================================================
 # 1. ORM MODEL SERIALIZATION
 # =============================================================================
 
+
 def sqlalchemy_to_toon(
     instance: Any,
     include_relationships: bool = False,
-    exclude_columns: Optional[List[str]] = None,
-    options: Optional[ToonEncodeOptions] = None
+    exclude_columns: list[str] | None = None,
+    options: ToonEncodeOptions | None = None,
 ) -> str:
     """Convert SQLAlchemy model instance to TOON format.
 
@@ -80,7 +81,7 @@ def sqlalchemy_to_toon(
         mapper = inspect(instance.__class__)
 
         # Build dictionary from model
-        data: Dict[str, Any] = {}
+        data: dict[str, Any] = {}
         exclude_set = set(exclude_columns or [])
 
         # Add column values
@@ -106,8 +107,7 @@ def sqlalchemy_to_toon(
                 elif isinstance(rel_value, list):
                     # One-to-many or many-to-many
                     data[relationship.key] = [
-                        _model_to_dict(item, include_pk=True)
-                        for item in rel_value
+                        _model_to_dict(item, include_pk=True) for item in rel_value
                     ]
                 else:
                     # Many-to-one or one-to-one
@@ -118,13 +118,12 @@ def sqlalchemy_to_toon(
         return encoder.encode(data)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert SQLAlchemy model to TOON: {e}") from e
+        msg = f"Failed to convert SQLAlchemy model to TOON: {e}"
+        raise ConversionError(msg) from e
 
 
 def toon_to_sqlalchemy(
-    toon_str: str,
-    model_class: Type,
-    options: Optional[ToonDecodeOptions] = None
+    toon_str: str, model_class: type, options: ToonDecodeOptions | None = None
 ) -> Any:
     """Convert TOON format to SQLAlchemy model instance.
 
@@ -157,32 +156,30 @@ def toon_to_sqlalchemy(
         data = decoder.decode(toon_str)
 
         if not isinstance(data, dict):
-            raise ConversionError("TOON data must be an object for model conversion")
+            msg = "TOON data must be an object for model conversion"
+            raise ConversionError(msg)
 
         # Create model instance
         # Filter data to only include valid columns
         mapper = inspect(model_class)
         column_names = {col.key for col in mapper.columns}
 
-        valid_data = {
-            key: value
-            for key, value in data.items()
-            if key in column_names
-        }
+        valid_data = {key: value for key, value in data.items() if key in column_names}
 
         return model_class(**valid_data)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to SQLAlchemy model: {e}") from e
+        msg = f"Failed to convert TOON to SQLAlchemy model: {e}"
+        raise ConversionError(msg) from e
 
 
 # =============================================================================
 # 2. QUERY RESULT CONVERSION
 # =============================================================================
 
+
 def query_to_toon(
-    result: Union[Result, List[Row], List[Any]],
-    options: Optional[ToonEncodeOptions] = None
+    result: Result | list[Row] | list[Any], options: ToonEncodeOptions | None = None
 ) -> str:
     """Convert SQLAlchemy query result to TOON format.
 
@@ -217,13 +214,12 @@ def query_to_toon(
         return encoder.encode(rows)
 
     except Exception as e:
-        raise ConversionError(f"Failed to convert query result to TOON: {e}") from e
+        msg = f"Failed to convert query result to TOON: {e}"
+        raise ConversionError(msg) from e
 
 
 def bulk_query_to_toon(
-    result: Union[Result, List[Any]],
-    chunk_size: int = 1000,
-    options: Optional[ToonEncodeOptions] = None
+    result: Result | list[Any], chunk_size: int = 1000, options: ToonEncodeOptions | None = None
 ) -> Iterator[str]:
     """Convert large query result to TOON in chunks (streaming).
 
@@ -249,7 +245,7 @@ def bulk_query_to_toon(
         chunk = []
 
         # Process result in chunks
-        if hasattr(result, 'scalars'):
+        if hasattr(result, "scalars"):
             # Result object
             for row in result.scalars():
                 chunk.append(_model_to_dict(row))
@@ -271,17 +267,16 @@ def bulk_query_to_toon(
             yield encoder.encode(chunk)
 
     except Exception as e:
-        raise ConversionError(f"Failed to bulk convert query result: {e}") from e
+        msg = f"Failed to bulk convert query result: {e}"
+        raise ConversionError(msg) from e
 
 
 # =============================================================================
 # 3. SCHEMA EXPORT
 # =============================================================================
 
-def schema_to_toon(
-    metadata: MetaData,
-    options: Optional[ToonEncodeOptions] = None
-) -> str:
+
+def schema_to_toon(metadata: MetaData, options: ToonEncodeOptions | None = None) -> str:
     """Export database schema to TOON format.
 
     Args:
@@ -300,24 +295,17 @@ def schema_to_toon(
     _check_sqlalchemy()
 
     try:
-        schema_data = {
-            "tables": [
-                _table_to_dict(table)
-                for table in metadata.sorted_tables
-            ]
-        }
+        schema_data = {"tables": [_table_to_dict(table) for table in metadata.sorted_tables]}
 
         encoder = ToonEncoder(options)
         return encoder.encode(schema_data)
 
     except Exception as e:
-        raise ConversionError(f"Failed to export schema to TOON: {e}") from e
+        msg = f"Failed to export schema to TOON: {e}"
+        raise ConversionError(msg) from e
 
 
-def table_to_toon(
-    table: Table,
-    options: Optional[ToonEncodeOptions] = None
-) -> str:
+def table_to_toon(table: Table, options: ToonEncodeOptions | None = None) -> str:
     """Export single table schema to TOON format.
 
     Args:
@@ -342,19 +330,21 @@ def table_to_toon(
         return encoder.encode(table_data)
 
     except Exception as e:
-        raise ConversionError(f"Failed to export table to TOON: {e}") from e
+        msg = f"Failed to export table to TOON: {e}"
+        raise ConversionError(msg) from e
 
 
 # =============================================================================
 # 4. BULK OPERATIONS
 # =============================================================================
 
+
 def bulk_insert_from_toon(
     toon_str: str,
-    model_class: Type,
+    model_class: type,
     session: Session,
     chunk_size: int = 1000,
-    options: Optional[ToonDecodeOptions] = None
+    options: ToonDecodeOptions | None = None,
 ) -> int:
     """Bulk insert records from TOON format.
 
@@ -391,7 +381,8 @@ def bulk_insert_from_toon(
         data = decoder.decode(toon_str)
 
         if not isinstance(data, list):
-            raise ConversionError("TOON data must be an array for bulk insert")
+            msg = "TOON data must be an array for bulk insert"
+            raise ConversionError(msg)
 
         # Get valid column names
         mapper = inspect(model_class)
@@ -401,7 +392,7 @@ def bulk_insert_from_toon(
 
         # Process in chunks
         for i in range(0, len(data), chunk_size):
-            chunk = data[i:i + chunk_size]
+            chunk = data[i : i + chunk_size]
 
             # Filter to valid columns and create instances
             instances = []
@@ -409,11 +400,7 @@ def bulk_insert_from_toon(
                 if not isinstance(record, dict):
                     continue
 
-                valid_data = {
-                    key: value
-                    for key, value in record.items()
-                    if key in column_names
-                }
+                valid_data = {key: value for key, value in record.items() if key in column_names}
                 instances.append(model_class(**valid_data))
 
             # Bulk insert chunk
@@ -425,7 +412,8 @@ def bulk_insert_from_toon(
 
     except Exception as e:
         session.rollback()
-        raise ConversionError(f"Failed to bulk insert from TOON: {e}") from e
+        msg = f"Failed to bulk insert from TOON: {e}"
+        raise ConversionError(msg) from e
 
 
 def export_table_to_toon(
@@ -433,8 +421,8 @@ def export_table_to_toon(
     session: Session,
     stream: bool = False,
     chunk_size: int = 1000,
-    options: Optional[ToonEncodeOptions] = None
-) -> Union[str, Iterator[str]]:
+    options: ToonEncodeOptions | None = None,
+) -> str | Iterator[str]:
     """Export entire table to TOON format.
 
     Args:
@@ -475,10 +463,7 @@ def export_table_to_toon(
                         break
 
                     # Convert to dicts
-                    row_dicts = [
-                        {key: value for key, value in row._mapping.items()}
-                        for row in rows
-                    ]
+                    row_dicts = [dict(row._mapping.items()) for row in rows]
 
                     encoder = ToonEncoder(options)
                     yield encoder.encode(row_dicts)
@@ -486,27 +471,25 @@ def export_table_to_toon(
                     offset += chunk_size
 
             return stream_table()
-        else:
-            # Load entire table
-            query = text(f"SELECT * FROM {table_name}")
-            result = session.execute(query)
-            rows = result.fetchall()
+        # Load entire table
+        query = text(f"SELECT * FROM {table_name}")
+        result = session.execute(query)
+        rows = result.fetchall()
 
-            row_dicts = [
-                {key: value for key, value in row._mapping.items()}
-                for row in rows
-            ]
+        row_dicts = [dict(row._mapping.items()) for row in rows]
 
-            encoder = ToonEncoder(options)
-            return encoder.encode(row_dicts)
+        encoder = ToonEncoder(options)
+        return encoder.encode(row_dicts)
 
     except Exception as e:
-        raise ConversionError(f"Failed to export table to TOON: {e}") from e
+        msg = f"Failed to export table to TOON: {e}"
+        raise ConversionError(msg) from e
 
 
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
+
 
 def _convert_sqlalchemy_value(value: Any) -> Any:
     """Convert SQLAlchemy-specific types to JSON-compatible types.
@@ -519,18 +502,17 @@ def _convert_sqlalchemy_value(value: Any) -> Any:
     """
     if value is None:
         return None
-    elif isinstance(value, (datetime, date, time)):
+    if isinstance(value, (datetime, date, time)):
         return value.isoformat()
-    elif isinstance(value, Decimal):
+    if isinstance(value, Decimal):
         return float(value)
-    elif isinstance(value, bytes):
+    if isinstance(value, bytes):
         # Convert bytes to hex string
         return value.hex()
-    else:
-        return value
+    return value
 
 
-def _model_to_dict(instance: Any, include_pk: bool = False) -> Dict[str, Any]:
+def _model_to_dict(instance: Any, include_pk: bool = False) -> dict[str, Any]:
     """Convert model instance to dictionary.
 
     Args:
@@ -553,7 +535,7 @@ def _model_to_dict(instance: Any, include_pk: bool = False) -> Dict[str, Any]:
     return data
 
 
-def _result_to_dicts(result: Union[Result, List[Any]]) -> List[Dict[str, Any]]:
+def _result_to_dicts(result: Result | list[Any]) -> list[dict[str, Any]]:
     """Convert SQLAlchemy result to list of dictionaries.
 
     Args:
@@ -564,32 +546,36 @@ def _result_to_dicts(result: Union[Result, List[Any]]) -> List[Dict[str, Any]]:
     """
     rows = []
 
-    if hasattr(result, 'scalars'):
+    if hasattr(result, "scalars"):
         # Result object with ORM instances
         for instance in result.scalars():
             rows.append(_model_to_dict(instance))
-    elif hasattr(result, 'mappings'):
+    elif hasattr(result, "mappings"):
         # Result object with Row mappings
         for row in result.mappings():
             rows.append(dict(row))
     elif isinstance(result, list):
         # List of instances or rows
-        if result and hasattr(result[0], '__table__'):
+        if result and hasattr(result[0], "__table__"):
             # List of ORM instances
             rows = [_model_to_dict(instance) for instance in result]
         else:
             # List of Row objects or dicts
             for row in result:
-                if hasattr(row, '_mapping'):
-                    rows.append({key: _convert_sqlalchemy_value(value)
-                                for key, value in row._mapping.items()})
+                if hasattr(row, "_mapping"):
+                    rows.append(
+                        {
+                            key: _convert_sqlalchemy_value(value)
+                            for key, value in row._mapping.items()
+                        }
+                    )
                 else:
                     rows.append(row)
 
     return rows
 
 
-def _table_to_dict(table: Table) -> Dict[str, Any]:
+def _table_to_dict(table: Table) -> dict[str, Any]:
     """Convert Table object to dictionary schema.
 
     Args:
@@ -626,7 +612,7 @@ def _table_to_dict(table: Table) -> Dict[str, Any]:
                 "referred_columns": [fk.column.name],
             }
             for fk in table.foreign_keys
-        ]
+        ],
     }
 
 
@@ -635,16 +621,16 @@ def _table_to_dict(table: Table) -> Dict[str, Any]:
 # =============================================================================
 
 __all__ = [
-    # ORM
-    "sqlalchemy_to_toon",
-    "toon_to_sqlalchemy",
-    # Queries
-    "query_to_toon",
-    "bulk_query_to_toon",
-    # Schema
-    "schema_to_toon",
-    "table_to_toon",
     # Bulk operations
     "bulk_insert_from_toon",
+    "bulk_query_to_toon",
     "export_table_to_toon",
+    # Queries
+    "query_to_toon",
+    # Schema
+    "schema_to_toon",
+    # ORM
+    "sqlalchemy_to_toon",
+    "table_to_toon",
+    "toon_to_sqlalchemy",
 ]

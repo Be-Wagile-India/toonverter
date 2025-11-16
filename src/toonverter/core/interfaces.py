@@ -5,7 +5,7 @@ Adapter patterns for extensibility and loose coupling.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 from .types import DecodeOptions, EncodeOptions, TokenAnalysis
 
@@ -25,10 +25,9 @@ class FormatAdapter(ABC):
         Returns:
             Format identifier string
         """
-        pass
 
     @abstractmethod
-    def encode(self, data: Any, options: Optional[EncodeOptions] = None) -> str:
+    def encode(self, data: Any, options: EncodeOptions | None = None) -> str:
         """Encode data to this format.
 
         Args:
@@ -41,10 +40,9 @@ class FormatAdapter(ABC):
         Raises:
             EncodingError: If encoding fails
         """
-        pass
 
     @abstractmethod
-    def decode(self, data_str: str, options: Optional[DecodeOptions] = None) -> Any:
+    def decode(self, data_str: str, options: DecodeOptions | None = None) -> Any:
         """Decode data from this format.
 
         Args:
@@ -57,7 +55,6 @@ class FormatAdapter(ABC):
         Raises:
             DecodingError: If decoding fails
         """
-        pass
 
     @abstractmethod
     def validate(self, data_str: str) -> bool:
@@ -69,7 +66,6 @@ class FormatAdapter(ABC):
         Returns:
             True if valid, False otherwise
         """
-        pass
 
     def supports_streaming(self) -> bool:
         """Check if adapter supports streaming for large files.
@@ -91,7 +87,6 @@ class TokenCounter(ABC):
         Returns:
             Model identifier (e.g., 'cl100k_base', 'gpt-4')
         """
-        pass
 
     @abstractmethod
     def count_tokens(self, text: str) -> int:
@@ -106,7 +101,6 @@ class TokenCounter(ABC):
         Raises:
             TokenCountError: If counting fails
         """
-        pass
 
     @abstractmethod
     def analyze(self, text: str, format_name: str) -> TokenAnalysis:
@@ -122,7 +116,6 @@ class TokenCounter(ABC):
         Raises:
             TokenCountError: If analysis fails
         """
-        pass
 
 
 class Plugin(ABC):
@@ -140,7 +133,6 @@ class Plugin(ABC):
         Returns:
             Unique plugin identifier
         """
-        pass
 
     @property
     @abstractmethod
@@ -150,7 +142,6 @@ class Plugin(ABC):
         Returns:
             Version string (e.g., '1.0.0')
         """
-        pass
 
     @abstractmethod
     def register(self, registry: "FormatRegistry") -> None:
@@ -162,15 +153,12 @@ class Plugin(ABC):
         Raises:
             PluginError: If registration fails
         """
-        pass
 
     def initialize(self) -> None:
         """Optional initialization hook called after registration."""
-        pass
 
     def cleanup(self) -> None:
         """Optional cleanup hook called on shutdown."""
-        pass
 
 
 class FormatRegistry(ABC):
@@ -190,7 +178,6 @@ class FormatRegistry(ABC):
         Raises:
             ValueError: If format already registered
         """
-        pass
 
     @abstractmethod
     def get(self, format_name: str) -> FormatAdapter:
@@ -205,7 +192,6 @@ class FormatRegistry(ABC):
         Raises:
             FormatNotSupportedError: If format not found
         """
-        pass
 
     @abstractmethod
     def unregister(self, format_name: str) -> None:
@@ -217,7 +203,6 @@ class FormatRegistry(ABC):
         Raises:
             FormatNotSupportedError: If format not found
         """
-        pass
 
     @abstractmethod
     def list_formats(self) -> list[str]:
@@ -226,7 +211,6 @@ class FormatRegistry(ABC):
         Returns:
             List of format identifiers
         """
-        pass
 
     @abstractmethod
     def is_supported(self, format_name: str) -> bool:
@@ -238,4 +222,3 @@ class FormatRegistry(ABC):
         Returns:
             True if format is registered
         """
-        pass

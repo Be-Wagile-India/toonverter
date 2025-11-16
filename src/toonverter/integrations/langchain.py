@@ -1,11 +1,12 @@
 """LangChain integration."""
 
-from typing import Any, Optional
+from typing import Any
 
-from ..core.exceptions import ConversionError
-from ..core.types import DecodeOptions, EncodeOptions
-from ..decoders import decode
-from ..encoders import encode
+from toonverter.core.exceptions import ConversionError
+from toonverter.core.types import DecodeOptions, EncodeOptions
+from toonverter.decoders import decode
+from toonverter.encoders import encode
+
 
 # Optional dependency
 try:
@@ -17,9 +18,7 @@ except ImportError:
     Document = Any  # type: ignore
 
 
-def langchain_to_toon(
-    document: "Document", options: Optional[EncodeOptions] = None
-) -> str:
+def langchain_to_toon(document: "Document", options: EncodeOptions | None = None) -> str:
     """Convert LangChain Document to TOON format.
 
     Args:
@@ -39,20 +38,18 @@ def langchain_to_toon(
         >>> toon_str = langchain_to_toon(doc)
     """
     if not LANGCHAIN_AVAILABLE:
-        raise ImportError(
-            "langchain is required. Install with: pip install toon-converter[integrations]"
-        )
+        msg = "langchain is required. Install with: pip install toon-converter[integrations]"
+        raise ImportError(msg)
 
     try:
         data = {"page_content": document.page_content, "metadata": document.metadata}
         return encode(data, options)
     except Exception as e:
-        raise ConversionError(f"Failed to convert LangChain Document to TOON: {e}") from e
+        msg = f"Failed to convert LangChain Document to TOON: {e}"
+        raise ConversionError(msg) from e
 
 
-def toon_to_langchain(
-    toon_str: str, options: Optional[DecodeOptions] = None
-) -> "Document":
+def toon_to_langchain(toon_str: str, options: DecodeOptions | None = None) -> "Document":
     """Convert TOON format to LangChain Document.
 
     Args:
@@ -71,9 +68,8 @@ def toon_to_langchain(
         >>> doc = toon_to_langchain(toon_str)
     """
     if not LANGCHAIN_AVAILABLE:
-        raise ImportError(
-            "langchain is required. Install with: pip install toon-converter[integrations]"
-        )
+        msg = "langchain is required. Install with: pip install toon-converter[integrations]"
+        raise ImportError(msg)
 
     try:
         data = decode(toon_str, options)
@@ -81,7 +77,8 @@ def toon_to_langchain(
             page_content = data.get("page_content", "")
             metadata = data.get("metadata", {})
             return Document(page_content=page_content, metadata=metadata)
-        else:
-            raise ConversionError("TOON data must be a dictionary with page_content and metadata")
+        msg = "TOON data must be a dictionary with page_content and metadata"
+        raise ConversionError(msg)
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to LangChain Document: {e}") from e
+        msg = f"Failed to convert TOON to LangChain Document: {e}"
+        raise ConversionError(msg) from e

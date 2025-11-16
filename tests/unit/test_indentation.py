@@ -1,11 +1,8 @@
 """Comprehensive tests for indentation management."""
 
 import pytest
-from toonverter.encoders.indentation import (
-    IndentationManager,
-    detect_indentation,
-    calculate_depth
-)
+
+from toonverter.encoders.indentation import IndentationManager, calculate_depth, detect_indentation
 
 
 class TestIndentationManagerInit:

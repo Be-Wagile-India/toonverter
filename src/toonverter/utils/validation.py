@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any
 
-from ..core.exceptions import ValidationError
+from toonverter.core.exceptions import ValidationError
 
 
 def validate_file_exists(file_path: str) -> Path:
@@ -20,9 +20,11 @@ def validate_file_exists(file_path: str) -> Path:
     """
     path = Path(file_path)
     if not path.exists():
-        raise ValidationError(f"File not found: {file_path}")
+        msg = f"File not found: {file_path}"
+        raise ValidationError(msg)
     if not path.is_file():
-        raise ValidationError(f"Path is not a file: {file_path}")
+        msg = f"Path is not a file: {file_path}"
+        raise ValidationError(msg)
     return path
 
 
@@ -39,7 +41,8 @@ def validate_format_name(format_name: str) -> str:
         ValidationError: If format name is invalid
     """
     if not format_name:
-        raise ValidationError("Format name cannot be empty")
+        msg = "Format name cannot be empty"
+        raise ValidationError(msg)
     return format_name.lower().strip()
 
 
@@ -53,6 +56,8 @@ def validate_data_not_empty(data: Any) -> None:
         ValidationError: If data is empty
     """
     if data is None:
-        raise ValidationError("Data cannot be None")
+        msg = "Data cannot be None"
+        raise ValidationError(msg)
     if isinstance(data, (str, list, dict)) and not data:
-        raise ValidationError("Data cannot be empty")
+        msg = "Data cannot be empty"
+        raise ValidationError(msg)

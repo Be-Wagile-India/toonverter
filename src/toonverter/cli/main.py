@@ -2,7 +2,7 @@
 
 import sys
 from pathlib import Path
-from typing import Optional
+
 
 # Optional dependency
 try:
@@ -19,7 +19,6 @@ if CLI_AVAILABLE:
     @click.version_option()
     def cli() -> None:
         """TOON Converter - Token-Optimized Object Notation for LLMs."""
-        pass
 
     @cli.command()
     @click.argument("source", type=click.Path(exists=True))
@@ -50,7 +49,7 @@ if CLI_AVAILABLE:
     @click.argument("input_file", type=click.Path(exists=True))
     @click.option("--output", "-o", type=click.Path(), help="Output file")
     @click.option("--compact", is_flag=True, help="Use compact encoding")
-    def encode(input_file: str, output: Optional[str], compact: bool) -> None:
+    def encode(input_file: str, output: str | None, compact: bool) -> None:
         """Encode data to TOON format."""
         import toonverter as toon
 
@@ -75,7 +74,7 @@ if CLI_AVAILABLE:
     @click.argument("input_file", type=click.Path(exists=True))
     @click.option("--output", "-o", type=click.Path(), help="Output file")
     @click.option("--format", "-f", default="json", help="Output format")
-    def decode(input_file: str, output: Optional[str], format: str) -> None:
+    def decode(input_file: str, output: str | None, format: str) -> None:
         """Decode TOON format to other formats."""
         import toonverter as toon
 
@@ -95,7 +94,11 @@ if CLI_AVAILABLE:
     @cli.command()
     @click.argument("input_file", type=click.Path(exists=True))
     @click.option(
-        "--compare", "-c", multiple=True, default=["json", "yaml", "toon"], help="Formats to compare"
+        "--compare",
+        "-c",
+        multiple=True,
+        default=["json", "yaml", "toon"],
+        help="Formats to compare",
     )
     @click.option("--model", "-m", default="gpt-4", help="Model for token counting")
     def analyze(input_file: str, compare: tuple[str, ...], model: str) -> None:
@@ -111,7 +114,7 @@ if CLI_AVAILABLE:
             report = toon.analyze(data, compare_formats=list(compare))
 
             # Display report
-            from ..analysis import format_report
+            from toonverter.analysis import format_report
 
             click.echo(format_report(report, format="text", detailed=False))
         except Exception as e:
@@ -131,11 +134,6 @@ else:
     # CLI not available - provide error message
     def cli() -> None:
         """CLI requires click package."""
-        print(
-            "Error: CLI requires 'click' package.\n"
-            "Install with: pip install toonverter[cli]",
-            file=sys.stderr,
-        )
         sys.exit(1)
 
 

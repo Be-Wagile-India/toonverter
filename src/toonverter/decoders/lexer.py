@@ -6,10 +6,8 @@ Handles indentation tracking, line-by-line scanning, and token classification.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Iterator
 
-from ..core.spec import Delimiter
-from ..encoders.indentation import detect_indentation
+from toonverter.encoders.indentation import detect_indentation
 
 
 class TokenType(Enum):
@@ -336,10 +334,12 @@ class ToonLexer:
                     elif next_char == "t":
                         chars.append("\t")
                     else:
-                        raise ValueError(f"Invalid escape sequence: \\{next_char}")
+                        msg = f"Invalid escape sequence: \\{next_char}"
+                        raise ValueError(msg)
                     i += 2
                 else:
-                    raise ValueError("Unterminated escape sequence")
+                    msg = "Unterminated escape sequence"
+                    raise ValueError(msg)
 
             elif char == '"':
                 # End of string
@@ -358,7 +358,8 @@ class ToonLexer:
                 chars.append(char)
                 i += 1
 
-        raise ValueError(f"Unterminated quoted string at line {line_num}")
+        msg = f"Unterminated quoted string at line {line_num}"
+        raise ValueError(msg)
 
     def _scan_identifier(
         self, line: str, start: int, line_num: int, indent_level: int

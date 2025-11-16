@@ -1,10 +1,9 @@
 """Pandas DataFrame integration."""
 
-from typing import Any, Optional
+from toonverter.core.exceptions import ConversionError
+from toonverter.core.types import EncodeOptions
+from toonverter.encoders import encode
 
-from ..core.exceptions import ConversionError
-from ..core.types import EncodeOptions
-from ..encoders import encode
 
 # Optional dependency
 try:
@@ -15,7 +14,7 @@ except ImportError:
     PANDAS_AVAILABLE = False
 
 
-def pandas_to_toon(df: "pd.DataFrame", options: Optional[EncodeOptions] = None) -> str:
+def pandas_to_toon(df: "pd.DataFrame", options: EncodeOptions | None = None) -> str:
     """Convert pandas DataFrame to TOON format.
 
     This uses the optimized tabular encoding for maximum efficiency.
@@ -37,7 +36,8 @@ def pandas_to_toon(df: "pd.DataFrame", options: Optional[EncodeOptions] = None) 
         >>> toon_str = pandas_to_toon(df)
     """
     if not PANDAS_AVAILABLE:
-        raise ImportError("pandas is required. Install with: pip install toon-converter[integrations]")
+        msg = "pandas is required. Install with: pip install toon-converter[integrations]"
+        raise ImportError(msg)
 
     try:
         # Convert DataFrame to list of dicts (optimal for tabular TOON encoding)
@@ -45,7 +45,8 @@ def pandas_to_toon(df: "pd.DataFrame", options: Optional[EncodeOptions] = None) 
         options = options or EncodeOptions.tabular()
         return encode(data, options)
     except Exception as e:
-        raise ConversionError(f"Failed to convert DataFrame to TOON: {e}") from e
+        msg = f"Failed to convert DataFrame to TOON: {e}"
+        raise ConversionError(msg) from e
 
 
 def toon_to_pandas(toon_str: str) -> "pd.DataFrame":
@@ -66,16 +67,18 @@ def toon_to_pandas(toon_str: str) -> "pd.DataFrame":
         >>> df = toon_to_pandas(toon_str)
     """
     if not PANDAS_AVAILABLE:
-        raise ImportError("pandas is required. Install with: pip install toon-converter[integrations]")
+        msg = "pandas is required. Install with: pip install toon-converter[integrations]"
+        raise ImportError(msg)
 
     try:
-        from ..decoders import decode
+        from toonverter.decoders import decode
 
         data = decode(toon_str)
 
         if isinstance(data, list) and data and isinstance(data[0], dict):
             return pd.DataFrame(data)
-        else:
-            raise ConversionError("TOON data must be in tabular format (list of dicts)")
+        msg = "TOON data must be in tabular format (list of dicts)"
+        raise ConversionError(msg)
     except Exception as e:
-        raise ConversionError(f"Failed to convert TOON to DataFrame: {e}") from e
+        msg = f"Failed to convert TOON to DataFrame: {e}"
+        raise ConversionError(msg) from e

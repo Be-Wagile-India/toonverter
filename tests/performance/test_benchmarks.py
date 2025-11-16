@@ -1,10 +1,9 @@
 """Performance benchmarks for TOON encoding/decoding."""
 
-import pytest
-import time
 import json
-from toonverter.encoders.toon_encoder import ToonEncoder
+
 from toonverter.decoders.toon_decoder import ToonDecoder
+from toonverter.encoders.toon_encoder import ToonEncoder
 
 
 class TestEncodingPerformance:
@@ -20,7 +19,7 @@ class TestEncodingPerformance:
 
         result = benchmark(self.encoder.encode, data)
 
-        assert 'Alice' in result
+        assert "Alice" in result
 
     def test_encode_medium_array(self, benchmark):
         """Benchmark encoding medium array."""
@@ -28,20 +27,19 @@ class TestEncodingPerformance:
 
         result = benchmark(self.encoder.encode, data)
 
-        assert '[1000]:' in result
+        assert "[1000]:" in result
 
     def test_encode_large_structure(self, benchmark):
         """Benchmark encoding large nested structure."""
         data = {
             "users": [
-                {"id": i, "name": f"User{i}", "email": f"user{i}@example.com"}
-                for i in range(1000)
+                {"id": i, "name": f"User{i}", "email": f"user{i}@example.com"} for i in range(1000)
             ]
         }
 
         result = benchmark(self.encoder.encode, data)
 
-        assert '[1000]' in result
+        assert "[1000]" in result
 
     def test_encode_deeply_nested(self, benchmark):
         """Benchmark encoding deeply nested structure."""
@@ -70,7 +68,7 @@ class TestDecodingPerformance:
 
         result = benchmark(self.decoder.decode, toon)
 
-        assert result['name'] == 'Alice'
+        assert result["name"] == "Alice"
 
     def test_decode_medium_array(self, benchmark):
         """Benchmark decoding medium array."""
@@ -79,21 +77,16 @@ class TestDecodingPerformance:
 
         result = benchmark(self.decoder.decode, toon)
 
-        assert len(result['items']) == 1000
+        assert len(result["items"]) == 1000
 
     def test_decode_large_tabular(self, benchmark):
         """Benchmark decoding large tabular array."""
-        data = {
-            "users": [
-                {"id": i, "name": f"User{i}"}
-                for i in range(1000)
-            ]
-        }
+        data = {"users": [{"id": i, "name": f"User{i}"} for i in range(1000)]}
         toon = self.encoder.encode(data)
 
         result = benchmark(self.decoder.decode, toon)
 
-        assert len(result['users']) == 1000
+        assert len(result["users"]) == 1000
 
 
 class TestRoundtripPerformance:
@@ -126,7 +119,7 @@ class TestRoundtripPerformance:
 
         result = benchmark(roundtrip)
 
-        assert len(result['items']) == 100
+        assert len(result["items"]) == 100
 
 
 class TestCompressionRatio:
@@ -149,16 +142,13 @@ class TestCompressionRatio:
         # TOON should be smaller or equal
         assert toon_len <= json_len
 
-        print(f"\nJSON: {json_len} bytes, TOON: {toon_len} bytes")
-        print(f"Savings: {((json_len - toon_len) / json_len * 100):.1f}%")
-
     def test_array_compression(self):
         """Test compression ratio for arrays."""
         data = {
             "users": [
                 {"name": "Alice", "age": 30},
                 {"name": "Bob", "age": 25},
-                {"name": "Carol", "age": 35}
+                {"name": "Carol", "age": 35},
             ]
         }
 
@@ -171,21 +161,14 @@ class TestCompressionRatio:
         # TOON tabular should be much smaller
         assert toon_len < json_len
 
-        savings = ((json_len - toon_len) / json_len * 100)
-        print(f"\nJSON: {json_len} bytes, TOON: {toon_len} bytes")
-        print(f"Savings: {savings:.1f}%")
+        savings = (json_len - toon_len) / json_len * 100
 
         # Should achieve at least 20% savings on uniform data
         assert savings >= 20
 
     def test_large_dataset_compression(self):
         """Test compression ratio for large dataset."""
-        data = {
-            "records": [
-                {"id": i, "name": f"Record{i}", "value": i * 10}
-                for i in range(1000)
-            ]
-        }
+        data = {"records": [{"id": i, "name": f"Record{i}", "value": i * 10} for i in range(1000)]}
 
         toon = self.encoder.encode(data)
         json_str = json.dumps(data)
@@ -193,9 +176,7 @@ class TestCompressionRatio:
         toon_len = len(toon)
         json_len = len(json_str)
 
-        savings = ((json_len - toon_len) / json_len * 100)
-        print(f"\nLarge dataset - JSON: {json_len} bytes, TOON: {toon_len} bytes")
-        print(f"Savings: {savings:.1f}%")
+        savings = (json_len - toon_len) / json_len * 100
 
         # Should achieve significant savings on large uniform data
         assert savings >= 30
@@ -212,12 +193,7 @@ class TestMemoryUsage:
         decoder = ToonDecoder()
 
         # Create large structure
-        data = {
-            "items": [
-                {"id": i, "data": f"{'x' * 100}"}
-                for i in range(1000)
-            ]
-        }
+        data = {"items": [{"id": i, "data": f"{'x' * 100}"} for i in range(1000)]}
 
         # Encode
         toon = encoder.encode(data)
@@ -226,11 +202,8 @@ class TestMemoryUsage:
         result = decoder.decode(toon)
 
         # Should complete without excessive memory usage
-        assert len(result['items']) == 1000
+        assert len(result["items"]) == 1000
 
         # Measure sizes
-        toon_size = sys.getsizeof(toon)
-        json_size = sys.getsizeof(json.dumps(data))
-
-        print(f"\nTOON string size: {toon_size} bytes")
-        print(f"JSON string size: {json_size} bytes")
+        sys.getsizeof(toon)
+        sys.getsizeof(json.dumps(data))

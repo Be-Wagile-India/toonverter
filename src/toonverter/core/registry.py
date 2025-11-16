@@ -45,16 +45,19 @@ class DefaultFormatRegistry(FormatRegistry):
             ValueError: If format already registered or invalid
         """
         if not format_name:
-            raise ValueError("Format name cannot be empty")
+            msg = "Format name cannot be empty"
+            raise ValueError(msg)
 
         if not isinstance(adapter, FormatAdapter):
-            raise TypeError(f"Adapter must be a FormatAdapter instance, got {type(adapter)}")
+            msg = f"Adapter must be a FormatAdapter instance, got {type(adapter)}"
+            raise TypeError(msg)
 
         format_name = format_name.lower()
 
         with self._adapter_lock:
             if format_name in self._adapters:
-                raise ValueError(f"Format '{format_name}' is already registered")
+                msg = f"Format '{format_name}' is already registered"
+                raise ValueError(msg)
             self._adapters[format_name] = adapter
 
     def get(self, format_name: str) -> FormatAdapter:
@@ -70,16 +73,18 @@ class DefaultFormatRegistry(FormatRegistry):
             FormatNotSupportedError: If format not found
         """
         if not format_name:
-            raise FormatNotSupportedError("Format name cannot be empty")
+            msg = "Format name cannot be empty"
+            raise FormatNotSupportedError(msg)
 
         format_name = format_name.lower()
 
         with self._adapter_lock:
             if format_name not in self._adapters:
-                raise FormatNotSupportedError(
+                msg = (
                     f"Format '{format_name}' is not supported. "
                     f"Available formats: {', '.join(sorted(self._adapters.keys()))}"
                 )
+                raise FormatNotSupportedError(msg)
             return self._adapters[format_name]
 
     def unregister(self, format_name: str) -> None:
@@ -95,7 +100,8 @@ class DefaultFormatRegistry(FormatRegistry):
 
         with self._adapter_lock:
             if format_name not in self._adapters:
-                raise FormatNotSupportedError(f"Format '{format_name}' is not registered")
+                msg = f"Format '{format_name}' is not registered"
+                raise FormatNotSupportedError(msg)
             del self._adapters[format_name]
 
     def list_formats(self) -> list[str]:

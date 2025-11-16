@@ -5,10 +5,8 @@ from https://github.com/toon-format/spec
 """
 
 import pytest
-
 from src.toonverter.decoders.toon_decoder import ToonDecoder
 from src.toonverter.encoders.toon_encoder import ToonEncoder
-from src.toonverter.core.spec import ToonDecodeOptions, ToonEncodeOptions
 
 
 class TestEmptyDocuments:
@@ -62,8 +60,8 @@ class TestRootForms:
         # Test various primitives
         assert decoder.decode("42") == 42
         assert decoder.decode("3.14") == 3.14
-        assert decoder.decode("true") == True
-        assert decoder.decode("false") == False
+        assert decoder.decode("true")
+        assert not decoder.decode("false")
         assert decoder.decode("null") is None
         assert decoder.decode("hello") == "hello"
 
@@ -92,7 +90,7 @@ class TestArrayForms:
             "users": [
                 {"name": "Alice", "age": 30},
                 {"name": "Bob", "age": 25},
-                {"name": "Carol", "age": 35}
+                {"name": "Carol", "age": 35},
             ]
         }
         toon = encoder.encode(data)
@@ -250,17 +248,7 @@ class TestNestedStructures:
         encoder = ToonEncoder()
         decoder = ToonDecoder()
 
-        data = {
-            "level1": {
-                "level2": {
-                    "level3": {
-                        "level4": {
-                            "value": "deep"
-                        }
-                    }
-                }
-            }
-        }
+        data = {"level1": {"level2": {"level3": {"level4": {"value": "deep"}}}}}
 
         toon = encoder.encode(data)
         decoded = decoder.decode(toon)
@@ -272,13 +260,7 @@ class TestNestedStructures:
         encoder = ToonEncoder()
         decoder = ToonDecoder()
 
-        data = {
-            "matrix": [
-                [1, 2, 3],
-                [4, 5, 6],
-                [7, 8, 9]
-            ]
-        }
+        data = {"matrix": [[1, 2, 3], [4, 5, 6], [7, 8, 9]]}
 
         toon = encoder.encode(data)
         decoded = decoder.decode(toon)
@@ -295,19 +277,13 @@ class TestNestedStructures:
                 {
                     "name": "Alice",
                     "roles": ["admin", "user"],
-                    "metadata": {
-                        "created": "2024-01-01",
-                        "active": True
-                    }
+                    "metadata": {"created": "2024-01-01", "active": True},
                 },
                 {
                     "name": "Bob",
                     "roles": ["user"],
-                    "metadata": {
-                        "created": "2024-01-02",
-                        "active": False
-                    }
-                }
+                    "metadata": {"created": "2024-01-02", "active": False},
+                },
             ]
         }
 
@@ -346,15 +322,9 @@ class TestRoundtripConsistency:
         decoder = ToonDecoder()
 
         original = {
-            "users": [
-                {"name": "Alice", "age": 30},
-                {"name": "Bob", "age": 25}
-            ],
-            "metadata": {
-                "count": 2,
-                "active": True
-            },
-            "tags": ["python", "toon", "encoding"]
+            "users": [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}],
+            "metadata": {"count": 2, "active": True},
+            "tags": ["python", "toon", "encoding"],
         }
 
         # Multiple roundtrips
@@ -392,19 +362,19 @@ class TestSpecEdgeCases:
         decoder = ToonDecoder()
 
         # NaN should become null
-        data_nan = {"value": float('nan')}
+        data_nan = {"value": float("nan")}
         toon_nan = encoder.encode(data_nan)
         assert "null" in toon_nan
         assert decoder.decode(toon_nan)["value"] is None
 
         # Infinity should become null
-        data_inf = {"value": float('inf')}
+        data_inf = {"value": float("inf")}
         toon_inf = encoder.encode(data_inf)
         assert "null" in toon_inf
         assert decoder.decode(toon_inf)["value"] is None
 
         # Negative infinity should become null
-        data_neg_inf = {"value": float('-inf')}
+        data_neg_inf = {"value": float("-inf")}
         toon_neg_inf = encoder.encode(data_neg_inf)
         assert "null" in toon_neg_inf
         assert decoder.decode(toon_neg_inf)["value"] is None

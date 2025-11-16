@@ -1,8 +1,7 @@
 """Tests for base format adapter."""
 
-import pytest
+from toonverter.core.types import DecodeOptions, EncodeOptions
 from toonverter.formats.base import BaseFormatAdapter
-from toonverter.core.types import EncodeOptions, DecodeOptions
 
 
 class MockFormatAdapter(BaseFormatAdapter):
@@ -48,12 +47,7 @@ class TestBaseFormatAdapter:
 
     def test_get_encode_kwargs_with_options(self):
         """Test _get_encode_kwargs with EncodeOptions."""
-        options = EncodeOptions(
-            indent=2,
-            compact=False,
-            sort_keys=True,
-            ensure_ascii=False
-        )
+        options = EncodeOptions(indent=2, compact=False, sort_keys=True, ensure_ascii=False)
         result = self.adapter._get_encode_kwargs(options)
 
         assert result["indent"] == 2

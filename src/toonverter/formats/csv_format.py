@@ -2,10 +2,11 @@
 
 import csv
 import io
-from typing import Any, Optional
+from typing import Any
 
-from ..core.exceptions import DecodingError, EncodingError
-from ..core.types import DecodeOptions, EncodeOptions
+from toonverter.core.exceptions import DecodingError, EncodingError
+from toonverter.core.types import DecodeOptions, EncodeOptions
+
 from .base import BaseFormatAdapter
 
 
@@ -19,7 +20,7 @@ class CsvFormatAdapter(BaseFormatAdapter):
         """Initialize CSV format adapter."""
         super().__init__("csv")
 
-    def encode(self, data: Any, options: Optional[EncodeOptions] = None) -> str:
+    def encode(self, data: Any, options: EncodeOptions | None = None) -> str:
         """Encode data to CSV format.
 
         Args:
@@ -33,7 +34,8 @@ class CsvFormatAdapter(BaseFormatAdapter):
             EncodingError: If encoding fails or data is not tabular
         """
         if not isinstance(data, list) or not data:
-            raise EncodingError("CSV format requires non-empty list data")
+            msg = "CSV format requires non-empty list data"
+            raise EncodingError(msg)
 
         delimiter = options.delimiter if options else ","
 
@@ -54,13 +56,15 @@ class CsvFormatAdapter(BaseFormatAdapter):
                 writer = csv.writer(output, delimiter=delimiter)
                 writer.writerows(data)
             else:
-                raise EncodingError("CSV format requires list of dictionaries or list of lists")
+                msg = "CSV format requires list of dictionaries or list of lists"
+                raise EncodingError(msg)
 
             return output.getvalue()
         except (TypeError, ValueError, AttributeError) as e:
-            raise EncodingError(f"Failed to encode to CSV: {e}") from e
+            msg = f"Failed to encode to CSV: {e}"
+            raise EncodingError(msg) from e
 
-    def decode(self, data_str: str, options: Optional[DecodeOptions] = None) -> Any:
+    def decode(self, data_str: str, options: DecodeOptions | None = None) -> Any:
         """Decode CSV format to Python data.
 
         Args:
@@ -88,7 +92,8 @@ class CsvFormatAdapter(BaseFormatAdapter):
         except csv.Error as e:
             if options and not options.strict:
                 return data_str
-            raise DecodingError(f"Failed to decode CSV: {e}") from e
+            msg = f"Failed to decode CSV: {e}"
+            raise DecodingError(msg) from e
 
     def _infer_types(self, row: dict[str, str]) -> dict[str, Any]:
         """Infer types for CSV row values.

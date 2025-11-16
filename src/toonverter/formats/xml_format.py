@@ -1,11 +1,12 @@
 """XML format adapter."""
 
 import xml.etree.ElementTree as ET
-from typing import Any, Optional
+from typing import Any
 from xml.dom import minidom
 
-from ..core.exceptions import DecodingError, EncodingError
-from ..core.types import DecodeOptions, EncodeOptions
+from toonverter.core.exceptions import DecodingError, EncodingError
+from toonverter.core.types import DecodeOptions, EncodeOptions
+
 from .base import BaseFormatAdapter
 
 
@@ -20,7 +21,7 @@ class XmlFormatAdapter(BaseFormatAdapter):
         """Initialize XML format adapter."""
         super().__init__("xml")
 
-    def encode(self, data: Any, options: Optional[EncodeOptions] = None) -> str:
+    def encode(self, data: Any, options: EncodeOptions | None = None) -> str:
         """Encode data to XML format.
 
         Args:
@@ -47,7 +48,8 @@ class XmlFormatAdapter(BaseFormatAdapter):
 
             return xml_str
         except Exception as e:
-            raise EncodingError(f"Failed to encode to XML: {e}") from e
+            msg = f"Failed to encode to XML: {e}"
+            raise EncodingError(msg) from e
 
     def _to_xml_element(self, data: Any, tag: str) -> ET.Element:
         """Convert Python data to XML Element.
@@ -79,7 +81,7 @@ class XmlFormatAdapter(BaseFormatAdapter):
                 child = self._to_xml_element(value, str(key))
                 element.append(child)
         elif isinstance(data, (list, tuple)):
-            for i, item in enumerate(data):
+            for _i, item in enumerate(data):
                 child = self._to_xml_element(item, "item")
                 element.append(child)
         else:
@@ -87,7 +89,7 @@ class XmlFormatAdapter(BaseFormatAdapter):
 
         return element
 
-    def decode(self, data_str: str, options: Optional[DecodeOptions] = None) -> Any:
+    def decode(self, data_str: str, options: DecodeOptions | None = None) -> Any:
         """Decode XML format to Python data.
 
         Args:
@@ -102,16 +104,14 @@ class XmlFormatAdapter(BaseFormatAdapter):
         """
         try:
             root = ET.fromstring(data_str)
-            result = self._from_xml_element(root, options)
-            return result
+            return self._from_xml_element(root, options)
         except ET.ParseError as e:
             if options and not options.strict:
                 return data_str
-            raise DecodingError(f"Failed to decode XML: {e}") from e
+            msg = f"Failed to decode XML: {e}"
+            raise DecodingError(msg) from e
 
-    def _from_xml_element(
-        self, element: ET.Element, options: Optional[DecodeOptions] = None
-    ) -> Any:
+    def _from_xml_element(self, element: ET.Element, options: DecodeOptions | None = None) -> Any:
         """Convert XML Element to Python data.
 
         Args:
@@ -129,9 +129,9 @@ class XmlFormatAdapter(BaseFormatAdapter):
         type_attr = element.get("type")
         if type_attr == "bool":
             return element.text == "true"
-        elif type_attr == "int":
+        if type_attr == "int":
             return int(element.text or "0")
-        elif type_attr == "float":
+        if type_attr == "float":
             return float(element.text or "0.0")
 
         # If has children, it's a dict or list
@@ -139,18 +139,16 @@ class XmlFormatAdapter(BaseFormatAdapter):
             # Check if all children have "item" tag (list)
             if all(child.tag == "item" for child in element):
                 return [self._from_xml_element(child, options) for child in element]
-            else:
-                # Dictionary
-                result = {}
-                for child in element:
-                    result[child.tag] = self._from_xml_element(child, options)
-                return result
-        else:
-            # Leaf node - return text with type inference
-            text = element.text or ""
-            if options and options.type_inference:
-                return self._infer_type(text)
-            return text
+            # Dictionary
+            result = {}
+            for child in element:
+                result[child.tag] = self._from_xml_element(child, options)
+            return result
+        # Leaf node - return text with type inference
+        text = element.text or ""
+        if options and options.type_inference:
+            return self._infer_type(text)
+        return text
 
     def _infer_type(self, value: str) -> Any:
         """Infer type from string value.
@@ -163,15 +161,14 @@ class XmlFormatAdapter(BaseFormatAdapter):
         """
         if not value:
             return None
-        elif value.lower() in ("true", "false"):
+        if value.lower() in ("true", "false"):
             return value.lower() == "true"
-        elif value.isdigit() or (value.startswith("-") and value[1:].isdigit()):
+        if value.isdigit() or (value.startswith("-") and value[1:].isdigit()):
             return int(value)
-        else:
-            try:
-                return float(value)
-            except ValueError:
-                return value
+        try:
+            return float(value)
+        except ValueError:
+            return value
 
     def validate(self, data_str: str) -> bool:
         """Validate XML format string.

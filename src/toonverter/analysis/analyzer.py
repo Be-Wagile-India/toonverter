@@ -1,12 +1,12 @@
 """Token analysis module using tiktoken."""
 
-from typing import Any, Optional
+from typing import ClassVar
 
 import tiktoken
 
-from ..core.exceptions import TokenCountError
-from ..core.interfaces import TokenCounter
-from ..core.types import TokenAnalysis
+from toonverter.core.exceptions import TokenCountError
+from toonverter.core.interfaces import TokenCounter
+from toonverter.core.types import TokenAnalysis
 
 
 class TiktokenCounter(TokenCounter):
@@ -16,7 +16,7 @@ class TiktokenCounter(TokenCounter):
     """
 
     # Model to encoding mapping
-    MODEL_ENCODINGS = {
+    MODEL_ENCODINGS: ClassVar[dict[str, str]] = {
         "gpt-4": "cl100k_base",
         "gpt-4-turbo": "cl100k_base",
         "gpt-3.5-turbo": "cl100k_base",
@@ -38,7 +38,8 @@ class TiktokenCounter(TokenCounter):
         try:
             self._encoding = tiktoken.get_encoding(self._encoding_name)
         except Exception as e:
-            raise TokenCountError(f"Failed to load encoding '{self._encoding_name}': {e}") from e
+            msg = f"Failed to load encoding '{self._encoding_name}': {e}"
+            raise TokenCountError(msg) from e
 
     def _get_encoding_name(self, model: str) -> str:
         """Get encoding name for model.
@@ -91,7 +92,8 @@ class TiktokenCounter(TokenCounter):
             tokens = self._encoding.encode(text)
             return len(tokens)
         except Exception as e:
-            raise TokenCountError(f"Failed to count tokens: {e}") from e
+            msg = f"Failed to count tokens: {e}"
+            raise TokenCountError(msg) from e
 
     def analyze(self, text: str, format_name: str) -> TokenAnalysis:
         """Analyze token usage for text.

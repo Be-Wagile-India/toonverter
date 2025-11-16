@@ -1,10 +1,12 @@
 """YAML format adapter."""
 
-from typing import Any, Optional
+from typing import Any
 
-from ..core.exceptions import DecodingError, EncodingError
-from ..core.types import DecodeOptions, EncodeOptions
+from toonverter.core.exceptions import DecodingError, EncodingError
+from toonverter.core.types import DecodeOptions, EncodeOptions
+
 from .base import BaseFormatAdapter
+
 
 # Optional dependency
 try:
@@ -25,12 +27,13 @@ class YamlFormatAdapter(BaseFormatAdapter):
         """Initialize YAML format adapter."""
         super().__init__("yaml")
         if not YAML_AVAILABLE:
-            raise ImportError(
+            msg = (
                 "PyYAML is required for YAML support. "
                 "Install with: pip install toon-converter[formats]"
             )
+            raise ImportError(msg)
 
-    def encode(self, data: Any, options: Optional[EncodeOptions] = None) -> str:
+    def encode(self, data: Any, options: EncodeOptions | None = None) -> str:
         """Encode data to YAML format.
 
         Args:
@@ -52,9 +55,10 @@ class YamlFormatAdapter(BaseFormatAdapter):
 
             return yaml.dump(data, **kwargs)
         except yaml.YAMLError as e:
-            raise EncodingError(f"Failed to encode to YAML: {e}") from e
+            msg = f"Failed to encode to YAML: {e}"
+            raise EncodingError(msg) from e
 
-    def decode(self, data_str: str, options: Optional[DecodeOptions] = None) -> Any:
+    def decode(self, data_str: str, options: DecodeOptions | None = None) -> Any:
         """Decode YAML format to Python data.
 
         Args:
@@ -72,7 +76,8 @@ class YamlFormatAdapter(BaseFormatAdapter):
         except yaml.YAMLError as e:
             if options and not options.strict:
                 return data_str
-            raise DecodingError(f"Failed to decode YAML: {e}") from e
+            msg = f"Failed to decode YAML: {e}"
+            raise DecodingError(msg) from e
 
     def validate(self, data_str: str) -> bool:
         """Validate YAML format string.

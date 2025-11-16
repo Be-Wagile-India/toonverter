@@ -6,8 +6,9 @@ the official TOON v2.0 specification.
 
 from typing import Any
 
-from ..core.exceptions import DecodingError, ValidationError
-from ..core.spec import ArrayForm, Delimiter, RootForm, ToonDecodeOptions, ToonValue
+from toonverter.core.exceptions import DecodingError, ValidationError
+from toonverter.core.spec import ArrayForm, Delimiter, RootForm, ToonDecodeOptions, ToonValue
+
 from .lexer import Token, TokenType, ToonLexer
 
 
@@ -69,13 +70,14 @@ class ToonDecoder:
 
             if root_form == RootForm.ARRAY:
                 return self._parse_root_array()
-            elif root_form == RootForm.PRIMITIVE:
+            if root_form == RootForm.PRIMITIVE:
                 return self._parse_root_primitive()
-            else:  # RootForm.OBJECT
-                return self._parse_root_object()
+            # RootForm.OBJECT
+            return self._parse_root_object()
 
         except (ValueError, IndexError, KeyError) as e:
-            raise DecodingError(f"Failed to decode TOON data: {e}") from e
+            msg = f"Failed to decode TOON data: {e}"
+            raise DecodingError(msg) from e
 
     def _detect_root_form(self) -> RootForm:
         """Detect the form of root document.
@@ -107,9 +109,15 @@ class ToonDecoder:
                 return RootForm.OBJECT
 
             # Array markers can appear between key and colon
-            if look_token.type in (TokenType.ARRAY_START, TokenType.ARRAY_END,
-                                  TokenType.BRACE_START, TokenType.BRACE_END,
-                                  TokenType.NUMBER, TokenType.COMMA, TokenType.IDENTIFIER):
+            if look_token.type in (
+                TokenType.ARRAY_START,
+                TokenType.ARRAY_END,
+                TokenType.BRACE_START,
+                TokenType.BRACE_END,
+                TokenType.NUMBER,
+                TokenType.COMMA,
+                TokenType.IDENTIFIER,
+            ):
                 lookahead_pos += 1
                 continue
 
@@ -145,14 +153,21 @@ class ToonDecoder:
                 self.pos += 1
 
                 # Check if value is an array (key[N]: syntax)
-                if self.pos < len(self.tokens) and self.tokens[self.pos].type == TokenType.ARRAY_START:
+                if (
+                    self.pos < len(self.tokens)
+                    and self.tokens[self.pos].type == TokenType.ARRAY_START
+                ):
                     # Array value - parse array header and content
                     value = self._parse_value(depth=0)
                     result[key] = value
                 else:
                     # Regular value - expect colon
-                    if self.pos >= len(self.tokens) or self.tokens[self.pos].type != TokenType.COLON:
-                        raise DecodingError(f"Expected ':' after key '{key}'")
+                    if (
+                        self.pos >= len(self.tokens)
+                        or self.tokens[self.pos].type != TokenType.COLON
+                    ):
+                        msg = f"Expected ':' after key '{key}'"
+                        raise DecodingError(msg)
                     self.pos += 1
 
                     # Parse value
@@ -175,10 +190,10 @@ class ToonDecoder:
         # Parse array content based on form
         if header["form"] == ArrayForm.INLINE:
             return self._parse_inline_array(header)
-        elif header["form"] == ArrayForm.TABULAR:
+        if header["form"] == ArrayForm.TABULAR:
             return self._parse_tabular_array(header)
-        else:  # ArrayForm.LIST
-            return self._parse_list_array(header, depth=0)
+        # ArrayForm.LIST
+        return self._parse_list_array(header, depth=0)
 
     def _parse_root_primitive(self) -> Any:
         """Parse root-level primitive value.
@@ -212,10 +227,9 @@ class ToonDecoder:
             header = self._parse_array_header()
             if header["form"] == ArrayForm.INLINE:
                 return self._parse_inline_array(header)
-            elif header["form"] == ArrayForm.TABULAR:
+            if header["form"] == ArrayForm.TABULAR:
                 return self._parse_tabular_array(header)
-            else:
-                return self._parse_list_array(header, depth)
+            return self._parse_list_array(header, depth)
 
         # Nested object (current token is INDENT after skipping newlines)
         if token.type == TokenType.INDENT:
@@ -225,7 +239,10 @@ class ToonDecoder:
         # This handles cases like "- key: value" in list arrays
         if token.type in (TokenType.IDENTIFIER, TokenType.QUOTED_STRING):
             # Look ahead for colon
-            if self.pos + 1 < len(self.tokens) and self.tokens[self.pos + 1].type == TokenType.COLON:
+            if (
+                self.pos + 1 < len(self.tokens)
+                and self.tokens[self.pos + 1].type == TokenType.COLON
+            ):
                 # This is an inline object, parse it
                 return self._parse_inline_object(depth)
 
@@ -270,14 +287,21 @@ class ToonDecoder:
                 self.pos += 1
 
                 # Check if value is an array (key[N]: syntax)
-                if self.pos < len(self.tokens) and self.tokens[self.pos].type == TokenType.ARRAY_START:
+                if (
+                    self.pos < len(self.tokens)
+                    and self.tokens[self.pos].type == TokenType.ARRAY_START
+                ):
                     # Array value - parse array header and content
                     value = self._parse_value(depth + 1)
                     result[key] = value
                 else:
                     # Regular value - expect colon
-                    if self.pos >= len(self.tokens) or self.tokens[self.pos].type != TokenType.COLON:
-                        raise DecodingError(f"Expected ':' after key '{key}'")
+                    if (
+                        self.pos >= len(self.tokens)
+                        or self.tokens[self.pos].type != TokenType.COLON
+                    ):
+                        msg = f"Expected ':' after key '{key}'"
+                        raise DecodingError(msg)
                     self.pos += 1
 
                     # Parse value
@@ -310,11 +334,15 @@ class ToonDecoder:
 
             # Expect colon
             if self.pos >= len(self.tokens) or self.tokens[self.pos].type != TokenType.COLON:
-                raise DecodingError(f"Expected ':' after key '{key}' in inline object")
+                msg = f"Expected ':' after key '{key}' in inline object"
+                raise DecodingError(msg)
             self.pos += 1
 
             # Parse value (primitive only on dash line)
-            if self.pos >= len(self.tokens) or self.tokens[self.pos].type in (TokenType.NEWLINE, TokenType.EOF):
+            if self.pos >= len(self.tokens) or self.tokens[self.pos].type in (
+                TokenType.NEWLINE,
+                TokenType.EOF,
+            ):
                 result[key] = None
             else:
                 value = self._token_to_value(self.tokens[self.pos])
@@ -356,14 +384,21 @@ class ToonDecoder:
                     self.pos += 1
 
                     # Check if value is an array (key[N]: syntax)
-                    if self.pos < len(self.tokens) and self.tokens[self.pos].type == TokenType.ARRAY_START:
+                    if (
+                        self.pos < len(self.tokens)
+                        and self.tokens[self.pos].type == TokenType.ARRAY_START
+                    ):
                         # Array value - parse array header and content
                         value = self._parse_value(depth + 1)
                         result[key] = value
                     else:
                         # Regular value - expect colon
-                        if self.pos >= len(self.tokens) or self.tokens[self.pos].type != TokenType.COLON:
-                            raise DecodingError(f"Expected ':' after key '{key}'")
+                        if (
+                            self.pos >= len(self.tokens)
+                            or self.tokens[self.pos].type != TokenType.COLON
+                        ):
+                            msg = f"Expected ':' after key '{key}'"
+                            raise DecodingError(msg)
                         self.pos += 1
 
                         # Parse value
@@ -382,13 +417,15 @@ class ToonDecoder:
         """
         # Expect [
         if self.tokens[self.pos].type != TokenType.ARRAY_START:
-            raise DecodingError("Expected '[' for array header")
+            msg = "Expected '[' for array header"
+            raise DecodingError(msg)
         self.pos += 1
 
         # Parse length
         length_token = self.tokens[self.pos]
         if length_token.type != TokenType.NUMBER:
-            raise DecodingError("Expected array length number")
+            msg = "Expected array length number"
+            raise DecodingError(msg)
         length = int(length_token.value)  # type: ignore
         self.pos += 1
 
@@ -406,7 +443,8 @@ class ToonDecoder:
 
         # Expect ]
         if self.tokens[self.pos].type != TokenType.ARRAY_END:
-            raise DecodingError("Expected ']' in array header")
+            msg = "Expected ']' in array header"
+            raise DecodingError(msg)
         self.pos += 1
 
         # Check for field spec {field1,field2}
@@ -463,7 +501,7 @@ class ToonDecoder:
             List of values
         """
         values: list[Any] = []
-        delimiter = header["delimiter"]
+        header["delimiter"]
 
         while self.pos < len(self.tokens):
             token = self.tokens[self.pos]
@@ -483,9 +521,8 @@ class ToonDecoder:
 
         # Validate length in strict mode
         if self.options.strict and len(values) != header["length"]:
-            raise ValidationError(
-                f"Array length mismatch: declared {header['length']}, got {len(values)}"
-            )
+            msg = f"Array length mismatch: declared {header['length']}, got {len(values)}"
+            raise ValidationError(msg)
 
         return values
 
@@ -500,10 +537,11 @@ class ToonDecoder:
         """
         result: list[dict[str, Any]] = []
         fields = header["fields"]
-        delimiter = header["delimiter"]
+        header["delimiter"]
 
         if not fields:
-            raise DecodingError("Tabular array must have fields")
+            msg = "Tabular array must have fields"
+            raise DecodingError(msg)
 
         # Skip newline after header
         if self.pos < len(self.tokens) and self.tokens[self.pos].type == TokenType.NEWLINE:
@@ -534,13 +572,11 @@ class ToonDecoder:
                 self.pos += 1
 
             # Create dict from fields and values
-            if len(row_values) != len(fields):
-                if self.options.strict:
-                    raise ValidationError(
-                        f"Row width mismatch: expected {len(fields)}, got {len(row_values)}"
-                    )
+            if len(row_values) != len(fields) and self.options.strict:
+                msg = f"Row width mismatch: expected {len(fields)}, got {len(row_values)}"
+                raise ValidationError(msg)
 
-            row_dict = dict(zip(fields, row_values))
+            row_dict = dict(zip(fields, row_values, strict=False))
             result.append(row_dict)
 
             # Skip newline
@@ -596,9 +632,8 @@ class ToonDecoder:
 
         # Validate length in strict mode
         if self.options.strict and len(values) != header["length"]:
-            raise ValidationError(
-                f"Array length mismatch: declared {header['length']}, got {len(values)}"
-            )
+            msg = f"Array length mismatch: declared {header['length']}, got {len(values)}"
+            raise ValidationError(msg)
 
         return values
 
@@ -613,34 +648,31 @@ class ToonDecoder:
         """
         if token.type == TokenType.NULL:
             return None
-        elif token.type == TokenType.BOOLEAN:
+        if token.type in (TokenType.BOOLEAN, TokenType.NUMBER) or token.type in (
+            TokenType.STRING,
+            TokenType.QUOTED_STRING,
+        ):
             return token.value
-        elif token.type == TokenType.NUMBER:
-            return token.value
-        elif token.type in (TokenType.STRING, TokenType.QUOTED_STRING):
-            return token.value
-        elif token.type == TokenType.IDENTIFIER:
+        if token.type == TokenType.IDENTIFIER:
             # Unquoted identifier - type inference
             if self.options.type_inference:
                 value_str = str(token.value)
                 # Try to infer type
                 if value_str == "null":
                     return None
-                elif value_str == "true":
+                if value_str == "true":
                     return True
-                elif value_str == "false":
+                if value_str == "false":
                     return False
                 # Try number
                 try:
                     if "." in value_str:
                         return float(value_str)
-                    else:
-                        return int(value_str)
+                    return int(value_str)
                 except ValueError:
                     pass
             return token.value
-        else:
-            return token.value
+        return token.value
 
 
 def decode(data_str: str, options: ToonDecodeOptions | None = None) -> ToonValue:

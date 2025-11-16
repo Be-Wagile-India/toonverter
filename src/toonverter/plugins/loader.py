@@ -1,15 +1,9 @@
 """Plugin loader using entry points."""
 
-import sys
-from typing import Any
+from importlib.metadata import entry_points  # type: ignore
 
-from ..core.exceptions import PluginError
-from ..core.registry import registry
-
-if sys.version_info >= (3, 10):
-    from importlib.metadata import entry_points
-else:
-    from importlib_metadata import entry_points  # type: ignore
+from toonverter.core.exceptions import PluginError
+from toonverter.core.registry import registry
 
 
 def load_plugins() -> list[str]:
@@ -25,10 +19,7 @@ def load_plugins() -> list[str]:
 
     try:
         # Load plugins from entry points
-        if sys.version_info >= (3, 10):
-            eps = entry_points(group="toon_converter.plugins")
-        else:
-            eps = entry_points().get("toon_converter.plugins", [])
+        eps = entry_points(group="toon_converter.plugins")
 
         for ep in eps:
             try:
@@ -41,11 +32,13 @@ def load_plugins() -> list[str]:
 
                 loaded.append(plugin.name)
             except Exception as e:
-                raise PluginError(f"Failed to load plugin '{ep.name}': {e}") from e
+                msg = f"Failed to load plugin '{ep.name}': {e}"
+                raise PluginError(msg) from e
 
     except Exception as e:
         if isinstance(e, PluginError):
             raise
-        raise PluginError(f"Failed to discover plugins: {e}") from e
+        msg = f"Failed to discover plugins: {e}"
+        raise PluginError(msg) from e
 
     return loaded

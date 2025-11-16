@@ -1,7 +1,7 @@
 """Type definitions and data classes for TOON Converter."""
 
 from dataclasses import dataclass, field
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 
 @dataclass
@@ -23,14 +23,14 @@ class EncodeOptions:
 
     indent: int = 2
     delimiter: Literal[",", "\t", "|", ";"] = ","
-    length_marker: Optional[str] = None
+    length_marker: str | None = None
     compact: bool = False
     sort_keys: bool = False
     ensure_ascii: bool = False
-    max_line_length: Optional[int] = None
+    max_line_length: int | None = None
 
     @classmethod
-    def compact(cls) -> "EncodeOptions":
+    def create_compact(cls) -> "EncodeOptions":
         """Create preset for compact encoding.
 
         Returns:
@@ -91,11 +91,11 @@ class ConversionResult:
     success: bool
     source_format: str
     target_format: str
-    source_tokens: Optional[int] = None
-    target_tokens: Optional[int] = None
-    savings_percentage: Optional[float] = None
+    source_tokens: int | None = None
+    target_tokens: int | None = None
+    savings_percentage: float | None = None
     data: Any = None
-    error: Optional[str] = None
+    error: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:

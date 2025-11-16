@@ -1,9 +1,9 @@
 """Comprehensive tests for report formatter."""
 
-import pytest
 import json
+
 from toonverter.analysis.reporter import ReportFormatter, format_report
-from toonverter.core.types import TokenAnalysis, ComparisonReport
+from toonverter.core.types import ComparisonReport, TokenAnalysis
 
 
 class TestFormatAnalysis:
@@ -12,10 +12,7 @@ class TestFormatAnalysis:
     def test_format_analysis_basic(self):
         """Test formatting basic token analysis."""
         analysis = TokenAnalysis(
-            format="json",
-            token_count=100,
-            model="gpt-4",
-            encoding="cl100k_base"
+            format="json", token_count=100, model="gpt-4", encoding="cl100k_base"
         )
 
         result = ReportFormatter.format_analysis(analysis)
@@ -32,7 +29,7 @@ class TestFormatAnalysis:
             token_count=50,
             model="gpt-4",
             encoding="cl100k_base",
-            metadata={"text_length": 200, "compression_ratio": 4.0}
+            metadata={"text_length": 200, "compression_ratio": 4.0},
         )
 
         result = ReportFormatter.format_analysis(analysis)
@@ -44,10 +41,7 @@ class TestFormatAnalysis:
     def test_format_analysis_without_metadata(self):
         """Test formatting analysis without metadata."""
         analysis = TokenAnalysis(
-            format="yaml",
-            token_count=75,
-            model="gpt-3.5-turbo",
-            encoding="cl100k_base"
+            format="yaml", token_count=75, model="gpt-3.5-turbo", encoding="cl100k_base"
         )
 
         result = ReportFormatter.format_analysis(analysis)
@@ -72,8 +66,8 @@ class TestFormatComparison:
             worst_format="json",
             recommendations=[
                 "Use TOON format for optimal token efficiency",
-                "TOON saves 40% tokens compared to JSON"
-            ]
+                "TOON saves 40% tokens compared to JSON",
+            ],
         )
 
     def test_format_comparison_header(self):
@@ -124,10 +118,7 @@ class TestFormatComparison:
     def test_format_comparison_no_recommendations(self):
         """Test report without recommendations."""
         report = ComparisonReport(
-            analyses=self.analyses,
-            best_format="toon",
-            worst_format="json",
-            recommendations=[]
+            analyses=self.analyses, best_format="toon", worst_format="json", recommendations=[]
         )
 
         result = ReportFormatter.format_comparison(report)
@@ -176,21 +167,16 @@ class TestFormatJSON:
                 token_count=100,
                 model="gpt-4",
                 encoding="cl100k_base",
-                metadata={"length": 500}
+                metadata={"length": 500},
             ),
-            TokenAnalysis(
-                format="toon",
-                token_count=60,
-                model="gpt-4",
-                encoding="cl100k_base"
-            ),
+            TokenAnalysis(format="toon", token_count=60, model="gpt-4", encoding="cl100k_base"),
         ]
 
         self.report = ComparisonReport(
             analyses=self.analyses,
             best_format="toon",
             worst_format="json",
-            recommendations=["Use TOON"]
+            recommendations=["Use TOON"],
         )
 
     def test_format_json_returns_dict(self):
@@ -257,7 +243,7 @@ class TestFormatReportFunction:
             analyses=self.analyses,
             best_format="toon",
             worst_format="json",
-            recommendations=["Use TOON"]
+            recommendations=["Use TOON"],
         )
 
     def test_format_report_default_text(self):
@@ -301,11 +287,7 @@ class TestEdgeCases:
     def test_format_analysis_empty_metadata(self):
         """Test formatting with empty metadata dict."""
         analysis = TokenAnalysis(
-            format="json",
-            token_count=100,
-            model="gpt-4",
-            encoding="cl100k_base",
-            metadata={}
+            format="json", token_count=100, model="gpt-4", encoding="cl100k_base", metadata={}
         )
 
         result = ReportFormatter.format_analysis(analysis)
@@ -320,10 +302,7 @@ class TestEdgeCases:
         ]
 
         report = ComparisonReport(
-            analyses=analyses,
-            best_format="json",
-            worst_format="json",
-            recommendations=[]
+            analyses=analyses, best_format="json", worst_format="json", recommendations=[]
         )
 
         result = ReportFormatter.format_comparison(report)
@@ -339,10 +318,7 @@ class TestEdgeCases:
         ]
 
         report = ComparisonReport(
-            analyses=analyses,
-            best_format="json",
-            worst_format="yaml",
-            recommendations=[]
+            analyses=analyses, best_format="json", worst_format="yaml", recommendations=[]
         )
 
         result = ReportFormatter.format_comparison(report)

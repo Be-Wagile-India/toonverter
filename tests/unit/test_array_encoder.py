@@ -1,11 +1,10 @@
 """Comprehensive tests for array encoder."""
 
-import pytest
-from toonverter.encoders.array_encoder import ArrayEncoder
-from toonverter.encoders.string_encoder import StringEncoder
-from toonverter.encoders.number_encoder import NumberEncoder
-from toonverter.encoders.indentation import IndentationManager
 from toonverter.core.spec import ArrayForm, Delimiter
+from toonverter.encoders.array_encoder import ArrayEncoder
+from toonverter.encoders.indentation import IndentationManager
+from toonverter.encoders.number_encoder import NumberEncoder
+from toonverter.encoders.string_encoder import StringEncoder
 
 
 class TestArrayEncoderInit:
@@ -31,9 +30,7 @@ class TestDetectArrayForm:
     def setup_method(self):
         """Set up test fixtures."""
         self.encoder = ArrayEncoder(
-            StringEncoder(Delimiter.COMMA),
-            NumberEncoder(),
-            IndentationManager()
+            StringEncoder(Delimiter.COMMA), NumberEncoder(), IndentationManager()
         )
 
     def test_detect_empty_array_as_inline(self):
@@ -58,10 +55,7 @@ class TestDetectArrayForm:
 
     def test_detect_uniform_dicts_as_tabular(self):
         """Test uniform dict array detected as tabular."""
-        arr = [
-            {"id": 1, "name": "Alice"},
-            {"id": 2, "name": "Bob"}
-        ]
+        arr = [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]
         result = self.encoder.detect_array_form(arr)
         assert result == ArrayForm.TABULAR
 
@@ -75,7 +69,7 @@ class TestDetectArrayForm:
         """Test non-uniform dict keys detected as list."""
         arr = [
             {"id": 1, "name": "Alice"},
-            {"id": 2, "email": "bob@example.com"}  # Different keys
+            {"id": 2, "email": "bob@example.com"},  # Different keys
         ]
         result = self.encoder.detect_array_form(arr)
         assert result == ArrayForm.LIST
@@ -84,7 +78,7 @@ class TestDetectArrayForm:
         """Test dicts with non-primitive values detected as list."""
         arr = [
             {"id": 1, "tags": ["a", "b"]},  # Nested list
-            {"id": 2, "tags": ["c", "d"]}
+            {"id": 2, "tags": ["c", "d"]},
         ]
         result = self.encoder.detect_array_form(arr)
         assert result == ArrayForm.LIST
@@ -108,9 +102,7 @@ class TestIsPrimitive:
     def setup_method(self):
         """Set up test fixtures."""
         self.encoder = ArrayEncoder(
-            StringEncoder(Delimiter.COMMA),
-            NumberEncoder(),
-            IndentationManager()
+            StringEncoder(Delimiter.COMMA), NumberEncoder(), IndentationManager()
         )
 
     def test_string_is_primitive(self):
@@ -149,9 +141,7 @@ class TestEncodeInline:
     def setup_method(self):
         """Set up test fixtures."""
         self.encoder = ArrayEncoder(
-            StringEncoder(Delimiter.COMMA),
-            NumberEncoder(),
-            IndentationManager()
+            StringEncoder(Delimiter.COMMA), NumberEncoder(), IndentationManager()
         )
 
     def test_encode_inline_integers(self):
@@ -181,11 +171,7 @@ class TestEncodeInline:
 
     def test_encode_inline_with_pipe_delimiter(self):
         """Test encoding inline with pipe delimiter."""
-        encoder = ArrayEncoder(
-            StringEncoder(Delimiter.PIPE),
-            NumberEncoder(),
-            IndentationManager()
-        )
+        encoder = ArrayEncoder(StringEncoder(Delimiter.PIPE), NumberEncoder(), IndentationManager())
         result = encoder.encode_inline("tags", ["a", "b"], 0)
         assert result == "tags[2|]: a|b"
 
@@ -196,17 +182,12 @@ class TestEncodeTabular:
     def setup_method(self):
         """Set up test fixtures."""
         self.encoder = ArrayEncoder(
-            StringEncoder(Delimiter.COMMA),
-            NumberEncoder(),
-            IndentationManager()
+            StringEncoder(Delimiter.COMMA), NumberEncoder(), IndentationManager()
         )
 
     def test_encode_tabular_simple(self):
         """Test encoding simple tabular array."""
-        arr = [
-            {"id": 1, "name": "Alice"},
-            {"id": 2, "name": "Bob"}
-        ]
+        arr = [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]
         result = self.encoder.encode_tabular("users", arr, 0)
 
         assert len(result) == 3  # Header + 2 rows
@@ -235,7 +216,7 @@ class TestEncodeTabular:
         """Test tabular encoding preserves field order."""
         arr = [
             {"name": "Alice", "age": 30, "city": "NYC"},
-            {"name": "Bob", "age": 25, "city": "LA"}
+            {"name": "Bob", "age": 25, "city": "LA"},
         ]
         result = self.encoder.encode_tabular("people", arr, 0)
 
@@ -243,11 +224,7 @@ class TestEncodeTabular:
 
     def test_encode_tabular_with_pipe_delimiter(self):
         """Test encoding tabular with pipe delimiter."""
-        encoder = ArrayEncoder(
-            StringEncoder(Delimiter.PIPE),
-            NumberEncoder(),
-            IndentationManager()
-        )
+        encoder = ArrayEncoder(StringEncoder(Delimiter.PIPE), NumberEncoder(), IndentationManager())
         arr = [{"a": 1, "b": 2}]
         result = encoder.encode_tabular("data", arr, 0)
 
@@ -261,9 +238,7 @@ class TestEncodeValue:
     def setup_method(self):
         """Set up test fixtures."""
         self.encoder = ArrayEncoder(
-            StringEncoder(Delimiter.COMMA),
-            NumberEncoder(),
-            IndentationManager()
+            StringEncoder(Delimiter.COMMA), NumberEncoder(), IndentationManager()
         )
 
     def test_encode_integer(self):
@@ -308,9 +283,7 @@ class TestEdgeCases:
     def setup_method(self):
         """Set up test fixtures."""
         self.encoder = ArrayEncoder(
-            StringEncoder(Delimiter.COMMA),
-            NumberEncoder(),
-            IndentationManager()
+            StringEncoder(Delimiter.COMMA), NumberEncoder(), IndentationManager()
         )
 
     def test_detect_array_with_boolean_primitives(self):

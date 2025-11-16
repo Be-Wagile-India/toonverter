@@ -2,4 +2,5 @@
 
 from .toon_decoder import ToonDecoder, decode
 
+
 __all__ = ["ToonDecoder", "decode"]

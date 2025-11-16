@@ -1,9 +1,22 @@
 name: Release to PyPI
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+      test_pypi:
+        description: 'Publish to Test PyPI first?'
+        required: false
+        type: boolean
+        default: true
+      create_github_release:
+        description: 'Create GitHub release?'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -58,23 +71,38 @@ jobs:
       - name: Check package
         run: twine check dist/*
 
-      - name: Publish to Test PyPI (non-blocking)
+      - name: Publish to Test PyPI
+        if: ${{ inputs.test_pypi == true }}
         continue-on-error: true
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
         run: |
-          twine upload --repository testpypi dist/* || echo "Test PyPI upload failed or skipped"
+          echo "📦 Publishing to Test PyPI..."
+          twine upload --repository testpypi dist/* || echo "⚠️ Test PyPI upload failed or version already exists"
+
+      - name: Wait for verification
+        if: ${{ inputs.test_pypi == true }}
+        run: |
+          echo "⏸️ Pausing 30 seconds for Test PyPI verification..."
+          echo "   You can test install with:"
+          echo "   pip install --index-url https://test.pypi.org/simple/ toonverter==${{ inputs.version }}"
+          sleep 30
 
       - name: Publish to Production PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: twine upload dist/*
+        run: |
+          echo "📦 Publishing to Production PyPI..."
+          twine upload dist/*
 
       - name: Create GitHub Release
+        if: ${{ inputs.create_github_release == true }}
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: v${{ inputs.version }}
+          name: v${{ inputs.version }}
           files: dist/*
           generate_release_notes: true
           draft: false
@@ -84,5 +112,8 @@ jobs:
 
       - name: Post-release notification
         run: |
-          echo "✅ Successfully released ${{ github.ref_name }}"
-          echo "📦 Package published to PyPI: https://pypi.org/project/toonverter/"
+          echo "✅ Successfully released version ${{ inputs.version }}"
+          echo "📦 Package published to PyPI: https://pypi.org/project/toonverter/${{ inputs.version }}/"
+          if [ "${{ inputs.create_github_release }}" == "true" ]; then
+            echo "🎉 GitHub release created: https://github.com/${{ github.repository }}/releases/tag/v${{ inputs.version }}"
+          fi

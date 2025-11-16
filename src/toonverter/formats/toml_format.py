@@ -1,11 +1,13 @@
 """TOML format adapter."""
 
 import sys
-from typing import Any, Optional
+from typing import Any
 
-from ..core.exceptions import DecodingError, EncodingError
-from ..core.types import DecodeOptions, EncodeOptions
+from toonverter.core.exceptions import DecodingError, EncodingError
+from toonverter.core.types import DecodeOptions, EncodeOptions
+
 from .base import BaseFormatAdapter
+
 
 # Python 3.11+ has tomllib built-in, earlier versions need toml package
 if sys.version_info >= (3, 11):
@@ -42,12 +44,13 @@ class TomlFormatAdapter(BaseFormatAdapter):
         """Initialize TOML format adapter."""
         super().__init__("toml")
         if not TOML_READ_AVAILABLE:
-            raise ImportError(
+            msg = (
                 "TOML support requires 'toml' package on Python <3.11. "
                 "Install with: pip install toon-converter[formats]"
             )
+            raise ImportError(msg)
 
-    def encode(self, data: Any, options: Optional[EncodeOptions] = None) -> str:
+    def encode(self, data: Any, options: EncodeOptions | None = None) -> str:
         """Encode data to TOML format.
 
         Args:
@@ -61,24 +64,26 @@ class TomlFormatAdapter(BaseFormatAdapter):
             EncodingError: If encoding fails
         """
         if not isinstance(data, dict):
-            raise EncodingError("TOML format only supports dictionary data at the top level")
+            msg = "TOML format only supports dictionary data at the top level"
+            raise EncodingError(msg)
 
         if not TOML_WRITE_AVAILABLE:
-            raise EncodingError(
+            msg = (
                 "TOML writing requires 'toml' package (Python <3.11) or "
                 "'tomli-w' package (Python 3.11+). "
                 "Install with: pip install toon-converter[formats]"
             )
+            raise EncodingError(msg)
 
         try:
             if sys.version_info >= (3, 11):
                 return tomli_w.dumps(data)
-            else:
-                return toml.dumps(data)  # type: ignore
+            return toml.dumps(data)  # type: ignore
         except (TypeError, ValueError) as e:
-            raise EncodingError(f"Failed to encode to TOML: {e}") from e
+            msg = f"Failed to encode to TOML: {e}"
+            raise EncodingError(msg) from e
 
-    def decode(self, data_str: str, options: Optional[DecodeOptions] = None) -> Any:
+    def decode(self, data_str: str, options: DecodeOptions | None = None) -> Any:
         """Decode TOML format to Python data.
 
         Args:
@@ -94,12 +99,12 @@ class TomlFormatAdapter(BaseFormatAdapter):
         try:
             if sys.version_info >= (3, 11):
                 return tomllib.loads(data_str)
-            else:
-                return toml.loads(data_str)  # type: ignore
+            return toml.loads(data_str)  # type: ignore
         except Exception as e:
             if options and not options.strict:
                 return data_str
-            raise DecodingError(f"Failed to decode TOML: {e}") from e
+            msg = f"Failed to decode TOML: {e}"
+            raise DecodingError(msg) from e
 
     def validate(self, data_str: str) -> bool:
         """Validate TOML format string.

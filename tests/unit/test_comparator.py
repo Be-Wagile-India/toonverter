@@ -1,12 +1,13 @@
 """Tests for format comparator."""
 
 import pytest
+
 from toonverter.analysis.comparator import FormatComparator, compare
+from toonverter.core.exceptions import FormatNotSupportedError
 from toonverter.core.registry import registry
 from toonverter.formats.json_format import JsonFormatAdapter
-from toonverter.formats.yaml_format import YamlFormatAdapter
 from toonverter.formats.toon_format import ToonFormatAdapter
-from toonverter.core.exceptions import FormatNotSupportedError
+from toonverter.formats.yaml_format import YamlFormatAdapter
 
 
 class TestFormatComparator:
@@ -73,10 +74,7 @@ class TestFormatComparator:
         from toonverter.core.types import EncodeOptions
 
         data = {"key": "value"}
-        options = {
-            "json": EncodeOptions(indent=2),
-            "yaml": EncodeOptions(compact=True)
-        }
+        options = {"json": EncodeOptions(indent=2), "yaml": EncodeOptions(compact=True)}
 
         report = self.comparator.compare_formats(data, ["json", "yaml"], options)
         assert len(report.analyses) == 2

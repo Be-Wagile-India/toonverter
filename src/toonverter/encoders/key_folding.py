@@ -10,7 +10,7 @@ instead of:
 
 from typing import Any
 
-from ..core.spec import KEY_FOLD_SEPARATOR, KEY_SEGMENT_PATTERN, KeyPath
+from toonverter.core.spec import KEY_FOLD_SEPARATOR, KEY_SEGMENT_PATTERN
 
 
 class KeyFolder:
@@ -48,7 +48,7 @@ class KeyFolder:
 
         # Traverse single-key chains
         while isinstance(current, dict) and len(current) == 1:
-            key = list(current.keys())[0]
+            key = next(iter(current.keys()))
 
             # Check if key is a valid identifier segment
             if not KEY_SEGMENT_PATTERN.match(key):
