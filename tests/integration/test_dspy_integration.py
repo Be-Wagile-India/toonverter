@@ -6,7 +6,7 @@ import pytest
 # Skip if dspy-ai not installed
 pytest.importorskip("dspy")
 
-from toonverter.integrations.dspy_integration import from_toon_example, to_toon_example
+from toonverter.integrations.dspy_integration import toon_to_dspy, dspy_to_toon
 
 
 class TestDSPyExamples:
@@ -19,7 +19,7 @@ class TestDSPyExamples:
 
             example = dspy.Example(question="What is 2+2?", answer="4")
 
-            toon = to_toon_example(example)
+            toon = dspy_to_toon(example)
 
             assert "2+2" in toon
             assert "4" in toon
@@ -33,8 +33,8 @@ class TestDSPyExamples:
 
             example_original = dspy.Example(input="test input", output="test output")
 
-            toon = to_toon_example(example_original)
-            example_result = from_toon_example(toon)
+            toon = dspy_to_toon(example_original)
+            example_result = toon_to_dspy(toon)
 
             assert example_result.input == "test input"
             assert example_result.output == "test output"
@@ -52,7 +52,7 @@ class TestDSPyExamples:
                 dspy.Example(question="Q3", answer="A3"),
             ]
 
-            toon = to_toon_example(examples)
+            toon = dspy_to_toon(examples)
 
             assert "Q1" in toon
             assert "Q2" in toon

@@ -7,9 +7,9 @@ import pytest
 pytest.importorskip("langchain")
 
 from toonverter.integrations.langchain_integration import (
-    from_toon_document,
+    toon_to_langchain,
     from_toon_messages,
-    to_toon_document,
+    langchain_to_toon,
     to_toon_messages,
 )
 
@@ -26,7 +26,7 @@ class TestLangChainDocuments:
                 page_content="This is the content", metadata={"source": "test.txt", "page": 1}
             )
 
-            toon = to_toon_document(doc)
+            toon = langchain_to_toon(doc)
 
             assert "This is the content" in toon
             assert "test.txt" in toon
@@ -41,8 +41,8 @@ class TestLangChainDocuments:
 
             doc_original = Document(page_content="Test content", metadata={"key": "value"})
 
-            toon = to_toon_document(doc_original)
-            doc_result = from_toon_document(toon)
+            toon = langchain_to_toon(doc_original)
+            doc_result = toon_to_langchain(toon)
 
             assert doc_result.page_content == "Test content"
             assert doc_result.metadata["key"] == "value"
@@ -60,7 +60,7 @@ class TestLangChainDocuments:
                 Document(page_content="Doc 3", metadata={"id": 3}),
             ]
 
-            toon = to_toon_document(docs)
+            toon = langchain_to_toon(docs)
 
             assert "Doc 1" in toon
             assert "Doc 2" in toon

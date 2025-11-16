@@ -6,7 +6,7 @@ import pytest
 # Skip if llama-index not installed
 pytest.importorskip("llama_index")
 
-from toonverter.integrations.llamaindex_integration import from_toon_node, to_toon_node
+from toonverter.integrations.llamaindex_integration import toon_to_llamaindex, llamaindex_to_toon
 
 
 class TestLlamaIndexNodes:
@@ -19,7 +19,7 @@ class TestLlamaIndexNodes:
 
             node = TextNode(text="This is test content", metadata={"source": "test"}, id_="node1")
 
-            toon = to_toon_node(node)
+            toon = llamaindex_to_toon(node)
 
             assert "test content" in toon
             assert "test" in toon
@@ -33,8 +33,8 @@ class TestLlamaIndexNodes:
 
             node_original = TextNode(text="Content", metadata={"key": "value"}, id_="test_node")
 
-            toon = to_toon_node(node_original)
-            node_result = from_toon_node(toon)
+            toon = llamaindex_to_toon(node_original)
+            node_result = toon_to_llamaindex(toon)
 
             assert node_result.text == "Content"
             assert node_result.metadata["key"] == "value"
@@ -52,7 +52,7 @@ class TestLlamaIndexNodes:
                 TextNode(text="Node 3", id_="3"),
             ]
 
-            toon = to_toon_node(nodes)
+            toon = llamaindex_to_toon(nodes)
 
             assert "Node 1" in toon
             assert "Node 2" in toon

@@ -7,7 +7,7 @@ import pytest
 pytest.importorskip("mcp")
 
 
-from toonverter.integrations.mcp_server import ToonMCPServer
+from toonverter.integrations.mcp_server import ToonverterMCPServer
 
 
 class TestMCPServer:
@@ -16,7 +16,7 @@ class TestMCPServer:
     @pytest.fixture
     def server(self):
         """Create test MCP server."""
-        return ToonMCPServer()
+        return ToonverterMCPServer()
 
     def test_server_initialization(self, server):
         """Test server initializes correctly."""

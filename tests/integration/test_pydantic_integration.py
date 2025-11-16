@@ -9,7 +9,7 @@ pytest.importorskip("pydantic")
 
 from pydantic import BaseModel
 
-from toonverter.integrations.pydantic_integration import from_toon, to_toon
+from toonverter.integrations.pydantic_integration import toon_to_pydantic, pydantic_to_toon
 
 
 class User(BaseModel):
@@ -35,11 +35,11 @@ class Post(BaseModel):
 class TestPydanticModelSerialization:
     """Test Pydantic model serialization."""
 
-    def test_simple_model_to_toon(self):
+    def test_simple_model_pydantic_to_toon(self):
         """Test converting Pydantic model to TOON."""
         user = User(id=1, name="Alice", age=30, active=True)
 
-        toon = to_toon(user)
+        toon = pydantic_to_toon(user)
 
         assert "Alice" in toon
         assert "30" in toon
@@ -49,8 +49,8 @@ class TestPydanticModelSerialization:
         """Test Pydantic model roundtrip."""
         user_original = User(id=1, name="Bob", age=25, active=False, email="bob@example.com")
 
-        toon = to_toon(user_original)
-        user_result = from_toon(toon, model=User)
+        toon = pydantic_to_toon(user_original)
+        user_result = toon_to_pydantic(toon, model=User)
 
         assert user_result.name == "Bob"
         assert user_result.age == 25
@@ -64,7 +64,7 @@ class TestPydanticModelSerialization:
             id=1, title="My Post", content="Content here", author=user, tags=["python", "toon"]
         )
 
-        toon = to_toon(post)
+        toon = pydantic_to_toon(post)
 
         assert "My Post" in toon
         assert "Alice" in toon
@@ -78,7 +78,7 @@ class TestPydanticModelSerialization:
             User(id=3, name="Carol", age=35),
         ]
 
-        toon = to_toon(users)
+        toon = pydantic_to_toon(users)
 
         # Should use tabular or list format
         assert "Alice" in toon
@@ -90,8 +90,8 @@ class TestPydanticModelSerialization:
         user_with_email = User(id=1, name="Alice", age=30, email="alice@example.com")
         user_without_email = User(id=2, name="Bob", age=25)
 
-        toon1 = to_toon(user_with_email)
-        toon2 = to_toon(user_without_email)
+        toon1 = pydantic_to_toon(user_with_email)
+        toon2 = pydantic_to_toon(user_without_email)
 
         assert "alice@example.com" in toon1
         assert "null" in toon2 or "email" not in toon2
@@ -105,11 +105,11 @@ class TestPydanticValidation:
         toon = "name: Alice\nage: invalid"
 
         with pytest.raises(Exception):  # ValidationError or similar
-            from_toon(toon, model=User)
+            toon_to_pydantic(toon, model=User)
 
     def test_missing_required_field(self):
         """Test missing required field."""
         toon = "name: Alice"  # Missing id and age
 
         with pytest.raises(Exception):
-            from_toon(toon, model=User)
+            toon_to_pydantic(toon, model=User)

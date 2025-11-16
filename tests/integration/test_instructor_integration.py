@@ -8,7 +8,7 @@ pytest.importorskip("instructor")
 
 from pydantic import BaseModel
 
-from toonverter.integrations.instructor_integration import from_toon_response, to_toon_response
+from toonverter.integrations.instructor_integration import toon_to_response, response_to_toon
 
 
 class UserResponse(BaseModel):
@@ -26,7 +26,7 @@ class TestInstructorResponses:
         """Test converting Instructor response to TOON."""
         response = UserResponse(name="Alice", age=30, email="alice@example.com")
 
-        toon = to_toon_response(response)
+        toon = response_to_toon(response)
 
         assert "Alice" in toon
         assert "30" in toon
@@ -36,8 +36,8 @@ class TestInstructorResponses:
         """Test response roundtrip."""
         response_original = UserResponse(name="Bob", age=25, email="bob@example.com")
 
-        toon = to_toon_response(response_original)
-        response_result = from_toon_response(toon, model=UserResponse)
+        toon = response_to_toon(response_original)
+        response_result = toon_to_response(toon, model=UserResponse)
 
         assert response_result.name == "Bob"
         assert response_result.age == 25
@@ -51,7 +51,7 @@ class TestInstructorResponses:
             UserResponse(name="User3", age=40, email="user3@example.com"),
         ]
 
-        toon = to_toon_response(responses)
+        toon = response_to_toon(responses)
 
         assert "User1" in toon
         assert "User2" in toon

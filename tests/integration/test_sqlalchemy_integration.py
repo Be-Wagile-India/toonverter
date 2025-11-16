@@ -11,10 +11,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
 from toonverter.integrations.sqlalchemy_integration import (
-    bulk_export,
-    bulk_import,
-    from_toon,
-    to_toon,
+    query_to_toon,
+    bulk_query_to_toon,
+    toon_to_sqlalchemy,
+    sqlalchemy_to_toon,
 )
 
 
@@ -61,7 +61,7 @@ class TestSQLAlchemyModelSerialization:
         self.session.add(user)
         self.session.commit()
 
-        toon = to_toon(user)
+        toon = sqlalchemy_to_toon(user)
 
         assert "Alice" in toon
         assert "30" in toon
@@ -71,7 +71,7 @@ class TestSQLAlchemyModelSerialization:
         """Test model roundtrip."""
         user_original = User(id=1, name="Bob", age=25, active=False)
 
-        toon = to_toon(user_original)
+        toon = sqlalchemy_to_toon(user_original)
         user_dict = from_toon(toon)
 
         assert user_dict["name"] == "Bob"
@@ -90,7 +90,7 @@ class TestSQLAlchemyModelSerialization:
         self.session.commit()
 
         users = self.session.query(User).all()
-        toon = to_toon(users)
+        toon = sqlalchemy_to_toon(users)
 
         # Should use tabular format
         assert "[3]{" in toon
@@ -98,12 +98,12 @@ class TestSQLAlchemyModelSerialization:
         assert "Bob" in toon
         assert "Carol" in toon
 
-    def test_bulk_export(self):
+    def test_query_to_toon(self):
         """Test bulk export."""
         self.session.add_all([User(id=i, name=f"User{i}", age=20 + i) for i in range(100)])
         self.session.commit()
 
-        toon = bulk_export(self.session, User)
+        toon = query_to_toon(self.session, User)
 
         assert "[100]{" in toon
 
@@ -116,7 +116,7 @@ class TestSQLAlchemyModelSerialization:
         self.session.add_all([user, post1, post2])
         self.session.commit()
 
-        toon = to_toon(user, include_relationships=True)
+        toon = sqlalchemy_to_toon(user, include_relationships=True)
 
         assert "Alice" in toon
         assert "First Post" in toon or "posts" in toon
@@ -136,14 +136,14 @@ class TestSQLAlchemyBulkOperations:
         """Tear down test database."""
         self.session.close()
 
-    def test_bulk_import(self):
+    def test_bulk_query_to_toon(self):
         """Test bulk import from TOON."""
         toon = """users[3]{name,age}:
   Alice,30
   Bob,25
   Carol,35"""
 
-        bulk_import(self.session, User, toon)
+        bulk_query_to_toon(self.session, User, toon)
 
         users = self.session.query(User).all()
         assert len(users) == 3
@@ -152,7 +152,7 @@ class TestSQLAlchemyBulkOperations:
     def test_schema_export(self):
         """Test schema export to TOON."""
         schema = Base.metadata.tables["users"]
-        toon = to_toon(schema, as_schema=True)
+        toon = sqlalchemy_to_toon(schema, as_schema=True)
 
         assert "name" in toon
         assert "age" in toon
