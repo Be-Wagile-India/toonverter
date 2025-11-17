@@ -1,5 +1,5 @@
 """Version information for TOON Converter."""
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 __author__ = "Danesh Patel, Be-Wagile India"
 __license__ = "MIT"
