@@ -2,15 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/## [Unreleased]/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
-- Future enhancements will be listed here
+### Planned
+- Additional framework integrations
+- Performance optimizations
+- Enhanced CLI features
 
-## [## [Unreleased]] - 2025-01-17
+## [1.0.2] - 2025-01-17
+
+### Added
+- GitHub Pages documentation deployment workflow
+- AUTHORS.md file with contributor information
+- Comprehensive test coverage verification
+- Documentation for all 10 framework integrations
+
+### Changed
+- Updated documentation URLs to GitHub Pages
+- Improved README with logo and better formatting
+- Enhanced Sphinx documentation configuration
+
+### Fixed
+- PyPI package links now correctly point to Be-Wagile-India repository
+- Documentation build configuration optimized
+- Missing documentation files added
+
+## [1.0.1] - 2025-01-17
+
+### Fixed
+- Package metadata and repository links
+- Documentation configuration
+
+## [1.0.0] - 2025-01-17
 
 ### Added
 - **Complete TOON v2.0 Specification Implementation**
@@ -39,42 +65,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Level 2 OOP API: Stateful classes for advanced use (Encoder, Decoder, Converter, Analyzer)
   - Full type hints for IDE support
 
+- **10 Framework Integrations**
+  - Pandas: DataFrame optimization with tabular encoding
+  - Pydantic: BaseModel serialization with validation
+  - LangChain: Document and Message support for RAG systems
+  - FastAPI: Native TOON response class
+  - SQLAlchemy: ORM model serialization and bulk operations
+  - MCP: Model Context Protocol server with 4 tools
+  - LlamaIndex: Node and Document support
+  - Haystack: Document integration for pipelines
+  - DSPy: Example and prediction support
+  - Instructor: Response model integration
+
 - **Comprehensive Test Suite**
-  - 550+ unit tests with 50%+ coverage
-  - Spec compliance tests validating TOON v2.0 conformance
-  - Integration tests for format adapters
+  - 554 tests with 50.66% code coverage
+  - 26/26 TOON v2.0 spec compliance tests passing
+  - Integration tests for all format adapters
   - Performance benchmark suite
   - All critical paths tested
 
 - **Developer Experience**
-  - Modern src/ layout with proper packaging
+  - Modern src/ layout with PEP 517/518 packaging
   - Ruff for linting and formatting
   - Pre-commit hooks for code quality
   - Comprehensive documentation with examples
-  - Makefile for common tasks
-  - Type checking with mypy
+  - Makefile for common development tasks
+  - Type checking with mypy (100% typed)
 
-- **Integrations Framework**
-  - Plugin system with entry point discovery
-  - Integration stubs for LangChain, Pandas, Pydantic, FastAPI, etc.
-  - Extensible adapter registry
+- **CLI Tools**
+  - Command-line interface for file conversion
+  - Token analysis from command line
+  - Format validation and inspection
+  - Rich output formatting
 
 ### Fixed
-- Decoder now correctly handles all TOON v2.0 syntax
-- Number encoding properly handles edge cases (NaN, Infinity, -0)
+- Decoder correctly handles all TOON v2.0 syntax
+- Number encoding handles edge cases (NaN, Infinity, -0)
 - String encoding correctly escapes special characters
-- Tabular array detection and encoding
+- Tabular array detection and encoding optimized
 
-## [## [Unreleased]] - 2025-01-15
+## [0.1.0] - 2025-01-15
 
 ### Added
-- Initial release of TOON Converter
-- Support for JSON, YAML, TOML, CSV formats
+- Initial development release
 - Basic TOON encoding and decoding
+- Support for JSON, YAML, TOML formats
 - Token analysis with tiktoken
-- Command-line interface
 - Python 3.10+ support
 - MIT License
-- Documentation and examples
 
-
+[Unreleased]: https://github.com/Be-Wagile-India/toonverter/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/Be-Wagile-India/toonverter/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/Be-Wagile-India/toonverter/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/Be-Wagile-India/toonverter/compare/v0.1.0...v1.0.0
+[0.1.0]: https://github.com/Be-Wagile-India/toonverter/releases/tag/v0.1.0

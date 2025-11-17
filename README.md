@@ -1,4 +1,8 @@
-# 🎒 TOON Converter
+# TOON Converter
+
+<p align="left">
+  <img src="docs/BWI.jpg" alt="Be-Wagile India Logo" width="200"/>
+</p>
 
 [![PyPI version](https://badge.fury.io/py/toonverter.svg)](https://badge.fury.io/py/toonverter)
 [![Python Support](https://img.shields.io/pypi/pyversions/toonverter.svg)](https://pypi.org/project/toonverter/)
@@ -11,7 +15,7 @@
 
 **Token-Optimized Object Notation (TOON) v2.0** - The most comprehensive Python library for TOON format, featuring **100% spec compliance**, 10 framework integrations, and production-ready tools for reducing LLM token usage by 30-60%.
 
-## ⚡ Why TOON Converter?
+## Why TOON Converter?
 
 | Feature | toonverter | Others |
 |---------|-----------|--------|
@@ -23,7 +27,7 @@
 | **MCP Server** | ✅ Built-in | ❌ None |
 | **Production Ready** | ✅ Yes | ⚠️ Experimental |
 
-## 🚀 Key Features
+## Key Features
 
 ### Core Capabilities
 - **100% TOON v2.0 Spec Compliant**: All 26 specification tests passing

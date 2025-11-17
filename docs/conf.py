@@ -16,8 +16,8 @@ sys.path.insert(0, os.path.abspath('../src'))
 project = 'toonverter'
 copyright = f'{datetime.now().year}, Be-Wagile India'
 author = 'Be-Wagile India'
-release = '1.0.0'
-version = '1.0.0'
+release = '1.0.2'
+version = '1.0.2'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -93,7 +93,7 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 html_title = f'{project} {version}'
 html_short_title = project
-html_logo = None
+html_logo = 'BWI.jpg'
 html_favicon = None
 
 html_theme_options = {
