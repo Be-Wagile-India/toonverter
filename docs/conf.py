@@ -120,11 +120,6 @@ html_js_files = []
 # -- Intersphinx configuration -----------------------------------------------
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
-    'pandas': ('https://pandas.pydata.org/docs/', None),
-    'pydantic': ('https://docs.pydantic.dev/latest/', None),
-    'langchain': ('https://python.langchain.com/docs/', None),
-    'fastapi': ('https://fastapi.tiangolo.com/', None),
-    'sqlalchemy': ('https://docs.sqlalchemy.org/en/20/', None),
 }
 
 # -- Additional settings -----------------------------------------------------

@@ -159,11 +159,11 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/toonverter"
-Documentation = "https://toonverter.readthedocs.io"
-Repository = "https://github.com/yourusername/toonverter"
-"Bug Tracker" = "https://github.com/yourusername/toonverter/issues"
-Changelog = "https://github.com/yourusername/toonverter/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/Be-Wagile-India/toonverter"
+Documentation = "https://be-wagile-india.github.io/toonverter/"
+Repository = "https://github.com/Be-Wagile-India/toonverter"
+"Bug Tracker" = "https://github.com/Be-Wagile-India/toonverter/issues"
+Changelog = "https://github.com/Be-Wagile-India/toonverter/blob/main/CHANGELOG.md"
 
 [project.scripts]
 toonverter = "toonverter.cli.main:cli"
