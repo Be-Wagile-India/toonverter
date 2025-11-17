@@ -5,6 +5,18 @@ TOON Converter Documentation
    :target: https://badge.fury.io/py/toonverter
    :alt: PyPI version
 
+.. image:: https://static.pepy.tech/badge/toonverter
+   :target: https://pepy.tech/project/toonverter
+   :alt: Total Downloads
+
+.. image:: https://static.pepy.tech/badge/toonverter/month
+   :target: https://pepy.tech/project/toonverter
+   :alt: Monthly Downloads
+
+.. image:: https://static.pepy.tech/badge/toonverter/week
+   :target: https://pepy.tech/project/toonverter
+   :alt: Weekly Downloads
+
 .. image:: https://img.shields.io/pypi/pyversions/toonverter.svg
    :target: https://pypi.org/project/toonverter/
    :alt: Python Support
@@ -30,37 +42,28 @@ Features
 Core Capabilities
 ^^^^^^^^^^^^^^^^^
 
-* 🎯 **100% TOON v2.0 Spec Compliant**: All 26 specification tests passing
-* 📉 **30-60% Token Savings**: Verified with benchmarks on real-world data
-* 🔄 **Multi-Format Support**: JSON, YAML, TOML, CSV, XML ↔ TOON
-* 📊 **Tabular Optimization**: Exceptional efficiency for DataFrame-like structures
-* 🧮 **Token Analysis**: Compare token usage across formats using tiktoken
-* 🔍 **Type Inference**: Automatic type detection and preservation
-* ✅ **Strict Validation**: Optional strict mode for production safety
+* **100% TOON v2.0 Spec Compliant**: All 26 specification tests passing
+* **30-60% Token Savings**: Verified with benchmarks on real-world data
+* **Multi-Format Support**: JSON, YAML, TOML, CSV, XML ↔ TOON
+* **Tabular Optimization**: Exceptional efficiency for DataFrame-like structures
+* **Token Analysis**: Compare token usage across formats using tiktoken
+* **Type Inference**: Automatic type detection and preservation
+* **Strict Validation**: Optional strict mode for production safety
 
 Framework Integrations (10)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* 🐼 **Pandas**: DataFrame ↔ TOON with tabular optimization
-* 📦 **Pydantic**: BaseModel serialization with validation
-* 🦜 **LangChain**: Document and Message support for RAG systems
-* ⚡ **FastAPI**: Native TOON response class
-* 🗄️ **SQLAlchemy**: ORM model serialization and bulk operations
-* 🔌 **MCP**: Model Context Protocol server with 4 tools
-* 🦙 **LlamaIndex**: Node and Document support
-* 🌾 **Haystack**: Document integration for pipelines
-* 🎯 **DSPy**: Example and prediction support
-* 🎓 **Instructor**: Response model integration
+* **Pandas**: DataFrame ↔ TOON with tabular optimization
+* **Pydantic**: BaseModel serialization with validation
+* **LangChain**: Document and Message support for RAG systems
+* **FastAPI**: Native TOON response class
+* **SQLAlchemy**: ORM model serialization and bulk operations
+* **MCP**: Model Context Protocol server with 4 tools
+* **LlamaIndex**: Node and Document support
+* **Haystack**: Document integration for pipelines
+* **DSPy**: Example and prediction support
+* **Instructor**: Response model integration
 
-Production Features
-^^^^^^^^^^^^^^^^^^^^
-
-* 📝 **50+ Test Files**: Comprehensive unit, integration, and performance tests
-* 🎨 **Type-Safe**: 100% type hints with mypy strict mode
-* ⚡ **High Performance**: <100ms for typical datasets, streaming for large files
-* 🔧 **Extensible**: Plugin architecture for custom formats
-* 📚 **Well-Documented**: Extensive docs and examples
-* 🛡️ **Battle-Tested**: SOLID principles, clean architecture
 
 Quick Start
 -----------

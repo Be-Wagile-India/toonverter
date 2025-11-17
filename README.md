@@ -1,10 +1,13 @@
 # TOON Converter
 
 <p align="left">
-  <img src="docs/BWI.jpg" alt="Be-Wagile India Logo" width="200"/>
+  <img src="docs/TDMC.png" alt="Be-Wagile India Logo" width="200"/>
 </p>
 
 [![PyPI version](https://badge.fury.io/py/toonverter.svg)](https://badge.fury.io/py/toonverter)
+[![Downloads](https://static.pepy.tech/badge/toonverter)](https://pepy.tech/project/toonverter)
+[![Downloads/Month](https://static.pepy.tech/badge/toonverter/month)](https://pepy.tech/project/toonverter)
+[![Downloads/Week](https://static.pepy.tech/badge/toonverter/week)](https://pepy.tech/project/toonverter)
 [![Python Support](https://img.shields.io/pypi/pyversions/toonverter.svg)](https://pypi.org/project/toonverter/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)

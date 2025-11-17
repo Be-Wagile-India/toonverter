@@ -93,7 +93,7 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 html_title = f'{project} {version}'
 html_short_title = project
-html_logo = 'BWI.jpg'
+html_logo = 'TDMC.png'
 html_favicon = None
 
 html_theme_options = {
