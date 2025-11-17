@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation build configuration optimized
 - Missing documentation files added
 
-## [1.0.1] - 2025-01-17
+## [## [Unreleased]] - 2025-01-17
 
 ### Fixed
 - Package metadata and repository links
@@ -115,7 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MIT License
 
 [Unreleased]: https://github.com/Be-Wagile-India/toonverter/compare/v1.0.2...HEAD
-[1.0.2]: https://github.com/Be-Wagile-India/toonverter/compare/v1.0.1...v1.0.2
-[1.0.1]: https://github.com/Be-Wagile-India/toonverter/compare/v1.0.0...v1.0.1
+[1.0.2]: https://github.com/Be-Wagile-India/toonverter/compare/v## [Unreleased]...v1.0.2
+[## [Unreleased]]: https://github.com/Be-Wagile-India/toonverter/compare/v1.0.0...v## [Unreleased]
 [1.0.0]: https://github.com/Be-Wagile-India/toonverter/compare/v0.1.0...v1.0.0
 [0.1.0]: https://github.com/Be-Wagile-India/toonverter/releases/tag/v0.1.0
