@@ -26,33 +26,26 @@
 ## 🚀 Key Features
 
 ### Core Capabilities
-- **🎯 100% TOON v2.0 Spec Compliant**: All 26 specification tests passing
-- **📉 30-60% Token Savings**: Verified with benchmarks on real-world data
-- **🔄 Multi-Format Support**: JSON, YAML, TOML, CSV, XML ↔ TOON
-- **📊 Tabular Optimization**: Exceptional efficiency for DataFrame-like structures
-- **🧮 Token Analysis**: Compare token usage across formats using tiktoken
-- **🔍 Type Inference**: Automatic type detection and preservation
-- **✅ Strict Validation**: Optional strict mode for production safety
+- **100% TOON v2.0 Spec Compliant**: All 26 specification tests passing
+- **30-60% Token Savings**: Verified with benchmarks on real-world data
+- **Multi-Format Support**: JSON, YAML, TOML, CSV, XML ↔ TOON
+- **Tabular Optimization**: Exceptional efficiency for DataFrame-like structures
+- **Token Analysis**: Compare token usage across formats using tiktoken
+- **Type Inference**: Automatic type detection and preservation
+- **Strict Validation**: Optional strict mode for production safety
 
 ### Framework Integrations (10)
-- **🐼 Pandas**: DataFrame ↔ TOON with tabular optimization
-- **📦 Pydantic**: BaseModel serialization with validation
-- **🦜 LangChain**: Document and Message support for RAG systems
-- **⚡ FastAPI**: Native TOON response class
-- **🗄️ SQLAlchemy**: ORM model serialization and bulk operations
-- **🔌 MCP**: Model Context Protocol server with 4 tools
-- **🦙 LlamaIndex**: Node and Document support
-- **🌾 Haystack**: Document integration for pipelines
-- **🎯 DSPy**: Example and prediction support
-- **🎓 Instructor**: Response model integration
+- **Pandas**: DataFrame ↔ TOON with tabular optimization
+- **Pydantic**: BaseModel serialization with validation
+- **LangChain**: Document and Message support for RAG systems
+- **FastAPI**: Native TOON response class
+- **🗄SQLAlchemy**: ORM model serialization and bulk operations
+- **MCP**: Model Context Protocol server with 4 tools
+- **LlamaIndex**: Node and Document support
+- **Haystack**: Document integration for pipelines
+- **DSPy**: Example and prediction support
+- **Instructor**: Response model integration
 
-### Production Features
-- **📝 554 Tests**: Comprehensive unit, integration, and spec compliance tests
-- **🎨 Type-Safe**: 100% type hints with mypy strict mode
-- **⚡ High Performance**: <100ms for typical datasets, streaming for large files
-- **🔧 Extensible**: Plugin architecture for custom formats
-- **📚 Well-Documented**: Extensive docs and examples
-- **🛡️ Battle-Tested**: SOLID principles, clean architecture
 
 ## Installation
 
@@ -557,73 +550,6 @@ entry_points={
 }
 ```
 
-## Performance
-
-TOON Converter is optimized for production use:
-
-- **Conversion Speed**: <100ms for typical datasets
-- **Memory Efficiency**: Streaming support for files up to 100MB+
-- **Token Efficiency**: 30-60% reduction vs JSON/YAML
-- **Type Safety**: Zero runtime type errors with full mypy coverage
-- **Test Coverage**: 554 tests passing with 50.66% coverage
-
-### Benchmark Results
-
-| Operation | Dataset Size | Time | Compression |
-|-----------|-------------|------|-------------|
-| Encode small object | 3 fields | <1ms | 33% smaller |
-| Encode tabular (100 rows) | 3 columns | <10ms | 45% smaller |
-| Encode tabular (1000 rows) | 3 columns | <50ms | 52% smaller |
-| Roundtrip medium | 100 objects | <20ms | N/A |
-| Decode large tabular | 1000 rows | <30ms | N/A |
-
-*Benchmarks run on typical hardware. Results may vary.*
-
-## Development
-
-### Setup Development Environment
-
-```bash
-# Clone repository
-git clone https://github.com/yourusername/toonverter.git
-cd toonverter
-
-# Install with dev dependencies
-make install-dev
-
-# Run tests
-make test
-
-# Run quality checks
-make quality
-```
-
-### Running Tests
-
-```bash
-make test          # All tests with coverage
-make test-fast     # Parallel tests without coverage
-make test-unit     # Unit tests only
-```
-
-### Code Quality
-
-```bash
-make lint          # Run ruff linter
-make format        # Format code with ruff
-make type-check    # Run mypy type checker
-make pre-commit    # Run all pre-commit hooks
-```
-
-### Building and Releasing
-
-```bash
-make build              # Build distribution packages
-make release-patch      # Bump patch version (0.1.0 -> 0.1.1)
-make release-minor      # Bump minor version (0.1.0 -> 0.2.0)
-make release-major      # Bump major version (0.1.0 -> 1.0.0)
-```
-
 
 ## Use Cases
 
@@ -640,56 +566,6 @@ make release-major      # Bump major version (0.1.0 -> 1.0.0)
 - Core: `typing-extensions>=4.8.0`, `tiktoken>=0.5.0`, `PyYAML>=6.0`, `tomli>=2.0.0` (Python <3.11)
 - Optional integrations: `pandas`, `pydantic`, `langchain`, `fastapi`, `sqlalchemy`, `mcp`, `llama-index`, `haystack-ai`, `dspy-ai`, `instructor`
 - Optional CLI: `click`, `rich`
-
-## Project Status
-
-✅ **Production-Ready v1.0.0**
-
-### Spec Compliance
-- ✅ **100% TOON v2.0 Spec Compliance** (26/26 tests passing)
-- ✅ All three root forms supported (Object, Array, Primitive)
-- ✅ All three array forms supported (Inline, Tabular, List)
-- ✅ Number canonical form (no exponents, no trailing zeros)
-- ✅ String quoting rules (10+ edge cases)
-- ✅ Escape sequences (5 types: `\\`, `\"`, `\n`, `\r`, `\t`)
-- ✅ All delimiters (Comma, Tab, Pipe)
-
-### Test Coverage
-- ✅ **554 tests passing** with 50.66% coverage
-- ✅ 29 comprehensive unit test files
-- ✅ 10 integration tests (one per framework)
-- ✅ Performance benchmarks
-- ✅ All edge cases covered
-
-### Integrations
-- ✅ **10 framework integrations** tested and documented
-- ✅ Pandas, Pydantic, LangChain, FastAPI
-- ✅ SQLAlchemy, MCP, LlamaIndex, Haystack
-- ✅ DSPy, Instructor
-
-### Code Quality
-- ✅ 100% type coverage with mypy strict mode
-- ✅ Ruff linting (zero violations)
-- ✅ SOLID principles and clean architecture
-- ✅ Full documentation coverage
-
-## Example Output
-
-```python
->>> import toonverter as toon
->>> data = {"name": "Alice", "age": 30, "city": "NYC", "active": True}
->>> encoded = toon.encode(data)
->>> print(encoded)
-{name:Alice,age:30,city:NYC,active:true}
-
->>> decoded = toon.decode(encoded)
->>> print(decoded)
-{'name': 'Alice', 'age': 30, 'city': 'NYC', 'active': True}
-
->>> report = toon.analyze(data, compare_formats=["json", "toon"])
->>> print(f"Savings: {report.max_savings_percentage:.1f}%")
-Savings: 33.3%
-```
 
 ## Contributing
 
@@ -713,11 +589,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Follows SOLID principles and clean architecture
 - Designed for the LLM and AI community
 
-## Support
-
-- [GitHub Issues](https://github.com/Be-Wagile-India/toonverter/issues)
-- [Discussions](https://github.com/Be-Wagile-India/toonverter/discussions)
-- [Documentation](GETTING_STARTED.md)
 
 ## Quick Links
 
