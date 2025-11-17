@@ -1,7 +1,7 @@
 # TOON Converter
 
 <p align="left">
-  <img src="docs/TDMC.png" alt="Be-Wagile India Logo" width="200"/>
+  <img src="docs/TDMC.png" alt="LOGO" width="200"/>
 </p>
 
 [![PyPI version](https://badge.fury.io/py/toonverter.svg)](https://badge.fury.io/py/toonverter)
