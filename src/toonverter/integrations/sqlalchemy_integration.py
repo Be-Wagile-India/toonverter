@@ -10,23 +10,33 @@ Features:
 - Bulk operations with batching
 """
 
-from collections.abc import Iterator
+from __future__ import annotations
+
+from collections.abc import Iterator  # noqa: TC003
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 
-try:
-    from sqlalchemy import MetaData, Table, inspect
+if TYPE_CHECKING:
+    from sqlalchemy import MetaData, Table
     from sqlalchemy.engine import Result, Row
     from sqlalchemy.orm import DeclarativeMeta, Session
+else:
+    # Runtime imports - these are only used, never just annotated
+    try:
+        from sqlalchemy import MetaData, Table, inspect
+        from sqlalchemy.engine import Result, Row
+        from sqlalchemy.orm import DeclarativeMeta, Session
 
-    SQLALCHEMY_AVAILABLE = True
-except ImportError:
-    SQLALCHEMY_AVAILABLE = False
+        SQLALCHEMY_AVAILABLE = True
+    except ImportError:
+        SQLALCHEMY_AVAILABLE = False
+        # Define dummy types for runtime when SQLAlchemy not installed
+        Result = Row = MetaData = Table = Session = DeclarativeMeta = None  # type: ignore
 
 from toonverter.core.exceptions import ConversionError
-from toonverter.core.spec import ToonDecodeOptions, ToonEncodeOptions
+from toonverter.core.spec import ToonDecodeOptions, ToonEncodeOptions  # noqa: TC001
 from toonverter.decoders.toon_decoder import ToonDecoder
 from toonverter.encoders.toon_encoder import ToonEncoder
 
