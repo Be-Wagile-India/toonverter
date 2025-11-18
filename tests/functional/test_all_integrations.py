@@ -51,7 +51,7 @@ class TestPandasIntegrationComplete:
 
     def test_roundtrip(self, sample_df):
         """Test DataFrame roundtrip."""
-        pd = pytest.importorskip("pandas")
+        pytest.importorskip("pandas")
         from toonverter.integrations.pandas_integration import pandas_to_toon, toon_to_pandas
 
         toon_str = pandas_to_toon(sample_df)
@@ -71,7 +71,7 @@ class TestPydanticIntegrationComplete:
     @pytest.fixture
     def user_model(self):
         """Create Pydantic User model."""
-        pydantic = pytest.importorskip("pydantic")
+        pytest.importorskip("pydantic")
         from pydantic import BaseModel
 
         class User(BaseModel):
@@ -333,8 +333,9 @@ class TestSQLAlchemyIntegrationComplete:
         user = User(id=1, name="Alice", age=30)
 
         # This should work but may need a session context
-        # For now, just test that the import works
+        # For now, just test that the import works and user is created
         assert sqlalchemy_to_toon is not None
+        assert user.name == "Alice"
 
 
 # =============================================================================
@@ -347,10 +348,7 @@ class TestDSPyIntegrationComplete:
 
     def test_example_encoding(self):
         """Test DSPy Example encoding."""
-        try:
-            import dspy
-        except ImportError:
-            pytest.skip("dspy not installed")
+        pytest.importorskip("dspy")
 
         from toonverter.integrations.dspy_integration import dspy_to_toon
 
@@ -369,10 +367,7 @@ class TestInstructorIntegrationComplete:
 
     def test_instructor_available(self):
         """Test Instructor integration availability."""
-        try:
-            from pydantic import BaseModel
-        except ImportError:
-            pytest.skip("pydantic not installed")
+        pytest.importorskip("pydantic")
 
         from toonverter.integrations.instructor_integration import response_to_toon
 

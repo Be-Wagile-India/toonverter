@@ -52,6 +52,7 @@ class TestPandasIntegration:
         """Test DataFrame to TOON and back."""
         pytest.importorskip("pandas")
         import pandas as pd
+
         from toonverter.integrations import pandas_to_toon, toon_to_pandas
 
         toon_str = pandas_to_toon(sample_dataframe)
@@ -64,6 +65,7 @@ class TestPandasIntegration:
         """Test empty DataFrame encoding."""
         pytest.importorskip("pandas")
         import pandas as pd
+
         from toonverter.integrations import pandas_to_toon
 
         df = pd.DataFrame()
@@ -74,6 +76,7 @@ class TestPandasIntegration:
         """Test single row DataFrame."""
         pytest.importorskip("pandas")
         import pandas as pd
+
         from toonverter.integrations import pandas_to_toon
 
         df = pd.DataFrame({"x": [1], "y": [2]})

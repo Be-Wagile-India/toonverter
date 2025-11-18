@@ -2,7 +2,6 @@
 
 import sys
 from pathlib import Path
-from typing import Optional
 
 import click
 
@@ -43,7 +42,7 @@ def convert(source: str, target: str, from_format: str, to_format: str, compact:
 @click.argument("input_file", type=click.Path(exists=True))
 @click.option("--output", "-o", type=click.Path(), help="Output file")
 @click.option("--compact", is_flag=True, help="Use compact encoding")
-def encode(input_file: str, output: Optional[str], compact: bool) -> None:
+def encode(input_file: str, output: str | None, compact: bool) -> None:
     """Encode data to TOON format."""
     import toonverter as toon
 
@@ -69,7 +68,7 @@ def encode(input_file: str, output: Optional[str], compact: bool) -> None:
 @click.argument("input_file", type=click.Path(exists=True))
 @click.option("--output", "-o", type=click.Path(), help="Output file")
 @click.option("--format", "-f", default="json", help="Output format")
-def decode(input_file: str, output: Optional[str], format: str) -> None:
+def decode(input_file: str, output: str | None, format: str) -> None:
     """Decode TOON format to other formats."""
     import toonverter as toon
 
