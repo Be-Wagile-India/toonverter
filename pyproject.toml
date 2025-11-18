@@ -62,6 +62,9 @@ dependencies = [
     "PyYAML>=6.0",
     "tomli>=2.0.0; python_version<'3.11'",
     "tomli-w>=1.0.0",  # TOML writing support for all Python versions
+    # CLI support (required for console script entry point)
+    "click>=8.1.0",
+    "rich>=13.0.0",
 ]
 
 [project.optional-dependencies]
@@ -118,11 +121,9 @@ integrations = [
     "instructor>=1.0.0",
 ]
 
-# CLI support
-cli = [
-    "click>=8.1.0",
-    "rich>=13.0.0",
-]
+# CLI support (click and rich are now required dependencies)
+# This extra is kept for backwards compatibility but is now empty
+cli = []
 
 # Development dependencies
 dev = [
