@@ -403,9 +403,7 @@ class TestAllIntegrationsWorkWithFixedOptions:
 
         for integration in integrations_with_encode_options:
             # Just verify they can be imported
-            module = __import__(
-                f"toonverter.integrations.{integration}", fromlist=[integration]
-            )
+            module = __import__(f"toonverter.integrations.{integration}", fromlist=[integration])
             assert module is not None
 
     def test_integrations_using_toon_encode_options(self):
@@ -421,7 +419,5 @@ class TestAllIntegrationsWorkWithFixedOptions:
 
         for integration in integrations_with_toon_options:
             # Just verify they can be imported
-            module = __import__(
-                f"toonverter.integrations.{integration}", fromlist=[integration]
-            )
+            module = __import__(f"toonverter.integrations.{integration}", fromlist=[integration])
             assert module is not None
