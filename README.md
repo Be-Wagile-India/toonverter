@@ -232,7 +232,7 @@ restored_user = toon_to_pydantic(toon_str, User)
 #### LangChain RAG
 
 ```python
-from langchain.schema import Document
+from langchain_core.documents import Document
 from toonverter.integrations import langchain_to_toon, toon_to_langchain
 
 # Convert LangChain documents to TOON for efficient storage

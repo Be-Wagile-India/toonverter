@@ -20,13 +20,13 @@ class IndentationManager:
         """Initialize indentation manager.
 
         Args:
-            indent_size: Number of spaces per indentation level (default: 2)
+            indent_size: Number of spaces per indentation level (default: 2, 0 for compact mode)
 
         Raises:
-            ValueError: If indent_size is less than 1
+            ValueError: If indent_size is less than 0
         """
-        if indent_size < 1:
-            msg = "indent_size must be at least 1"
+        if indent_size < 0:
+            msg = "indent_size must be at least 0 (0 for compact mode)"
             raise ValueError(msg)
 
         self.indent_size = indent_size

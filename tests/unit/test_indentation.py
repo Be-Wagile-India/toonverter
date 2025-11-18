@@ -19,14 +19,15 @@ class TestIndentationManagerInit:
         mgr = IndentationManager(indent_size=4)
         assert mgr.indent_size == 4
 
-    def test_init_indent_size_zero_raises_error(self):
-        """Test indent size of 0 raises ValueError."""
-        with pytest.raises(ValueError, match="must be at least 1"):
-            IndentationManager(indent_size=0)
+    def test_init_indent_size_zero_allowed(self):
+        """Test indent size of 0 is allowed for compact mode."""
+        mgr = IndentationManager(indent_size=0)
+        assert mgr.indent_size == 0
+        assert mgr.indent(1) == ""  # No indentation in compact mode
 
     def test_init_negative_indent_size_raises_error(self):
         """Test negative indent size raises ValueError."""
-        with pytest.raises(ValueError, match="must be at least 1"):
+        with pytest.raises(ValueError, match="must be at least 0"):
             IndentationManager(indent_size=-1)
 
     def test_init_indent_size_one(self):

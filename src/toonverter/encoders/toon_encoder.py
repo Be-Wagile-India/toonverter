@@ -7,7 +7,8 @@ according to the official TOON specification from github.com/toon-format/spec
 from typing import Any
 
 from toonverter.core.exceptions import EncodingError, ValidationError
-from toonverter.core.spec import ArrayForm, RootForm, ToonEncodeOptions, ToonValue
+from toonverter.core.spec import ArrayForm, Delimiter, RootForm, ToonEncodeOptions, ToonValue
+from toonverter.core.types import EncodeOptions
 
 from .array_encoder import ArrayEncoder
 from .indentation import IndentationManager
@@ -230,12 +231,45 @@ class ToonEncoder:
         raise ValidationError(msg)
 
 
-def encode(data: ToonValue, options: ToonEncodeOptions | None = None) -> str:
+def _convert_options(options: EncodeOptions | ToonEncodeOptions | None) -> ToonEncodeOptions | None:
+    """Convert EncodeOptions to ToonEncodeOptions if needed.
+
+    Args:
+        options: Either EncodeOptions (user-facing) or ToonEncodeOptions (internal)
+
+    Returns:
+        ToonEncodeOptions or None
+    """
+    if options is None:
+        return None
+
+    if isinstance(options, ToonEncodeOptions):
+        return options
+
+    # Convert EncodeOptions to ToonEncodeOptions
+    if isinstance(options, EncodeOptions):
+        # Convert string delimiter to Delimiter enum
+        delimiter = Delimiter.from_string(options.delimiter)
+
+        # Map compact mode to indent_size
+        indent_size = 0 if options.compact else options.indent
+
+        return ToonEncodeOptions(
+            indent_size=indent_size,
+            delimiter=delimiter,
+            key_folding="none",  # EncodeOptions doesn't have key_folding
+            strict=True,
+        )
+
+    return None
+
+
+def encode(data: ToonValue, options: EncodeOptions | ToonEncodeOptions | None = None) -> str:
     """Convenience function to encode data to TOON format.
 
     Args:
         data: Data to encode
-        options: Encoding options
+        options: Encoding options (EncodeOptions or ToonEncodeOptions)
 
     Returns:
         TOON-formatted string
@@ -244,5 +278,6 @@ def encode(data: ToonValue, options: ToonEncodeOptions | None = None) -> str:
         >>> encode({"name": "Alice", "age": 30})
         'name: Alice\\nage: 30'
     """
-    encoder = ToonEncoder(options)
+    toon_options = _convert_options(options)
+    encoder = ToonEncoder(toon_options)
     return encoder.encode(data)

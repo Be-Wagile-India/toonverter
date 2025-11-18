@@ -126,8 +126,8 @@ class ToonEncodeOptions:
 
     def __post_init__(self) -> None:
         """Validate options."""
-        if self.indent_size < 1:
-            msg = "indent_size must be at least 1"
+        if self.indent_size < 0:
+            msg = "indent_size must be at least 0 (0 for compact mode)"
             raise ValueError(msg)
         if self.key_folding not in ("safe", "none"):
             msg = "key_folding must be 'safe' or 'none'"

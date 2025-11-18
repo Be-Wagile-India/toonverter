@@ -420,8 +420,8 @@ def _dict_to_obj(
             text=text,
             metadata=metadata,
             id_=doc_id,
-            excluded_embed_metadata_keys=data.get("excluded_embed_metadata_keys"),
-            excluded_llm_metadata_keys=data.get("excluded_llm_metadata_keys"),
+            excluded_embed_metadata_keys=data.get("excluded_embed_metadata_keys") or [],
+            excluded_llm_metadata_keys=data.get("excluded_llm_metadata_keys") or [],
         )
 
     if node_type == "text":

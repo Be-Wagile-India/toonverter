@@ -8,14 +8,21 @@ from toonverter.decoders import decode
 from toonverter.encoders import encode
 
 
-# Optional dependency
+# Optional dependency - try new imports first, fall back to old for backward compatibility
 try:
-    from langchain.schema import Document
+    # New imports (langchain-core 0.1.0+)
+    from langchain_core.documents import Document
 
     LANGCHAIN_AVAILABLE = True
 except ImportError:
-    LANGCHAIN_AVAILABLE = False
-    Document = Any  # type: ignore
+    try:
+        # Old imports (deprecated but still supported for backward compatibility)
+        from langchain.schema import Document
+
+        LANGCHAIN_AVAILABLE = True
+    except ImportError:
+        LANGCHAIN_AVAILABLE = False
+        Document = Any  # type: ignore
 
 
 def langchain_to_toon(document: "Document", options: EncodeOptions | None = None) -> str:

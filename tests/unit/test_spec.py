@@ -122,14 +122,14 @@ class TestToonEncodeOptions:
         options = ToonEncodeOptions(strict=False)
         assert options.strict is False
 
-    def test_invalid_indent_size_zero_raises_error(self):
-        """Test indent size of 0 raises error."""
-        with pytest.raises(ValueError, match="indent_size must be at least 1"):
-            ToonEncodeOptions(indent_size=0)
+    def test_indent_size_zero_allowed_for_compact(self):
+        """Test indent size of 0 is allowed for compact mode."""
+        options = ToonEncodeOptions(indent_size=0)
+        assert options.indent_size == 0
 
     def test_invalid_indent_size_negative_raises_error(self):
         """Test negative indent size raises error."""
-        with pytest.raises(ValueError, match="indent_size must be at least 1"):
+        with pytest.raises(ValueError, match="must be at least 0"):
             ToonEncodeOptions(indent_size=-1)
 
     def test_invalid_key_folding_raises_error(self):
