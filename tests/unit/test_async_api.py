@@ -34,10 +34,12 @@ async def test_async_read_write(tmp_path: Path) -> None:
     test_path = tmp_path / "temp_async.txt"
     test_content = "This content should be written and read asynchronously."
 
-    await async_write_file(str(test_path), test_content)
+    # Pass the Path object directly
+    await async_write_file(test_path, test_content)
     assert test_path.exists()
 
-    read_content = await async_read_file(str(test_path))
+    # Pass the Path object directly
+    read_content = await async_read_file(test_path)
     assert read_content == test_content
 
 
