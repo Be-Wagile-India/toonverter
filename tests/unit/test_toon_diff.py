@@ -138,4 +138,5 @@ def test_toon_diff_result_summary() -> None:
     summary = mock_result.summary()
     assert "DIFFERENT" in summary
     assert "1 item" in summary
-    assert "+15 tokens" in summary
+    assert "15 tokens" in summary
+    assert "(+15)" in summary
