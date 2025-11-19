@@ -14,6 +14,7 @@ from typing import Any, Optional
 
 from .__version__ import __author__, __license__, __version__
 from .analysis import FormatComparator, TiktokenCounter, compare, count_tokens
+from .analysis.diff import ToonDiffer, ToonDiffResult
 from .async_api import async_convert, async_decode, async_encode
 from .core import (
     ComparisonReport,
@@ -245,6 +246,50 @@ def is_supported(format: str) -> bool:
     return registry.is_supported(format)
 
 
+def diff_data(data_a: Any, data_b: Any, model: str = "gpt-4") -> ToonDiffResult:
+    """Compare two Python data structures for token and structural differences.
+
+    Args:
+        data_a: First data structure.
+        data_b: Second data structure.
+        model: Token counting model to use.
+
+    Returns:
+        ToonDiffResult with comparison details.
+
+    Examples:
+        >>> report = diff_data({'a': 1}, {'a': 2, 'b': 3})
+        >>> print(report.token_diff)
+    """
+    differ = ToonDiffer(model)
+    return differ.diff_data(data_a, data_b)
+
+
+def diff_files(
+    file_a_path: str,
+    file_b_path: str,
+    format_a: str,
+    format_b: str,
+    model: str = "gpt-4",
+    **options: Any,
+) -> ToonDiffResult:
+    """Compare data from two files for token and structural differences.
+
+    Args:
+        file_a_path: Path to the first file.
+        file_b_path: Path to the second file.
+        format_a: Format of the first file (e.g., 'json', 'yaml').
+        format_b: Format of the second file.
+        model: Token counting model to use.
+        **options: Decoding options passed to the underlying adapters.
+
+    Returns:
+        ToonDiffResult with comparison details.
+    """
+    differ = ToonDiffer(model)
+    return differ.diff_files(file_a_path, file_b_path, format_a, format_b, **options)
+
+
 # Level 2 OOP API - Exported classes for power users
 class Converter:
     """Stateful converter for advanced use cases."""
@@ -403,6 +448,10 @@ __all__ = [
     "FormatNotSupportedError",
     "TiktokenCounter",
     "TokenAnalysis",
+    "ToonDiffer",
+    "ToonDiffResult",
+    "diff_data",
+    "diff_files",
     # Exceptions
     "ToonConverterError",
     "ToonDecoder",
