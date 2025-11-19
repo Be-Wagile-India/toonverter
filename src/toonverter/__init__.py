@@ -33,6 +33,12 @@ from .decoders import ToonDecoder
 from .encoders import ToonEncoder
 from .formats import register_default_formats
 from .plugins import load_plugins
+from .streaming import (
+    StreamingDecoder,
+    StreamingEncoder,
+    stream_dump,
+    stream_load,
+)
 from .utils import read_file, write_file
 
 
@@ -377,6 +383,11 @@ __all__ = [
     "DecodeOptions",
     "Decoder",
     "DecodingError",
+    # Streaming
+    "StreamingEncoder",
+    "StreamingDecoder",
+    "stream_dump",
+    "stream_load",
     # Types
     "EncodeOptions",
     "Encoder",
