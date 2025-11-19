@@ -14,6 +14,7 @@ from typing import Any, Optional
 
 from .__version__ import __author__, __license__, __version__
 from .analysis import FormatComparator, TiktokenCounter, compare, count_tokens
+from .async_api import async_convert, async_decode, async_encode
 from .core import (
     ComparisonReport,
     ConversionError,
@@ -40,6 +41,7 @@ from .streaming import (
     stream_load,
 )
 from .utils import read_file, write_file
+from .utils.async_io import async_read_file, async_write_file
 
 
 # Initialize package
@@ -375,6 +377,11 @@ class Analyzer:
 
 __all__ = [
     "Analyzer",
+    "async_convert",
+    "async_decode",
+    "async_encode",
+    "async_read_file",
+    "async_write_file",
     "ComparisonReport",
     "ConversionError",
     "ConversionResult",

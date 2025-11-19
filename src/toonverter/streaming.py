@@ -38,9 +38,7 @@ class StreamingEncoder:
         """Start a nested object section (e.g., 'address:')."""
         self.stream.write(f"{self._indent(level)}{key}:\n")
 
-    def write_table_header(
-        self, key: str, count: int, headers: list[str], level: int = 0
-    ) -> None:
+    def write_table_header(self, key: str, count: int, headers: list[str], level: int = 0) -> None:
         """
         Write the header for a tabular array.
         Output: key[N]{col1,col2}:
@@ -171,11 +169,7 @@ class StreamingDecoder:
                 continue
 
             # Case B: Nested Object Start -> "address:"
-            if (
-                content.endswith(":")
-                and not content.startswith("{")
-                and "[" not in content
-            ):
+            if content.endswith(":") and not content.startswith("{") and "[" not in content:
                 key = content[:-1]
                 context_stack.append((indent_len, key))
                 continue
@@ -197,9 +191,7 @@ class StreamingDecoder:
 # --- Facade Functions ---
 
 
-def stream_dump(
-    data: Iterable[dict[str, Any]], stream: TextIO, key: str = "data"
-) -> None:
+def stream_dump(data: Iterable[dict[str, Any]], stream: TextIO, key: str = "data") -> None:
     """Helper to dump a list of dicts directly to a stream."""
     encoder = StreamingEncoder(stream)
     encoder.dump_iterable(key, data)
