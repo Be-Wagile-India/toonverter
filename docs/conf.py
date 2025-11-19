@@ -6,6 +6,7 @@
 import os
 import sys
 from datetime import datetime
+from pygments.lexers.data import YamlLexer
 
 # Add the source directory to the path
 sys.path.insert(0, os.path.abspath('../src'))
@@ -58,6 +59,7 @@ autodoc_default_options = {
     'exclude-members': '__weakref__'
 }
 autodoc_typehints = 'description'
+autodoc_typehints_format = 'fully-qualified'
 autodoc_type_aliases = {}
 
 # Autosummary settings
@@ -135,3 +137,14 @@ todo_include_todos = True
 
 # Output file base name for HTML help builder
 htmlhelp_basename = 'toonverterdoc'
+
+def setup(app):
+    """Register the custom TOON lexer and handle other app-level setups."""
+    # Register the 'toon' language name with the Pygments JSON lexer.
+    app.add_lexer('toon', YamlLexer)
+
+    # Mock imports for optional dependencies (to resolve forward reference warnings)
+    app.config.autodoc_mock_imports.extend([
+        "haystack",
+        "llama_index",
+    ])

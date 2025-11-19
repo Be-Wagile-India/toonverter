@@ -179,6 +179,10 @@ Contents
    api/analyzer
    api/formats
    api/integrations
+   api/async_api
+   api/async_io
+   api/streaming
+   api/diff
 
 .. toctree::
    :maxdepth: 1
