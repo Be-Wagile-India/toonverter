@@ -73,6 +73,7 @@ def setup_dummy_registry() -> None:
         if not registry.is_supported("toon"):
             registry.register("toon", DummyToonAdapter())
     except Exception:
+        # If registration fails, it's likely already registered or not critical for tests.
         pass
 
 
