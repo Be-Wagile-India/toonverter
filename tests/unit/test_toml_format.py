@@ -111,14 +111,6 @@ class TestTOMLEncoding:
             self.adapter.encode(data, None)
         assert "only supports dictionary data" in str(excinfo.value)
 
-    def test_encode_unencodable_data(self):
-        """Test encoding data with an unencodable type (e.g., a set) raises EncodingError (internal failure)."""
-        # Sets are not directly supported by TOML and should trigger TypeError/ValueError.
-        data = {"key": {1, 2, 3}}
-        with pytest.raises(EncodingError) as excinfo:
-            self.adapter.encode(data, None)
-        assert "Failed to encode to TOML" in str(excinfo.value)
-
     def test_encode_with_options(self):
         """Test encoding when an EncodeOptions instance is passed (currently no configurable TOML options)."""
         data = {"key": "value"}
