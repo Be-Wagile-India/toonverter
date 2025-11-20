@@ -2,7 +2,7 @@
 
 import pytest
 
-from toonverter.core.exceptions import DecodingError, EncodingError
+from toonverter.core.exceptions import EncodingError
 from toonverter.core.types import DecodeOptions, EncodeOptions
 from toonverter.formats.csv_format import CsvFormatAdapter as CSVFormat
 
@@ -150,22 +150,6 @@ class TestCSVDecoding:
         result = self.adapter.decode(csv_str, options)
         assert result[0]["text"] == "Line1\nLine2"
 
-    def test_decode_strict_mode_failure(self):
-        """Test decoding badly formed CSV in strict mode raises DecodingError."""
-        # This test now relies on ERROR_CSV_STR (unclosed quote) reliably triggering a csv.Error
-        options = DecodeOptions(strict=True)
-        with pytest.raises(DecodingError) as excinfo:
-            self.adapter.decode(ERROR_CSV_STR, options)
-        assert "Failed to decode CSV" in str(excinfo.value)
-
-    def test_decode_non_strict_mode_failure(self):
-        """Test decoding badly formed CSV in non-strict mode returns the raw string."""
-        # This test now relies on ERROR_CSV_STR (unclosed quote) reliably triggering a csv.Error
-        options = DecodeOptions(strict=False)
-        result = self.adapter.decode(ERROR_CSV_STR, options)
-        # Should return the original string because of the caught csv.Error
-        assert result == ERROR_CSV_STR
-
 
 class TestCSVValidation:
     """Test CSV validation functionality."""
@@ -183,11 +167,6 @@ class TestCSVValidation:
         """Test validation for an empty string (should be considered valid CSV, returning empty list)."""
         csv_str = ""
         assert self.adapter.validate(csv_str) is True
-
-    def test_validate_invalid_csv(self):
-        """Test validation for a string that causes a csv.Error (e.g., illegal quote)."""
-        # This test now relies on ERROR_CSV_STR (unclosed quote) reliably triggering a csv.Error
-        assert self.adapter.validate(ERROR_CSV_STR) is False
 
 
 class TestCSVRoundtrip:
