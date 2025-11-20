@@ -1,7 +1,6 @@
 """Comprehensive tests for TOML format adapter."""
 
 import sys
-from typing import Any
 
 import pytest
 
