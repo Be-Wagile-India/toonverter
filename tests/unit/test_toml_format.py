@@ -16,7 +16,6 @@ if sys.version_info >= (3, 11):
     try:
         # tomllib (built-in reader) and tomli_w (writer) are needed for 3.11+
         import tomli_w
-        import tomllib
 
         TOML_AVAILABLE = True
     except ImportError as e:
