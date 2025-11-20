@@ -41,6 +41,7 @@ def get_toml_format_module():
         return toml_format
     except ImportError:
         pytest.skip("Could not import toml_format module for monkeypatching.")
+        return None
 
 
 @pytest.mark.skipif(not TOML_AVAILABLE, reason="TOML library not installed or cannot be imported")
