@@ -16,7 +16,7 @@ if sys.version_info >= (3, 11):
     try:
         # tomllib (built-in reader) and tomli_w (writer) are needed for 3.11+
         import tomli_w
-
+        tomli_w.__name__  # Mark as used for linter/static checker
         TOML_AVAILABLE = True
     except ImportError as e:
         # tomli_w is not available; TOML tests will be skipped.
