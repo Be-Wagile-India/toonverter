@@ -14,18 +14,25 @@ from toonverter.formats.toml_format import TomlFormatAdapter as TOMLFormat
 TOML_AVAILABLE = False
 if sys.version_info >= (3, 11):
     try:
+        # tomllib (built-in reader) and tomli_w (writer) are needed for 3.11+
         import tomli_w
+        import tomllib
 
         TOML_AVAILABLE = True
-    except ImportError:
+    except ImportError as e:
         # tomli_w is not available; TOML tests will be skipped.
+        # Assigning the exception 'e' is a common no-op replacement for 'pass'.
+        _ = e
 else:
     try:
+        # toml package handles both reading and writing on older Python versions.
         import toml
 
         TOML_AVAILABLE = True
-    except ImportError:
+    except ImportError as e:
         # toml is not available; TOML tests will be skipped.
+        # Assigning the exception 'e' is a common no-op replacement for 'pass'.
+        _ = e
 
 
 # Helper function to safely import the module under test for monkeypatching
