@@ -15,7 +15,6 @@ TOML_AVAILABLE = False
 if sys.version_info >= (3, 11):
     try:
         import tomli_w
-        import tomllib
 
         TOML_AVAILABLE = True
     except ImportError:
