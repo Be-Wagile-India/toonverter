@@ -18,14 +18,14 @@ if sys.version_info >= (3, 11):
 
         TOML_AVAILABLE = True
     except ImportError:
-        pass
+        # tomli_w is not available; TOML tests will be skipped.
 else:
     try:
         import toml
 
         TOML_AVAILABLE = True
     except ImportError:
-        pass
+        # toml is not available; TOML tests will be skipped.
 
 
 # Helper function to safely import the module under test for monkeypatching
