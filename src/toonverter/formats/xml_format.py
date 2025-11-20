@@ -46,6 +46,8 @@ class XmlFormatAdapter(BaseFormatAdapter):
                 lines = [line for line in xml_str.split("\n") if line.strip()]
                 xml_str = "\n".join(lines[1:]) if len(lines) > 1 else xml_str
 
+                xml_str = xml_str.strip()
+
             return xml_str
         except Exception as e:
             msg = f"Failed to encode to XML: {e}"
@@ -144,8 +146,13 @@ class XmlFormatAdapter(BaseFormatAdapter):
             for child in element:
                 result[child.tag] = self._from_xml_element(child, options)
             return result
-        # Leaf node - return text with type inference
-        text = element.text or ""
+
+        # Leaf node (no children) - return text with type inference or default
+        text = element.text.strip() if element.text else ""
+
+        if not text and not element.attrib:
+            return {}
+
         if options and options.type_inference:
             return self._infer_type(text)
         return text
