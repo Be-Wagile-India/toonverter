@@ -1,7 +1,23 @@
-"""Type definitions and data classes for TOON Converter."""
+"""Type definitions and data classes for TOON Converter, including context optimization types."""
 
+import datetime
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from enum import Enum
+from typing import Any, Final, Literal, Optional
+
+
+# --- Standard Data Types & Aliases ---
+
+# Define the supported type for a single data record
+DataRecord = dict[str, Any]
+# Define the supported types for data structure (list of records or a single record/dictionary)
+DataStructure = list[DataRecord] | DataRecord
+# Type aliases for common structures
+ToonData = dict[str, Any] | list[Any] | str | int | float | bool | None
+FormatName = Literal["json", "yaml", "toml", "csv", "xml", "toon"]
+
+
+# --- TOON Format Configuration Classes ---
 
 
 @dataclass
@@ -70,6 +86,63 @@ class DecodeOptions:
     strict: bool = True
     type_inference: bool = True
     delimiter: Literal[",", "\t", "|", ";"] = ","
+
+
+# --- Context Optimization Types (Existing structure preserved) ---
+
+
+class ContextPolicyType(str, Enum):
+    """Defines the prioritization policy for different use cases."""
+
+    # Existing Use Cases
+    LONG_CONVERSATION = "long_conversation"
+    MULTI_AGENT = "multi_agent"
+    STREAMING_RAG = "streaming_rag"
+    GENERIC = "generic"
+
+    # ADDED: Strategies used by context_helpers.py logic
+    RECENCY = "recency"
+    PRIORITY_THEN_RECENCY = "priority_then_recency"
+    SIZE_THEN_RECENCY = "size_then_recency"
+
+
+@dataclass
+class ContextRecord:
+    """
+    Represents a single piece of context data (message, tool call, log, state).
+    Required fields for intelligent prioritization.
+    """
+
+    data: DataStructure  # The actual data payload (str for message, dict for log/tool)
+    source: str  # e.g., "user", "system", "tool_output", "monitoring_log"
+    id: str = field(
+        default_factory=lambda: str(hash(datetime.datetime.now(tz=datetime.timezone.utc)))
+    )  # Unique ID for stability
+    timestamp: datetime.datetime = field(
+        default_factory=lambda: datetime.datetime.now(tz=datetime.timezone.utc)
+    )
+    # An optional, pre-calculated priority score (0-100), used as a tie-breaker or explicit override
+    explicit_priority: int = 0
+    # Flag to ensure critical information is NEVER pruned (e.g., initial system prompt, current state)
+    is_critical: bool = False
+
+
+@dataclass
+class OptimizeOptions:
+    """
+    Options for data optimization (prioritization and trimming).
+    """
+
+    target_context_size: int = 4096  # Target in approximate characters/tokens
+    max_items: int = 10  # Target maximum number of records
+    max_field_length: int = 256  # Maximum length for string values
+    exclude_fields: list[str] = field(default_factory=list)
+
+    # New: The policy to guide prioritization logic
+    policy_type: ContextPolicyType = ContextPolicyType.GENERIC
+
+
+# --- Conversion Result & Analysis Classes ---
 
 
 @dataclass
@@ -164,6 +237,109 @@ class ComparisonReport:
         return ((worst - best) / worst) * 100
 
 
-# Type aliases for common structures
-ToonData = dict[str, Any] | list[Any] | str | int | float | bool | None
-FormatName = Literal["json", "yaml", "toml", "csv", "xml", "toon"]
+@dataclass
+class ConvertOptions:
+    """Container for all options used during a conversion process."""
+
+    encode_options: EncodeOptions | None = None
+    decode_options: DecodeOptions | None = None
+    optimize_options: OptimizeOptions | None = None
+
+
+@dataclass(frozen=True)
+class SchemaInferenceOptions:
+    """Configuration for schema inference behavior."""
+
+    # When inferring an array, infer the schema from all items, not just the first non-null one.
+    # If set to True, will use the broadest compatible type (e.g., float if both int and float are present).
+    homogenize_arrays: Final[bool] = True
+
+    # If a field is null in the sample data, mark it as required=False in the inferred schema.
+    infer_optionality_from_nulls: Final[bool] = True
+
+
+@dataclass(frozen=True)
+class SchemaValidationOptions:
+    """Configuration for schema validation behavior."""
+
+    # If True, integer values (5) will not pass validation for a float field (5.0).
+    strict_type_checking: Final[bool] = False
+
+    # Ignore fields in the data that are not defined in the schema.
+    ignore_extra_fields: Final[bool] = False
+
+
+# --- Core Schema Definitions ---
+
+
+class SchemaType(Enum):
+    """
+    Defines the fundamental data types recognized by the schema validator.
+    """
+
+    STRING = "string"
+    INTEGER = "integer"
+    FLOAT = "float"
+    BOOLEAN = "boolean"
+    OBJECT = "object"
+    ARRAY = "array"
+    NULL = "null"  # Used only to indicate presence of None, usually marks a field as optional.
+    UNION = "union"  # Represents multiple allowed types.
+
+
+# Forward declaration for recursive types
+SchemaFieldDict = dict[str, "SchemaField"]
+ArrayItemSchema = Optional["SchemaField"]
+
+
+@dataclass(frozen=True)
+class SchemaField:
+    """
+    Represents a single field within a data structure schema.
+
+    Attributes:
+        type_hint: The primary expected type (e.g., OBJECT, ARRAY, STRING).
+        allowed_types: A list of allowed primitive types (used when type_hint is UNION or for coercion).
+        sub_schema: Schema for nested OBJECT types.
+        array_item_schema: Schema for items within an ARRAY type.
+        required: Whether the field must be present and non-null.
+    """
+
+    name: str
+    type_hint: SchemaType
+    allowed_types: list[SchemaType] = field(default_factory=lambda: [SchemaType.STRING])
+    required: bool = True
+    sub_schema: SchemaFieldDict | None = field(default=None)
+    array_item_schema: ArrayItemSchema = field(default=None)
+
+
+# --- Validation Reporting ---
+
+
+@dataclass(frozen=True)
+class ValidationError:
+    """
+    Records a single failure encountered during validation.
+
+    Attributes:
+        path: JSONPath-like notation to the location of the error (e.g., '$.user.tags[2]').
+        rule_failed: A concise description of the rule that was violated.
+        expected: The expected type or structure.
+        actual: The actual type or value found.
+    """
+
+    path: str
+    rule_failed: str
+    expected: Any
+    actual: Any
+
+
+@dataclass(frozen=True)
+class ValidationReport:
+    """
+    Summary of the data validation process.
+    """
+
+    is_valid: bool
+    schema_used: SchemaFieldDict | None
+    errors: list[ValidationError] = field(default_factory=list)

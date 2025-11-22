@@ -169,7 +169,7 @@ Contents
    examples/custom_adapters
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: API Reference
 
    api/facade
@@ -179,6 +179,21 @@ Contents
    api/analyzer
    api/formats
    api/integrations
+   api/async_api
+   api/async_io
+   api/streaming
+   api/diff
+   api/analysis_token_counter
+   api/rag_chunking_api
+   api/schema_helpers
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Context Converter
+
+   api/context_helpers
+   api/message
+   api/context_formatter
 
 .. toctree::
    :maxdepth: 1
