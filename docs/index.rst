@@ -187,6 +187,14 @@ Contents
    api/rag_chunking_api
 
 .. toctree::
+   :maxdepth: 2
+   :caption: Context Converter
+
+   api/context_helpers
+   api/message
+   api/context_formatter
+
+.. toctree::
    :maxdepth: 1
    :caption: Development
 
