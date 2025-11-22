@@ -185,6 +185,7 @@ Contents
    api/diff
    api/analysis_token_counter
    api/rag_chunking_api
+   api/schema_helpers
 
 .. toctree::
    :maxdepth: 2

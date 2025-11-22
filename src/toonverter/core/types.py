@@ -3,7 +3,7 @@
 import datetime
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Literal
+from typing import Any, Final, Literal, Optional
 
 
 # --- Standard Data Types & Aliases ---
@@ -237,9 +237,6 @@ class ComparisonReport:
         return ((worst - best) / worst) * 100
 
 
-# --- Master Configuration Container ---
-
-
 @dataclass
 class ConvertOptions:
     """Container for all options used during a conversion process."""
@@ -247,3 +244,102 @@ class ConvertOptions:
     encode_options: EncodeOptions | None = None
     decode_options: DecodeOptions | None = None
     optimize_options: OptimizeOptions | None = None
+
+
+@dataclass(frozen=True)
+class SchemaInferenceOptions:
+    """Configuration for schema inference behavior."""
+
+    # When inferring an array, infer the schema from all items, not just the first non-null one.
+    # If set to True, will use the broadest compatible type (e.g., float if both int and float are present).
+    homogenize_arrays: Final[bool] = True
+
+    # If a field is null in the sample data, mark it as required=False in the inferred schema.
+    infer_optionality_from_nulls: Final[bool] = True
+
+
+@dataclass(frozen=True)
+class SchemaValidationOptions:
+    """Configuration for schema validation behavior."""
+
+    # If True, integer values (5) will not pass validation for a float field (5.0).
+    strict_type_checking: Final[bool] = False
+
+    # Ignore fields in the data that are not defined in the schema.
+    ignore_extra_fields: Final[bool] = False
+
+
+# --- Core Schema Definitions ---
+
+
+class SchemaType(Enum):
+    """
+    Defines the fundamental data types recognized by the schema validator.
+    """
+
+    STRING = "string"
+    INTEGER = "integer"
+    FLOAT = "float"
+    BOOLEAN = "boolean"
+    OBJECT = "object"
+    ARRAY = "array"
+    NULL = "null"  # Used only to indicate presence of None, usually marks a field as optional.
+    UNION = "union"  # Represents multiple allowed types.
+
+
+# Forward declaration for recursive types
+SchemaFieldDict = dict[str, "SchemaField"]
+ArrayItemSchema = Optional["SchemaField"]
+
+
+@dataclass(frozen=True)
+class SchemaField:
+    """
+    Represents a single field within a data structure schema.
+
+    Attributes:
+        type_hint: The primary expected type (e.g., OBJECT, ARRAY, STRING).
+        allowed_types: A list of allowed primitive types (used when type_hint is UNION or for coercion).
+        sub_schema: Schema for nested OBJECT types.
+        array_item_schema: Schema for items within an ARRAY type.
+        required: Whether the field must be present and non-null.
+    """
+
+    name: str
+    type_hint: SchemaType
+    allowed_types: list[SchemaType] = field(default_factory=lambda: [SchemaType.STRING])
+    required: bool = True
+    sub_schema: SchemaFieldDict | None = field(default=None)
+    array_item_schema: ArrayItemSchema = field(default=None)
+
+
+# --- Validation Reporting ---
+
+
+@dataclass(frozen=True)
+class ValidationError:
+    """
+    Records a single failure encountered during validation.
+
+    Attributes:
+        path: JSONPath-like notation to the location of the error (e.g., '$.user.tags[2]').
+        rule_failed: A concise description of the rule that was violated.
+        expected: The expected type or structure.
+        actual: The actual type or value found.
+    """
+
+    path: str
+    rule_failed: str
+    expected: Any
+    actual: Any
+
+
+@dataclass(frozen=True)
+class ValidationReport:
+    """
+    Summary of the data validation process.
+    """
+
+    is_valid: bool
+    schema_used: SchemaFieldDict | None
+    errors: list[ValidationError] = field(default_factory=list)
