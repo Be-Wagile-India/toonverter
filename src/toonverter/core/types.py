@@ -3,6 +3,7 @@
 import datetime
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Any, Final, Literal, Optional
 
 
@@ -15,6 +16,8 @@ DataStructure = list[DataRecord] | DataRecord
 # Type aliases for common structures
 ToonData = dict[str, Any] | list[Any] | str | int | float | bool | None
 FormatName = Literal["json", "yaml", "toml", "csv", "xml", "toon"]
+
+ImageSource = str | Path | bytes | Any
 
 
 # --- TOON Format Configuration Classes ---
@@ -343,3 +346,51 @@ class ValidationReport:
     is_valid: bool
     schema_used: SchemaFieldDict | None
     errors: list[ValidationError] = field(default_factory=list)
+
+
+class ImageDetail(str, Enum):
+    """Detail level for Vision LLM consumption."""
+
+    AUTO = "auto"
+    LOW = "low"
+    HIGH = "high"
+
+
+@dataclass
+class ImageOptimizeOptions:
+    """Configuration for image optimization."""
+
+    max_dimension: int = 1024
+    detail: ImageDetail = ImageDetail.AUTO
+    format: Literal["JPEG", "PNG", "WEBP"] = "JPEG"
+    quality: int = 85
+    max_size_kb: int | None = None
+
+
+@dataclass
+class ToonImage:
+    """Represents a processed image ready for an LLM API."""
+
+    data: str
+    mime_type: str
+    detail: ImageDetail
+    token_cost: int
+    is_url: bool = False
+
+    def to_api_block(self) -> dict[str, Any]:
+        """Returns the dictionary format expected by OpenAI/Anthropic."""
+        if self.is_url:
+            return {
+                "type": "image_url",
+                "image_url": {"url": self.data, "detail": self.detail.value},
+            }
+        return {
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:{self.mime_type};base64,{self.data}",
+                "detail": self.detail.value,
+            },
+        }
+
+
+MultimodalPayload = list[str | ToonImage]

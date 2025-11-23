@@ -2,20 +2,20 @@ from typing import Any
 
 import pytest
 
-# Assuming schema_helpers is correctly imported from src
-from src.toonverter.utils.schema_helpers import (
-    get_base_type,
-    get_broadest_type,
-    infer_schema,
-    validate_data,
-)
-
 # Import all necessary components for testing
 from toonverter.core.types import (
     SchemaField,
     SchemaFieldDict,
     SchemaType,
     SchemaValidationOptions,
+)
+
+# Assuming schema_helpers is correctly imported from src
+from toonverter.utils.schema_helpers import (
+    get_base_type,
+    get_broadest_type,
+    infer_schema,
+    validate_data,
 )
 
 
