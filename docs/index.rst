@@ -189,11 +189,13 @@ Contents
 
 .. toctree::
    :maxdepth: 2
-   :caption: Context Converter
+   :caption: Additional API's
 
    api/context_helpers
    api/message
    api/context_formatter
+   api/image_tool
+   api/hybrid_serializer
 
 .. toctree::
    :maxdepth: 1
