@@ -60,14 +60,14 @@ def _check_llamaindex():
 
 
 def llamaindex_to_toon(
-    obj: Union["Document", "BaseNode"],
+    obj: Union["Document", "BaseNode", list[Union["Document", "BaseNode"]]],
     include_relationships: bool = False,
     options: ToonEncodeOptions | None = None,
 ) -> str:
-    """Convert LlamaIndex Document or Node to TOON format.
+    """Convert LlamaIndex Document, Node, or list of them to TOON format.
 
     Args:
-        obj: LlamaIndex Document or Node instance
+        obj: LlamaIndex Document, Node, or list of them
         include_relationships: Include node relationships (default: False)
         options: TOON encoding options
 
@@ -85,6 +85,9 @@ def llamaindex_to_toon(
     _check_llamaindex()
 
     try:
+        if isinstance(obj, list):
+            return bulk_documents_to_toon(obj, include_relationships, options)
+
         encoder = ToonEncoder(options)
         data = _obj_to_dict(obj, include_relationships)
         return encoder.encode(data)

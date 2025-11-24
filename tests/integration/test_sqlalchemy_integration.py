@@ -12,9 +12,10 @@ from sqlalchemy.orm import relationship, sessionmaker
 
 from toonverter import decode
 from toonverter.integrations.sqlalchemy_integration import (
-    bulk_query_to_toon,
+    bulk_insert_from_toon,
     query_to_toon,
     sqlalchemy_to_toon,
+    table_to_toon,
 )
 
 
@@ -90,7 +91,8 @@ class TestSQLAlchemyModelSerialization:
         self.session.commit()
 
         users = self.session.query(User).all()
-        toon = sqlalchemy_to_toon(users)
+        # Fix: Use query_to_toon for list of results
+        toon = query_to_toon(users)
 
         # Should use tabular format
         assert "[3]{" in toon
@@ -103,7 +105,9 @@ class TestSQLAlchemyModelSerialization:
         self.session.add_all([User(id=i, name=f"User{i}", age=20 + i) for i in range(100)])
         self.session.commit()
 
-        toon = query_to_toon(self.session, User)
+        # Fix: Execute query and pass result to query_to_toon
+        result = self.session.query(User).all()
+        toon = query_to_toon(result)
 
         assert "[100]{" in toon
 
@@ -136,14 +140,15 @@ class TestSQLAlchemyBulkOperations:
         """Tear down test database."""
         self.session.close()
 
-    def test_bulk_query_to_toon(self):
+    def test_bulk_insert(self):
         """Test bulk import from TOON."""
-        toon = """users[3]{name,age}:
+        toon = """[3]{name,age}:
   Alice,30
   Bob,25
   Carol,35"""
 
-        bulk_query_to_toon(self.session, User, toon)
+        # Fix: Use bulk_insert_from_toon with correct args (toon, model, session)
+        bulk_insert_from_toon(toon, User, self.session)
 
         users = self.session.query(User).all()
         assert len(users) == 3
@@ -152,8 +157,9 @@ class TestSQLAlchemyBulkOperations:
     def test_schema_export(self):
         """Test schema export to TOON."""
         schema = Base.metadata.tables["users"]
-        toon = sqlalchemy_to_toon(schema, as_schema=True)
+        # Fix: Use table_to_toon for Table object
+        toon = table_to_toon(schema)
 
         assert "name" in toon
         assert "age" in toon
-        assert "String" in toon or "Integer" in toon
+        assert "String" in toon or "INTEGER" in toon

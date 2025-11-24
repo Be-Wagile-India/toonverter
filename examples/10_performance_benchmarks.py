@@ -22,10 +22,7 @@ def benchmark_encoding():
 
     for size in sizes:
         data = {
-            "records": [
-                {"id": i, "value": f"Record{i}", "score": i * 0.1}
-                for i in range(size)
-            ]
+            "records": [{"id": i, "value": f"Record{i}", "score": i * 0.1} for i in range(size)]
         }
 
         # Benchmark TOON encoding
@@ -51,12 +48,7 @@ def benchmark_decoding():
     sizes = [10, 100, 1000, 5000]
 
     for size in sizes:
-        data = {
-            "records": [
-                {"id": i, "name": f"Item{i}"}
-                for i in range(size)
-            ]
-        }
+        data = {"records": [{"id": i, "name": f"Item{i}"} for i in range(size)]}
 
         toon_str = toon.encode(data)
         json_str = json.dumps(data)
@@ -83,12 +75,7 @@ def benchmark_roundtrip():
     sizes = [100, 500, 1000]
 
     for size in sizes:
-        data = {
-            "items": [
-                {"id": i, "data": f"Data{i}", "value": i * 10}
-                for i in range(size)
-            ]
-        }
+        data = {"items": [{"id": i, "data": f"Data{i}", "value": i * 10} for i in range(size)]}
 
         # TOON roundtrip
         start = time.time()

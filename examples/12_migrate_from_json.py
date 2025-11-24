@@ -43,20 +43,17 @@ def step2_file_migration():
     with tempfile.TemporaryDirectory() as tmpdir:
         # Original JSON file
         json_file = os.path.join(tmpdir, "config.json")
-        data = {
-            "database": {"host": "localhost", "port": 5432},
-            "cache": {"ttl": 3600}
-        }
+        data = {"database": {"host": "localhost", "port": 5432}, "cache": {"ttl": 3600}}
 
         # Save as JSON (old way)
-        with open(json_file, 'w') as f:
+        with open(json_file, "w") as f:
             json.dump(data, f)
 
         print(f"JSON file: {json_file}")
 
         # Migrate to TOON
         toon_file = os.path.join(tmpdir, "config.toon")
-        toon.convert(source=json_file, target=toon_file, from_format='json', to_format='toon')
+        toon.convert(source=json_file, target=toon_file, from_format="json", to_format="toon")
 
         print(f"TOON file: {toon_file}")
 
@@ -72,18 +69,17 @@ def step3_backward_compatibility():
     # Support both formats
     def load_config(filepath):
         """Load config from JSON or TOON."""
-        if filepath.endswith('.toon'):
-            return toon.load(filepath, format='toon')
-        elif filepath.endswith('.json'):
-            return toon.load(filepath, format='json')
-        else:
-            # Auto-detect
-            with open(filepath) as f:
-                content = f.read()
-                try:
-                    return toon.decode(content, format='toon')
-                except:
-                    return json.loads(content)
+        if filepath.endswith(".toon"):
+            return toon.load(filepath, format="toon")
+        if filepath.endswith(".json"):
+            return toon.load(filepath, format="json")
+        # Auto-detect
+        with open(filepath) as f:
+            content = f.read()
+            try:
+                return toon.decode(content, format="toon")
+            except:
+                return json.loads(content)
 
     print("Unified config loader supports both JSON and TOON")
 
@@ -142,7 +138,7 @@ def migration_checklist():
         "☐ Enable strict mode for validation",
         "☐ Monitor token usage metrics",
         "☐ Update documentation",
-        "☐ Train team on TOON format"
+        "☐ Train team on TOON format",
     ]
 
     print("\nMigration Checklist:")

@@ -80,6 +80,13 @@ haystack = ["haystack-ai>=2.0.0"]
 dspy = ["dspy-ai>=2.4.0"]
 instructor = ["instructor>=1.0.0", "pydantic>=2.0.0"]
 
+# Semantic chunking dependencies
+chunker = [
+    "networkx>=3.0",
+    "python-louvain>=0.16",
+    "sentence-transformers>=2.2.2",
+]
+
 # Grouped integrations - AI/ML frameworks
 ai = [
     "llama-index>=0.10.0",
@@ -286,6 +293,15 @@ ignore = [
 ]
 "src/toonverter/integrations/mcp_server.py" = [
     "E722",     # bare except for JSON parsing (intentional fallback)
+]
+"examples/*.py" = [
+    "T201",     # prints allowed in examples
+    "I001",     # import sorting (less strict in examples)
+    "F401",     # unused imports (examples)
+    "PLC0415",  # top-level imports
+    "Q000",     # quotes
+    "F541",     # f-strings
+    "E402",     # imports at top
 ]
 
 [tool.ruff.lint.isort]

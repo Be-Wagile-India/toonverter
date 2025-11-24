@@ -37,7 +37,7 @@ class TestInstructorResponses:
         response_original = UserResponse(name="Bob", age=25, email="bob@example.com")
 
         toon = response_to_toon(response_original)
-        response_result = toon_to_response(toon, model=UserResponse)
+        response_result = toon_to_response(toon, model_class=UserResponse)
 
         assert response_result.name == "Bob"
         assert response_result.age == 25

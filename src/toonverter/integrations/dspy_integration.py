@@ -53,12 +53,13 @@ def _check_dspy():
 
 
 def dspy_to_toon(
-    obj: Union["Example", "Prediction", dict[str, Any]], options: ToonEncodeOptions | None = None
+    obj: Union["Example", "Prediction", dict[str, Any], list["Example"]],
+    options: ToonEncodeOptions | None = None,
 ) -> str:
-    """Convert DSPy Example, Prediction, or dict to TOON format.
+    """Convert DSPy Example, Prediction, dict, or list of Examples to TOON format.
 
     Args:
-        obj: DSPy Example, Prediction, or dictionary
+        obj: DSPy Example, Prediction, dictionary, or list of Examples
         options: TOON encoding options
 
     Returns:
@@ -74,6 +75,10 @@ def dspy_to_toon(
     _check_dspy()
 
     try:
+        if isinstance(obj, list):
+            # Assuming list of Examples for now
+            return dataset_to_toon(obj, options)
+
         encoder = ToonEncoder(options)
 
         if isinstance(obj, Example):
@@ -371,15 +376,16 @@ def few_shot_to_toon(
 
 def _example_to_dict(example: "Example") -> dict[str, Any]:
     """Convert DSPy Example to dictionary."""
-    # Example objects store data in their __dict__
-    data = {}
-
-    # Get all attributes except internal ones
-    for key, value in example.__dict__.items():
-        if not key.startswith("_"):
-            data[key] = value
-
-    return data
+    try:
+        # Example objects support dict conversion
+        return dict(example)
+    except (TypeError, ValueError):
+        # Fallback for older versions
+        data = {}
+        for key, value in example.__dict__.items():
+            if not key.startswith("_"):
+                data[key] = value
+        return data
 
 
 def _dict_to_example(data: dict[str, Any], with_inputs: list[str] | None = None) -> "Example":

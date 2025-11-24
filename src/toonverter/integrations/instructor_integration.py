@@ -52,12 +52,14 @@ def _check_pydantic():
 
 
 def response_to_toon(
-    response: "BaseModel", include_metadata: bool = False, options: ToonEncodeOptions | None = None
+    response: "BaseModel | list[BaseModel]",
+    include_metadata: bool = False,
+    options: ToonEncodeOptions | None = None,
 ) -> str:
-    """Convert Instructor response model (Pydantic) to TOON format.
+    """Convert Instructor response model (Pydantic) or list of models to TOON format.
 
     Args:
-        response: Pydantic BaseModel instance from Instructor
+        response: Pydantic BaseModel instance or list of instances
         include_metadata: Include model metadata (class name, schema)
         options: TOON encoding options
 
@@ -77,6 +79,9 @@ def response_to_toon(
     _check_pydantic()
 
     try:
+        if isinstance(response, list):
+            return bulk_responses_to_toon(response, include_metadata, options)
+
         encoder = ToonEncoder(options)
 
         if include_metadata:

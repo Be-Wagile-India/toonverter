@@ -2,9 +2,9 @@
 
 # Pandas integration
 try:
-    from .pandas_integration import pandas_to_toon, toon_to_pandas
+    from .pandas_integration import pandas_to_toon, pandas_to_toon_stream, toon_to_pandas
 
-    __all_pandas__ = ["pandas_to_toon", "toon_to_pandas"]
+    __all_pandas__ = ["pandas_to_toon", "pandas_to_toon_stream", "toon_to_pandas"]
 except ImportError:
     __all_pandas__ = []
 
@@ -26,9 +26,9 @@ except ImportError:
 
 # FastAPI integration
 try:
-    from .fastapi_integration import TOONResponse
+    from .fastapi_integration import TOONResponse, TOONStreamingResponse
 
-    __all_fastapi__ = ["TOONResponse"]
+    __all_fastapi__ = ["TOONResponse", "TOONStreamingResponse"]
 except ImportError:
     __all_fastapi__ = []
 
@@ -41,6 +41,7 @@ try:
         query_to_toon,
         schema_to_toon,
         sqlalchemy_to_toon,
+        stream_query_to_toon,
         table_to_toon,
         toon_to_sqlalchemy,
     )
@@ -50,6 +51,7 @@ try:
         "toon_to_sqlalchemy",
         "query_to_toon",
         "bulk_query_to_toon",
+        "stream_query_to_toon",
         "schema_to_toon",
         "table_to_toon",
         "bulk_insert_from_toon",

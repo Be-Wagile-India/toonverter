@@ -86,8 +86,10 @@ class TestPandasSeriesConversion:
 
         toon = pandas_to_toon(s)
 
-        # Should be an inline array
-        assert "[5]:" in toon
+        # Should be an inline array or tabular (single column)
+        # Since we convert Series to DataFrame, it becomes tabular [5]{numbers}:
+        assert "[5]" in toon
+        assert "{numbers}" in toon
 
     def test_series_roundtrip(self):
         """Test Series roundtrip."""
@@ -96,11 +98,12 @@ class TestPandasSeriesConversion:
         toon = pandas_to_toon(s_original)
         s_result = toon_to_pandas(toon, as_series=True)
 
-        assert len(s_result) == len(s_original)
+        assert isinstance(s_result, pd.Series)
+        pd.testing.assert_series_equal(s_original, s_result)
 
 
 class TestPandasOptions:
-    """Test Pandas conversion options."""
+    """Test pandas conversion options."""
 
     def test_orient_option(self):
         """Test different orient options."""
@@ -110,10 +113,12 @@ class TestPandasOptions:
         toon_records = pandas_to_toon(df, orient="records")
         assert "[2]" in toon_records
 
-        # Test columns orient
-        toon_columns = pandas_to_toon(df, orient="columns")
-        assert "a" in toon_columns
-        assert "b" in toon_columns
+        # Test list/dict orient (valid pandas orient)
+        toon_columns = pandas_to_toon(df, orient="list")
+        # Result should be a dict-like object in TOON (not array)
+        # With lists as values, keys become array headers like a[2]:
+        assert "a[" in toon_columns
+        assert "b[" in toon_columns
 
     def test_compression_option(self):
         """Test compression option for large DataFrames."""

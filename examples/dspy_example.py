@@ -32,18 +32,18 @@ from toonverter.integrations.dspy import (
 # 1. EXAMPLE CONVERSION
 # =============================================================================
 
+
 def example_example_conversion():
     """Example: Convert DSPy Examples to/from TOON."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("1. EXAMPLE CONVERSION")
-    print("="*70)
+    print("=" * 70)
 
     # Create a simple QA example
     print("\n📝 Simple Example → TOON:")
-    example = Example(
-        question="What is the capital of France?",
-        answer="Paris"
-    ).with_inputs("question")
+    example = Example(question="What is the capital of France?", answer="Paris").with_inputs(
+        "question"
+    )
 
     toon = dspy_to_toon(example)
     print(toon)
@@ -61,7 +61,7 @@ def example_example_conversion():
         question="What is the capital of France?",
         answer="Paris",
         reasoning="The context explicitly states that Paris is the capital of France.",
-        confidence=0.98
+        confidence=0.98,
     ).with_inputs("context", "question")
 
     toon2 = dspy_to_toon(example2)
@@ -72,11 +72,12 @@ def example_example_conversion():
 # 2. DATASET SERIALIZATION
 # =============================================================================
 
+
 def example_dataset_serialization():
     """Example: Convert DSPy datasets to/from TOON."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("2. DATASET SERIALIZATION")
-    print("="*70)
+    print("=" * 70)
 
     # Create a training dataset
     print("\n📚 Training Dataset → TOON:")
@@ -103,11 +104,7 @@ def example_dataset_serialization():
     # Streaming for large datasets
     print("\n📚 Streaming Large Dataset (1000 examples):")
     large_dataset = [
-        Example(
-            input=f"Input {i}",
-            output=f"Output {i}",
-            metadata={"id": i, "batch": i // 100}
-        )
+        Example(input=f"Input {i}", output=f"Output {i}", metadata={"id": i, "batch": i // 100})
         for i in range(1000)
     ]
 
@@ -122,11 +119,12 @@ def example_dataset_serialization():
 # 3. PREDICTION CACHING
 # =============================================================================
 
+
 def example_prediction_caching():
     """Example: Cache model predictions to/from TOON."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("3. PREDICTION CACHING")
-    print("="*70)
+    print("=" * 70)
 
     # Simulate model predictions
     print("\n🔮 Model Predictions → TOON:")
@@ -134,18 +132,18 @@ def example_prediction_caching():
         Prediction(
             answer="Paris",
             reasoning="France's capital is explicitly mentioned as Paris.",
-            confidence=0.95
+            confidence=0.95,
         ),
         Prediction(
             answer="London",
             reasoning="The United Kingdom's capital city is London.",
-            confidence=0.92
+            confidence=0.92,
         ),
         Prediction(
             answer="Berlin",
             reasoning="Germany's capital and largest city is Berlin.",
-            confidence=0.89
-        )
+            confidence=0.89,
+        ),
     ]
 
     toon = predictions_to_toon(predictions)
@@ -168,35 +166,21 @@ def example_prediction_caching():
 # 4. FEW-SHOT LEARNING
 # =============================================================================
 
+
 def example_few_shot_learning():
     """Example: Optimize few-shot examples with TOON."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("4. FEW-SHOT LEARNING OPTIMIZATION")
-    print("="*70)
+    print("=" * 70)
 
     # Create few-shot examples for sentiment analysis
     print("\n🎯 Few-shot Examples → TOON:")
     few_shot_examples = [
-        Example(
-            text="This movie was absolutely fantastic!",
-            sentiment="positive"
-        ),
-        Example(
-            text="I really enjoyed the performance.",
-            sentiment="positive"
-        ),
-        Example(
-            text="This was a waste of time and money.",
-            sentiment="negative"
-        ),
-        Example(
-            text="Terrible experience, would not recommend.",
-            sentiment="negative"
-        ),
-        Example(
-            text="It was okay, nothing special.",
-            sentiment="neutral"
-        )
+        Example(text="This movie was absolutely fantastic!", sentiment="positive"),
+        Example(text="I really enjoyed the performance.", sentiment="positive"),
+        Example(text="This was a waste of time and money.", sentiment="negative"),
+        Example(text="Terrible experience, would not recommend.", sentiment="negative"),
+        Example(text="It was okay, nothing special.", sentiment="neutral"),
     ]
 
     # Convert to TOON for minimal token usage in prompts
@@ -213,11 +197,12 @@ def example_few_shot_learning():
 # 5. SIGNATURE EXAMPLES
 # =============================================================================
 
+
 def example_signature_examples():
     """Example: Store signature-specific examples."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("5. SIGNATURE EXAMPLES")
-    print("="*70)
+    print("=" * 70)
 
     # Create examples for a QA signature
     print("\n📋 QA Signature Examples → TOON:")
@@ -225,18 +210,18 @@ def example_signature_examples():
         Example(
             context="The Eiffel Tower is located in Paris, France.",
             question="Where is the Eiffel Tower?",
-            answer="Paris, France"
+            answer="Paris, France",
         ),
         Example(
             context="Python was created by Guido van Rossum in 1991.",
             question="Who created Python?",
-            answer="Guido van Rossum"
+            answer="Guido van Rossum",
         ),
         Example(
             context="The speed of light is approximately 299,792 km/s.",
             question="What is the speed of light?",
-            answer="299,792 km/s"
-        )
+            answer="299,792 km/s",
+        ),
     ]
 
     toon = signature_examples_to_toon("QuestionAnswering", qa_examples)
@@ -247,11 +232,12 @@ def example_signature_examples():
 # 6. OPTIMIZATION TRACES
 # =============================================================================
 
+
 def example_optimization_traces():
     """Example: Store DSPy optimization history."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("6. OPTIMIZATION TRACES")
-    print("="*70)
+    print("=" * 70)
 
     # Simulate an optimization trace
     print("\n📊 Optimization History → TOON:")
@@ -260,26 +246,26 @@ def example_optimization_traces():
             "step": 1,
             "score": 0.65,
             "metric": "accuracy",
-            "hyperparams": {"temperature": 0.7, "max_tokens": 100}
+            "hyperparams": {"temperature": 0.7, "max_tokens": 100},
         },
         {
             "step": 2,
             "score": 0.78,
             "metric": "accuracy",
-            "hyperparams": {"temperature": 0.5, "max_tokens": 150}
+            "hyperparams": {"temperature": 0.5, "max_tokens": 150},
         },
         {
             "step": 3,
             "score": 0.85,
             "metric": "accuracy",
-            "hyperparams": {"temperature": 0.3, "max_tokens": 120}
+            "hyperparams": {"temperature": 0.3, "max_tokens": 120},
         },
         {
             "step": 4,
             "score": 0.91,
             "metric": "accuracy",
-            "hyperparams": {"temperature": 0.3, "max_tokens": 100}
-        }
+            "hyperparams": {"temperature": 0.3, "max_tokens": 100},
+        },
     ]
 
     toon = optimization_trace_to_toon(trace)
@@ -295,11 +281,12 @@ def example_optimization_traces():
 # 7. TOKEN SAVINGS ANALYSIS
 # =============================================================================
 
+
 def example_token_savings():
     """Example: Analyze token savings for DSPy workflows."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("7. TOKEN SAVINGS ANALYSIS")
-    print("="*70)
+    print("=" * 70)
 
     import json
     from toonverter.analysis import count_tokens
@@ -308,7 +295,7 @@ def example_token_savings():
         ("Small Dataset (10 examples)", 10),
         ("Medium Dataset (50 examples)", 50),
         ("Large Dataset (200 examples)", 200),
-        ("Very Large Dataset (1000 examples)", 1000)
+        ("Very Large Dataset (1000 examples)", 1000),
     ]
 
     print("\n📊 Token Savings by Dataset Size:\n")
@@ -320,9 +307,9 @@ def example_token_savings():
         examples = [
             Example(
                 question=f"What is the result of calculation {i}?",
-                context=f"Given the numbers {i} and {i+1}, perform the operation.",
+                context=f"Given the numbers {i} and {i + 1}, perform the operation.",
                 answer=f"The answer is {i * 2}",
-                reasoning=f"By calculating {i} * 2, we get {i * 2}"
+                reasoning=f"By calculating {i} * 2, we get {i * 2}",
             )
             for i in range(count)
         ]
@@ -336,7 +323,7 @@ def example_token_savings():
                 "question": ex.question,
                 "context": ex.context,
                 "answer": ex.answer,
-                "reasoning": ex.reasoning
+                "reasoning": ex.reasoning,
             }
             for ex in examples
         ]
@@ -346,7 +333,7 @@ def example_token_savings():
         toon_tokens = count_tokens(toon)
         json_tokens = count_tokens(json_str)
         savings = json_tokens - toon_tokens
-        savings_pct = (savings / json_tokens * 100)
+        savings_pct = savings / json_tokens * 100
 
         print(f"{label:<30} {json_tokens:<12} {toon_tokens:<12} {savings} ({savings_pct:.1f}%)")
 
@@ -355,11 +342,12 @@ def example_token_savings():
 # 8. PROMPT OPTIMIZATION
 # =============================================================================
 
+
 def example_prompt_optimization():
     """Example: Optimize prompts with TOON format."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("8. PROMPT OPTIMIZATION FOR FEW-SHOT")
-    print("="*70)
+    print("=" * 70)
 
     # Create training examples for classification
     print("\n🎯 Scenario: Optimize few-shot prompt for text classification")
@@ -386,7 +374,7 @@ def example_prompt_optimization():
     json_tokens = count_tokens(json_str)
     toon_tokens = count_tokens(toon_str)
     savings = json_tokens - toon_tokens
-    savings_pct = (savings / json_tokens * 100)
+    savings_pct = savings / json_tokens * 100
 
     print(f"\n📋 JSON Format ({json_tokens} tokens):")
     print(json_str[:200] + "...")
@@ -409,11 +397,12 @@ def example_prompt_optimization():
 # MAIN
 # =============================================================================
 
+
 def main():
     """Run all examples."""
-    print("\n" + "🚀 " + "="*66 + " 🚀")
+    print("\n" + "🚀 " + "=" * 66 + " 🚀")
     print("  TOONVERTER - DSPY INTEGRATION EXAMPLES")
-    print("🚀 " + "="*66 + " 🚀")
+    print("🚀 " + "=" * 66 + " 🚀")
 
     example_example_conversion()
     example_dataset_serialization()
@@ -424,9 +413,9 @@ def main():
     example_token_savings()
     example_prompt_optimization()
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("✅ All examples completed successfully!")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
 
 
 if __name__ == "__main__":

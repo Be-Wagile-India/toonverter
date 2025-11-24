@@ -25,11 +25,8 @@ def example_nested_objects():
                 "street": "123 Main St",
                 "city": "NYC",
                 "zip": "10001",
-                "coordinates": {
-                    "lat": 40.7128,
-                    "lon": -74.0060
-                }
-            }
+                "coordinates": {"lat": 40.7128, "lon": -74.0060},
+            },
         }
     }
 
@@ -57,16 +54,14 @@ def example_nested_arrays():
                 "tags": ["python", "ai", "ml"],
                 "projects": [
                     {"name": "Project1", "status": "active"},
-                    {"name": "Project2", "status": "completed"}
-                ]
+                    {"name": "Project2", "status": "completed"},
+                ],
             },
             {
                 "name": "Bob",
                 "tags": ["javascript", "web", "react"],
-                "projects": [
-                    {"name": "Project3", "status": "active"}
-                ]
-            }
+                "projects": [{"name": "Project3", "status": "active"}],
+            },
         ]
     }
 
@@ -79,7 +74,7 @@ def example_nested_arrays():
     print(toon_str)
 
     # Token analysis
-    report = toon.analyze(data, compare_formats=['json', 'toon'])
+    report = toon.analyze(data, compare_formats=["json", "toon"])
     print(f"\nToken savings: {report.max_savings_percentage:.1f}%")
 
 
@@ -97,16 +92,16 @@ def example_complex_structure():
                         "id": 1,
                         "name": "Alice",
                         "skills": ["Python", "Go", "Rust"],
-                        "projects": ["API", "Database"]
+                        "projects": ["API", "Database"],
                     },
                     {
                         "id": 2,
                         "name": "Bob",
                         "skills": ["JavaScript", "React"],
-                        "projects": ["Frontend"]
-                    }
+                        "projects": ["Frontend"],
+                    },
                 ],
-                "budget": 500000
+                "budget": 500000,
             },
             {
                 "name": "Sales",
@@ -115,17 +110,13 @@ def example_complex_structure():
                         "id": 3,
                         "name": "Charlie",
                         "skills": ["Negotiation", "CRM"],
-                        "projects": ["Q1-Campaign"]
+                        "projects": ["Q1-Campaign"],
                     }
                 ],
-                "budget": 300000
-            }
+                "budget": 300000,
+            },
         ],
-        "metadata": {
-            "created": "2025-01-15",
-            "version": "1.0",
-            "active": True
-        }
+        "metadata": {"created": "2025-01-15", "version": "1.0", "active": True},
     }
 
     print("\nOriginal JSON:")
@@ -159,27 +150,25 @@ def example_array_forms():
     data = {
         # Inline array (primitives)
         "tags": ["python", "llm", "ai"],
-
         # Tabular array (uniform objects with primitives)
         "users": [
             {"name": "Alice", "age": 30},
             {"name": "Bob", "age": 25},
-            {"name": "Charlie", "age": 35}
+            {"name": "Charlie", "age": 35},
         ],
-
         # List array (complex structures)
         "projects": [
             {
                 "name": "Project1",
                 "members": ["Alice", "Bob"],
-                "metadata": {"status": "active", "priority": 1}
+                "metadata": {"status": "active", "priority": 1},
             },
             {
                 "name": "Project2",
                 "members": ["Charlie"],
-                "metadata": {"status": "completed", "priority": 2}
-            }
-        ]
+                "metadata": {"status": "completed", "priority": 2},
+            },
+        ],
     }
 
     print("\nOriginal JSON:")

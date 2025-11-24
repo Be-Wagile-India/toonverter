@@ -20,11 +20,13 @@ except ImportError:
 T = TypeVar("T", bound="BaseModel")
 
 
-def pydantic_to_toon(model: "BaseModel", options: EncodeOptions | None = None) -> str:
-    """Convert Pydantic model to TOON format.
+def pydantic_to_toon(
+    model: "BaseModel | list[BaseModel]", options: EncodeOptions | None = None
+) -> str:
+    """Convert Pydantic model or list of models to TOON format.
 
     Args:
-        model: Pydantic BaseModel instance
+        model: Pydantic BaseModel instance or list of instances
         options: Encoding options
 
     Returns:
@@ -47,8 +49,8 @@ def pydantic_to_toon(model: "BaseModel", options: EncodeOptions | None = None) -
         raise ImportError(msg)
 
     try:
-        data = model.model_dump()
-        return encode(data, options)
+        data = [m.model_dump() for m in model] if isinstance(model, list) else model.model_dump()
+        return encode(data, options)  # type: ignore
     except Exception as e:
         msg = f"Failed to convert Pydantic model to TOON: {e}"
         raise ConversionError(msg) from e
@@ -84,8 +86,8 @@ def toon_to_pydantic(
         raise ImportError(msg)
 
     try:
-        data = decode(toon_str, options)
-        return model_class(**data)
+        data = decode(toon_str, options)  # type: ignore
+        return model_class(**data)  # type: ignore
     except Exception as e:
         msg = f"Failed to convert TOON to Pydantic model: {e}"
         raise ConversionError(msg) from e

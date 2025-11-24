@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
-    from sqlalchemy import MetaData, Table
+    from sqlalchemy import MetaData, Table, inspect
     from sqlalchemy.engine import Result, Row
     from sqlalchemy.orm import DeclarativeMeta, Session
 else:
@@ -32,12 +32,14 @@ else:
         SQLALCHEMY_AVAILABLE = True
     except ImportError:
         SQLALCHEMY_AVAILABLE = False
+        inspect = None
         # Define dummy types for runtime when SQLAlchemy not installed
         Result = Row = MetaData = Table = Session = DeclarativeMeta = None  # type: ignore
 
 from toonverter.core.exceptions import ConversionError
 from toonverter.core.spec import ToonDecodeOptions, ToonEncodeOptions  # noqa: TC001
 from toonverter.decoders.toon_decoder import ToonDecoder
+from toonverter.encoders.stream_encoder import StreamList, ToonStreamEncoder
 from toonverter.encoders.toon_encoder import ToonEncoder
 
 
@@ -278,6 +280,64 @@ def bulk_query_to_toon(
 
     except Exception as e:
         msg = f"Failed to bulk convert query result: {e}"
+        raise ConversionError(msg) from e
+
+
+def stream_query_to_toon(
+    result: Result | list[Any], count: int | None = None, options: ToonEncodeOptions | None = None
+) -> Iterator[str]:
+    """Stream query result to a single valid TOON document.
+
+    Generates a single [N]: array, streaming items as they are processed.
+    Requires total count to be known or provided.
+
+    Args:
+        result: SQLAlchemy Result object or list of instances
+        count: Total number of rows (required if result doesn't support len/rowcount)
+        options: TOON encoding options
+
+    Yields:
+        Chunks of the TOON document
+
+    Raises:
+        ConversionError: If count cannot be determined
+    """
+    _check_sqlalchemy()
+
+    try:
+        # Determine count
+        if count is None:
+            if isinstance(result, list):
+                count = len(result)
+            elif hasattr(result, "rowcount") and result.rowcount >= 0:
+                count = result.rowcount
+            else:
+                msg = "Total count required for streaming single document. Pass 'count' argument."
+                raise ConversionError(msg)
+
+        # Create iterator of dicts
+        def result_iterator():
+            # Handle various result types using model-to-dict conversion
+            if hasattr(result, "scalars"):
+                for row in result.scalars():
+                    yield _model_to_dict(row)
+            elif isinstance(result, list):
+                for row in result:
+                    yield _model_to_dict(row)
+            else:
+                # Result object
+                for row in result:
+                    yield _model_to_dict(row)
+
+        # Create StreamList wrapper
+        stream_data = StreamList(iterator=result_iterator(), length=count)
+
+        # Stream encode
+        encoder = ToonStreamEncoder(options)
+        return encoder.iterencode(stream_data)
+
+    except Exception as e:
+        msg = f"Failed to stream query result: {e}"
         raise ConversionError(msg) from e
 
 
@@ -556,11 +616,24 @@ def _result_to_dicts(result: Result | list[Any]) -> list[dict[str, Any]]:
     """
     rows = []
 
-    if hasattr(result, "scalars"):
+    # Check for Result object (has scalars/mappings methods)
+    # We check callable because Session also has scalars but we don't want to call it without args if it's a Session.
+    # A Result object's scalars() can be called without args.
+    # Safe check: if it looks like a Result object (not a Session).
+    is_result = (
+        hasattr(result, "scalars") and hasattr(result, "fetchall") and not hasattr(result, "commit")
+    )
+
+    if is_result:
         # Result object with ORM instances
-        for instance in result.scalars():
-            rows.append(_model_to_dict(instance))
-    elif hasattr(result, "mappings"):
+        # .scalars() returns a ScalarResult which is iterable
+        try:
+            for instance in result.scalars():
+                rows.append(_model_to_dict(instance))
+        except TypeError:
+            # Fallback if scalars() failed (e.g. old sqlalchemy or wrong object)
+            pass
+    elif hasattr(result, "mappings") and not hasattr(result, "commit"):
         # Result object with Row mappings
         for row in result.mappings():
             rows.append(dict(row))
@@ -635,6 +708,7 @@ __all__ = [
     "bulk_insert_from_toon",
     "bulk_query_to_toon",
     "export_table_to_toon",
+    "stream_query_to_toon",
     # Queries
     "query_to_toon",
     # Schema

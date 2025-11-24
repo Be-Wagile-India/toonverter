@@ -33,7 +33,7 @@ Base = declarative_base()
 
 
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
     name = Column(String(50), nullable=False)
@@ -49,12 +49,12 @@ class User(Base):
 
 
 class Post(Base):
-    __tablename__ = 'posts'
+    __tablename__ = "posts"
 
     id = Column(Integer, primary_key=True)
     title = Column(String(200), nullable=False)
     content = Column(String(5000))
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationship
@@ -68,23 +68,20 @@ class Post(Base):
 # 1. ORM MODEL SERIALIZATION
 # =============================================================================
 
+
 def example_orm_serialization():
     """Example: Convert ORM models to/from TOON."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("1. ORM MODEL SERIALIZATION")
-    print("="*70)
+    print("=" * 70)
 
     # Create engine and session
-    engine = create_engine('sqlite:///:memory:', echo=False)
+    engine = create_engine("sqlite:///:memory:", echo=False)
     Base.metadata.create_all(engine)
     session = Session(engine)
 
     # Create a user
-    user = User(
-        name="Alice Johnson",
-        email="alice@example.com",
-        age=30
-    )
+    user = User(name="Alice Johnson", email="alice@example.com", age=30)
     session.add(user)
     session.commit()
 
@@ -125,13 +122,14 @@ age: 25
 # 2. QUERY RESULT CONVERSION
 # =============================================================================
 
+
 def example_query_conversion():
     """Example: Convert query results to TOON."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("2. QUERY RESULT CONVERSION")
-    print("="*70)
+    print("=" * 70)
 
-    engine = create_engine('sqlite:///:memory:', echo=False)
+    engine = create_engine("sqlite:///:memory:", echo=False)
     Base.metadata.create_all(engine)
     session = Session(engine)
 
@@ -170,13 +168,14 @@ def example_query_conversion():
 # 3. SCHEMA EXPORT
 # =============================================================================
 
+
 def example_schema_export():
     """Example: Export database schema to TOON."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("3. SCHEMA EXPORT")
-    print("="*70)
+    print("=" * 70)
 
-    engine = create_engine('sqlite:///:memory:', echo=False)
+    engine = create_engine("sqlite:///:memory:", echo=False)
     Base.metadata.create_all(engine)
 
     # Export entire schema
@@ -195,13 +194,14 @@ def example_schema_export():
 # 4. BULK OPERATIONS
 # =============================================================================
 
+
 def example_bulk_operations():
     """Example: Bulk insert and export."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("4. BULK OPERATIONS")
-    print("="*70)
+    print("=" * 70)
 
-    engine = create_engine('sqlite:///:memory:', echo=False)
+    engine = create_engine("sqlite:///:memory:", echo=False)
     Base.metadata.create_all(engine)
     session = Session(engine)
 
@@ -225,12 +225,12 @@ def example_bulk_operations():
 
     # Export table to TOON
     print("\n📤 Export Table → TOON:")
-    exported_toon = export_table_to_toon('users', session)
+    exported_toon = export_table_to_toon("users", session)
     print(exported_toon)
 
     # Streaming export for large tables
     print("\n📤 Export Table → TOON (streaming):")
-    for i, chunk in enumerate(export_table_to_toon('users', session, stream=True, chunk_size=2)):
+    for i, chunk in enumerate(export_table_to_toon("users", session, stream=True, chunk_size=2)):
         print(f"\nChunk {i + 1}:")
         print(chunk)
 
@@ -241,24 +241,22 @@ def example_bulk_operations():
 # TOKEN SAVINGS ANALYSIS
 # =============================================================================
 
+
 def example_token_savings():
     """Example: Compare token usage with JSON."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("5. TOKEN SAVINGS ANALYSIS")
-    print("="*70)
+    print("=" * 70)
 
     import json
     from toonverter.analysis import count_tokens
 
-    engine = create_engine('sqlite:///:memory:', echo=False)
+    engine = create_engine("sqlite:///:memory:", echo=False)
     Base.metadata.create_all(engine)
     session = Session(engine)
 
     # Create sample data
-    users = [
-        User(name=f"User{i}", email=f"user{i}@example.com", age=20+i)
-        for i in range(10)
-    ]
+    users = [User(name=f"User{i}", email=f"user{i}@example.com", age=20 + i) for i in range(10)]
     session.add_all(users)
     session.commit()
 
@@ -269,10 +267,7 @@ def example_token_savings():
     toon = query_to_toon(result)
 
     # Convert to JSON for comparison
-    data = [
-        {"name": u.name, "email": u.email, "age": u.age}
-        for u in result
-    ]
+    data = [{"name": u.name, "email": u.email, "age": u.age} for u in result]
     json_str = json.dumps(data, indent=2)
 
     # Count tokens
@@ -282,12 +277,16 @@ def example_token_savings():
     print(f"\n📊 Format Comparison:")
     print(f"  JSON tokens: {json_tokens}")
     print(f"  TOON tokens: {toon_tokens}")
-    print(f"  Savings: {json_tokens - toon_tokens} tokens ({((json_tokens - toon_tokens) / json_tokens * 100):.1f}%)")
+    print(
+        f"  Savings: {json_tokens - toon_tokens} tokens ({((json_tokens - toon_tokens) / json_tokens * 100):.1f}%)"
+    )
 
     print(f"\n📏 Size Comparison:")
     print(f"  JSON size: {len(json_str)} bytes")
     print(f"  TOON size: {len(toon)} bytes")
-    print(f"  Savings: {len(json_str) - len(toon)} bytes ({((len(json_str) - len(toon)) / len(json_str) * 100):.1f}%)")
+    print(
+        f"  Savings: {len(json_str) - len(toon)} bytes ({((len(json_str) - len(toon)) / len(json_str) * 100):.1f}%)"
+    )
 
     session.close()
 
@@ -296,11 +295,12 @@ def example_token_savings():
 # MAIN
 # =============================================================================
 
+
 def main():
     """Run all examples."""
-    print("\n" + "🚀 " + "="*66 + " 🚀")
+    print("\n" + "🚀 " + "=" * 66 + " 🚀")
     print("  TOONVERTER - SQLALCHEMY INTEGRATION EXAMPLES")
-    print("🚀 " + "="*66 + " 🚀")
+    print("🚀 " + "=" * 66 + " 🚀")
 
     example_orm_serialization()
     example_query_conversion()
@@ -308,9 +308,9 @@ def main():
     example_bulk_operations()
     example_token_savings()
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("✅ All examples completed successfully!")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
 
 
 if __name__ == "__main__":

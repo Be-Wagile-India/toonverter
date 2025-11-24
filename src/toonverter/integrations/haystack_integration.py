@@ -33,11 +33,27 @@ from toonverter.encoders.toon_encoder import ToonEncoder
 
 try:
     from haystack import Document
-    from haystack.schema import Answer, Label, Span
 
     HAYSTACK_AVAILABLE = True
 except ImportError:
     HAYSTACK_AVAILABLE = False
+
+    class Document:
+        pass  # type: ignore
+
+
+try:
+    from haystack.schema import Answer, Label, Span
+except ImportError:
+    # Fallback for Haystack v2 or missing schema
+    class Answer:
+        pass  # type: ignore
+
+    class Label:
+        pass  # type: ignore
+
+    class Span:
+        pass  # type: ignore
 
 
 def _check_haystack():
@@ -53,14 +69,14 @@ def _check_haystack():
 
 
 def haystack_to_toon(
-    obj: Union["Document", "Answer"],
+    obj: Union["Document", "Answer", list["Document"]],
     include_embeddings: bool = False,
     options: ToonEncodeOptions | None = None,
 ) -> str:
-    """Convert Haystack Document or Answer to TOON format.
+    """Convert Haystack Document, Answer, or list of Documents to TOON format.
 
     Args:
-        obj: Haystack Document or Answer instance
+        obj: Haystack Document, Answer, or list of Documents
         include_embeddings: Include embedding vectors (default: False, saves tokens)
         options: TOON encoding options
 
@@ -78,6 +94,10 @@ def haystack_to_toon(
     _check_haystack()
 
     try:
+        if isinstance(obj, list):
+            # Assuming list of Documents
+            return bulk_documents_to_toon(obj, include_embeddings, options)
+
         encoder = ToonEncoder(options)
 
         if isinstance(obj, Document):

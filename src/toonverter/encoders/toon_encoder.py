@@ -17,6 +17,13 @@ from .number_encoder import NumberEncoder
 from .string_encoder import StringEncoder
 
 
+# Avoid circular import at top level if possible, or handle carefully
+try:
+    from toonverter.optimization.engine import ContextOptimizer
+except ImportError:
+    ContextOptimizer = None  # type: ignore
+
+
 class ToonEncoder:
     """Official TOON v2.0 encoder.
 
@@ -63,6 +70,14 @@ class ToonEncoder:
             'name: Alice\\nage: 30'
         """
         try:
+            # OPTIMIZATION HOOK:
+            # If a token budget is set, run the ContextOptimizer first
+            if self.options.token_budget and ContextOptimizer:
+                optimizer = ContextOptimizer(
+                    budget=self.options.token_budget, policy=self.options.optimization_policy
+                )
+                data = optimizer.optimize(data)
+
             return self._encode_root(data)
         except (TypeError, ValueError, RecursionError) as e:
             msg = f"Failed to encode data: {e}"
@@ -259,6 +274,8 @@ def _convert_options(options: EncodeOptions | ToonEncodeOptions | None) -> ToonE
             delimiter=delimiter,
             key_folding="none",  # EncodeOptions doesn't have key_folding
             strict=True,
+            token_budget=options.token_budget,
+            optimization_policy=options.optimization_policy,
         )
 
     return None

@@ -28,21 +28,18 @@ from toonverter.integrations.llamaindex import (
 # 1. DOCUMENT CONVERSION
 # =============================================================================
 
+
 def example_document_conversion():
     """Example: Convert LlamaIndex Documents to/from TOON."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("1. DOCUMENT CONVERSION")
-    print("="*70)
+    print("=" * 70)
 
     # Create a simple document
     print("\n📄 Simple Document → TOON:")
     doc = Document(
         text="LlamaIndex is a data framework for LLM applications.",
-        metadata={
-            "source": "documentation.txt",
-            "page": 1,
-            "section": "Introduction"
-        }
+        metadata={"source": "documentation.txt", "page": 1, "section": "Introduction"},
     )
 
     toon = llamaindex_to_toon(doc)
@@ -63,10 +60,10 @@ def example_document_conversion():
             "author": "Dr. Smith",
             "year": 2024,
             "keywords": ["AI", "ML", "Deep Learning"],
-            "doi": "10.1234/example.2024"
+            "doi": "10.1234/example.2024",
         },
         excluded_embed_metadata_keys=["doi"],
-        excluded_llm_metadata_keys=["author"]
+        excluded_llm_metadata_keys=["author"],
     )
 
     toon2 = llamaindex_to_toon(doc2)
@@ -77,11 +74,12 @@ def example_document_conversion():
 # 2. NODE SERIALIZATION
 # =============================================================================
 
+
 def example_node_serialization():
     """Example: Convert different node types to/from TOON."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("2. NODE SERIALIZATION")
-    print("="*70)
+    print("=" * 70)
 
     # TextNode with character indices
     print("\n📝 TextNode → TOON:")
@@ -89,7 +87,7 @@ def example_node_serialization():
         text="LlamaIndex provides data loaders for various sources.",
         metadata={"source": "guide.md"},
         start_char_idx=0,
-        end_char_idx=54
+        end_char_idx=54,
     )
 
     toon = llamaindex_to_toon(text_node)
@@ -100,7 +98,7 @@ def example_node_serialization():
     image_node = ImageNode(
         text="Architecture diagram showing LlamaIndex components",
         metadata={"caption": "Figure 1: System Architecture"},
-        image_path="/path/to/architecture.png"
+        image_path="/path/to/architecture.png",
     )
 
     toon2 = llamaindex_to_toon(image_node)
@@ -111,7 +109,7 @@ def example_node_serialization():
     index_node = IndexNode(
         text="Reference to external knowledge base",
         metadata={"kb_name": "product_docs"},
-        index_id="kb_v2_2024"
+        index_id="kb_v2_2024",
     )
 
     toon3 = llamaindex_to_toon(index_node)
@@ -129,21 +127,18 @@ def example_node_serialization():
 # 3. BULK OPERATIONS
 # =============================================================================
 
+
 def example_bulk_operations():
     """Example: Convert multiple documents efficiently."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("3. BULK OPERATIONS")
-    print("="*70)
+    print("=" * 70)
 
     # Create a collection of documents
     docs = [
         Document(
             text=f"This is document {i} about topic {i % 3}.",
-            metadata={
-                "doc_id": i,
-                "topic": f"topic_{i % 3}",
-                "category": "example"
-            }
+            metadata={"doc_id": i, "topic": f"topic_{i % 3}", "category": "example"},
         )
         for i in range(5)
     ]
@@ -165,10 +160,7 @@ def example_bulk_operations():
     # Streaming for large collections
     print("\n📤 Streaming Large Collection (1000 docs):")
     large_docs = [
-        Document(
-            text=f"Document {i} content here.",
-            metadata={"id": i, "batch": i // 100}
-        )
+        Document(text=f"Document {i} content here.", metadata={"id": i, "batch": i // 100})
         for i in range(1000)
     ]
 
@@ -183,11 +175,12 @@ def example_bulk_operations():
 # 4. METADATA EXTRACTION
 # =============================================================================
 
+
 def example_metadata_extraction():
     """Example: Extract and analyze metadata."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("4. METADATA EXTRACTION")
-    print("="*70)
+    print("=" * 70)
 
     # Create documents with rich metadata
     docs = [
@@ -197,8 +190,8 @@ def example_metadata_extraction():
                 "filename": "report_2024.pdf",
                 "page": 1,
                 "section": "Executive Summary",
-                "word_count": 523
-            }
+                "word_count": 523,
+            },
         ),
         Document(
             text="Another document with lots of text...",
@@ -206,8 +199,8 @@ def example_metadata_extraction():
                 "filename": "analysis_Q1.pdf",
                 "page": 3,
                 "section": "Findings",
-                "word_count": 892
-            }
+                "word_count": 892,
+            },
         ),
         Document(
             text="Third document content...",
@@ -215,9 +208,9 @@ def example_metadata_extraction():
                 "filename": "proposal.docx",
                 "page": 1,
                 "section": "Introduction",
-                "word_count": 345
-            }
-        )
+                "word_count": 345,
+            },
+        ),
     ]
 
     # Extract only metadata (ignore text content)
@@ -234,11 +227,12 @@ def example_metadata_extraction():
 # 5. RAG PIPELINE EXAMPLE
 # =============================================================================
 
+
 def example_rag_pipeline():
     """Example: RAG pipeline with token optimization."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("5. RAG PIPELINE WITH TOKEN OPTIMIZATION")
-    print("="*70)
+    print("=" * 70)
 
     # Simulate a RAG pipeline: retrieve relevant documents
     print("\n🔍 Step 1: Retrieve relevant documents from vector DB")
@@ -249,25 +243,21 @@ def example_rag_pipeline():
             metadata={
                 "source": "python_guide.txt",
                 "relevance_score": 0.95,
-                "chunk_id": "chunk_42"
-            }
+                "chunk_id": "chunk_42",
+            },
         ),
         Document(
             text="LlamaIndex provides tools for ingesting, structuring, and accessing data.",
             metadata={
                 "source": "llamaindex_docs.md",
                 "relevance_score": 0.89,
-                "chunk_id": "chunk_17"
-            }
+                "chunk_id": "chunk_17",
+            },
         ),
         Document(
             text="RAG (Retrieval-Augmented Generation) combines retrieval with LLM generation.",
-            metadata={
-                "source": "rag_tutorial.pdf",
-                "relevance_score": 0.87,
-                "chunk_id": "chunk_8"
-            }
-        )
+            metadata={"source": "rag_tutorial.pdf", "relevance_score": 0.87, "chunk_id": "chunk_8"},
+        ),
     ]
 
     print(f"✅ Retrieved {len(retrieved_docs)} documents\n")
@@ -283,19 +273,13 @@ def example_rag_pipeline():
     from toonverter.analysis import count_tokens
 
     # Create JSON equivalent
-    json_data = [
-        {
-            "text": doc.text,
-            "metadata": doc.metadata
-        }
-        for doc in retrieved_docs
-    ]
+    json_data = [{"text": doc.text, "metadata": doc.metadata} for doc in retrieved_docs]
     json_str = json.dumps(json_data, indent=2)
 
     toon_tokens = count_tokens(toon)
     json_tokens = count_tokens(json_str)
     savings = json_tokens - toon_tokens
-    savings_pct = (savings / json_tokens * 100)
+    savings_pct = savings / json_tokens * 100
 
     print(f"\n💰 Token Savings for RAG Context:")
     print(f"  JSON format: {json_tokens} tokens")
@@ -312,11 +296,12 @@ def example_rag_pipeline():
 # 6. DOCUMENT CHUNKING WORKFLOW
 # =============================================================================
 
+
 def example_document_chunking():
     """Example: Chunk large documents and preserve metadata."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("6. DOCUMENT CHUNKING WORKFLOW")
-    print("="*70)
+    print("=" * 70)
 
     # Simulate a large document split into chunks
     print("\n📄 Original Document → Chunks with TextNode:")
@@ -333,20 +318,20 @@ def example_document_chunking():
             text="LlamaIndex is a data framework for LLM applications.",
             metadata={"source": "guide.txt", "chunk": 0, "total_chunks": 3},
             start_char_idx=0,
-            end_char_idx=54
+            end_char_idx=54,
         ),
         TextNode(
             text="It provides tools for data ingestion, indexing, and retrieval.",
             metadata={"source": "guide.txt", "chunk": 1, "total_chunks": 3},
             start_char_idx=55,
-            end_char_idx=118
+            end_char_idx=118,
         ),
         TextNode(
             text="The framework supports various data sources including PDFs, databases, and APIs.",
             metadata={"source": "guide.txt", "chunk": 2, "total_chunks": 3},
             start_char_idx=119,
-            end_char_idx=200
-        )
+            end_char_idx=200,
+        ),
     ]
 
     # Convert to TOON
@@ -363,11 +348,12 @@ def example_document_chunking():
 # TOKEN SAVINGS ANALYSIS
 # =============================================================================
 
+
 def example_token_savings():
     """Example: Analyze token savings for different document sizes."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("7. TOKEN SAVINGS ANALYSIS")
-    print("="*70)
+    print("=" * 70)
 
     import json
     from toonverter.analysis import count_tokens
@@ -376,7 +362,7 @@ def example_token_savings():
         ("Small (1 doc)", 1),
         ("Medium (10 docs)", 10),
         ("Large (100 docs)", 100),
-        ("Very Large (1000 docs)", 1000)
+        ("Very Large (1000 docs)", 1000),
     ]
 
     print("\n📊 Token Savings by Collection Size:\n")
@@ -388,11 +374,7 @@ def example_token_savings():
         docs = [
             Document(
                 text=f"This is document {i} with some content about topic {i % 5}.",
-                metadata={
-                    "doc_id": i,
-                    "category": f"cat_{i % 5}",
-                    "priority": i % 3
-                }
+                metadata={"doc_id": i, "category": f"cat_{i % 5}", "priority": i % 3},
             )
             for i in range(count)
         ]
@@ -408,7 +390,7 @@ def example_token_savings():
         toon_tokens = count_tokens(toon)
         json_tokens = count_tokens(json_str)
         savings = json_tokens - toon_tokens
-        savings_pct = (savings / json_tokens * 100)
+        savings_pct = savings / json_tokens * 100
 
         print(f"{label:<20} {json_tokens:<12} {toon_tokens:<12} {savings} ({savings_pct:.1f}%)")
 
@@ -417,11 +399,12 @@ def example_token_savings():
 # MAIN
 # =============================================================================
 
+
 def main():
     """Run all examples."""
-    print("\n" + "🚀 " + "="*66 + " 🚀")
+    print("\n" + "🚀 " + "=" * 66 + " 🚀")
     print("  TOONVERTER - LLAMAINDEX INTEGRATION EXAMPLES")
-    print("🚀 " + "="*66 + " 🚀")
+    print("🚀 " + "=" * 66 + " 🚀")
 
     example_document_conversion()
     example_node_serialization()
@@ -431,9 +414,9 @@ def main():
     example_document_chunking()
     example_token_savings()
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("✅ All examples completed successfully!")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
 
 
 if __name__ == "__main__":

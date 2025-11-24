@@ -13,6 +13,7 @@ try:
     from langchain.schema import Document, HumanMessage, AIMessage
     from langchain.text_splitter import RecursiveCharacterTextSplitter
     from toonverter.integrations import langchain_to_toon, toon_to_langchain
+
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
@@ -31,12 +32,12 @@ def example_document_conversion():
     # Create documents
     doc1 = Document(
         page_content="Python is a high-level programming language known for its simplicity.",
-        metadata={"source": "python_guide.pdf", "page": 1, "author": "Alice"}
+        metadata={"source": "python_guide.pdf", "page": 1, "author": "Alice"},
     )
 
     doc2 = Document(
         page_content="Machine learning is a subset of artificial intelligence.",
-        metadata={"source": "ml_intro.pdf", "page": 5, "author": "Bob"}
+        metadata={"source": "ml_intro.pdf", "page": 5, "author": "Bob"},
     )
 
     print("\nOriginal documents:")
@@ -72,9 +73,11 @@ def example_message_conversion():
 
     messages = [
         HumanMessage(content="What is TOON format?"),
-        AIMessage(content="TOON is a token-optimized data format that reduces LLM token usage by 30-60%."),
+        AIMessage(
+            content="TOON is a token-optimized data format that reduces LLM token usage by 30-60%."
+        ),
         HumanMessage(content="How does it achieve this?"),
-        AIMessage(content="TOON uses minimal syntax, tabular formats, and smart quoting rules.")
+        AIMessage(content="TOON uses minimal syntax, tabular formats, and smart quoting rules."),
     ]
 
     print("\nOriginal messages:")
@@ -104,7 +107,7 @@ def example_rag_pipeline():
         "Machine learning uses algorithms to learn from data.",
         "Natural language processing enables computers to understand human language.",
         "Deep learning is a subset of machine learning using neural networks.",
-        "TOON format reduces token usage in LLM applications."
+        "TOON format reduces token usage in LLM applications.",
     ]
 
     # Create documents
@@ -120,7 +123,11 @@ def example_rag_pipeline():
 
     # Calculate storage savings
     import json
-    json_size = sum(len(json.dumps({"content": doc.page_content, "metadata": doc.metadata})) for doc in documents)
+
+    json_size = sum(
+        len(json.dumps({"content": doc.page_content, "metadata": doc.metadata}))
+        for doc in documents
+    )
     toon_size = sum(len(toon_str) for toon_str in toon_docs)
 
     print(f"\nStorage comparison:")
@@ -130,7 +137,7 @@ def example_rag_pipeline():
 
     # Token analysis
     all_docs_dict = [{"content": doc.page_content, "metadata": doc.metadata} for doc in documents]
-    report = toon.analyze({"documents": all_docs_dict}, compare_formats=['json', 'toon'])
+    report = toon.analyze({"documents": all_docs_dict}, compare_formats=["json", "toon"])
 
     print(f"\nToken savings: {report.max_savings_percentage:.1f}%")
     print(f"  JSON: {report.format_results['json'].token_count} tokens")
@@ -145,12 +152,15 @@ def example_document_splitting():
     print("\n--- Document Splitting & Optimization ---")
 
     # Long document
-    long_text = """
+    long_text = (
+        """
     Python is a high-level, interpreted programming language known for its simplicity and readability.
     It supports multiple programming paradigms including procedural, object-oriented, and functional programming.
     Python has a comprehensive standard library and a vast ecosystem of third-party packages.
     The language is widely used in web development, data science, machine learning, and automation.
-    """ * 5  # Repeat to make it longer
+    """
+        * 5
+    )  # Repeat to make it longer
 
     # Split into chunks
     splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=50)
@@ -170,7 +180,11 @@ def example_document_splitting():
 
     # Calculate savings
     import json
-    json_size = sum(len(json.dumps({"content": chunk.page_content, "metadata": chunk.metadata})) for chunk in chunks)
+
+    json_size = sum(
+        len(json.dumps({"content": chunk.page_content, "metadata": chunk.metadata}))
+        for chunk in chunks
+    )
     toon_size = sum(len(toon_str) for toon_str in toon_chunks)
 
     print(f"\nTotal chunks storage:")

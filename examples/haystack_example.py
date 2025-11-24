@@ -30,21 +30,18 @@ from toonverter.integrations.haystack import (
 # 1. DOCUMENT CONVERSION
 # =============================================================================
 
+
 def example_document_conversion():
     """Example: Convert Haystack Documents to/from TOON."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("1. DOCUMENT CONVERSION")
-    print("="*70)
+    print("=" * 70)
 
     # Create a simple document
     print("\n📄 Simple Document → TOON:")
     doc = Document(
         content="Haystack is an open-source framework for building NLP applications.",
-        meta={
-            "source": "haystack_docs.txt",
-            "section": "Introduction",
-            "page": 1
-        }
+        meta={"source": "haystack_docs.txt", "section": "Introduction", "page": 1},
     )
 
     toon = haystack_to_toon(doc)
@@ -60,12 +57,8 @@ def example_document_conversion():
     print("\n📄 Document with Score → TOON:")
     doc2 = Document(
         content="Neural networks are computational models inspired by biological brains.",
-        meta={
-            "title": "Neural Networks 101",
-            "author": "Dr. Johnson",
-            "category": "AI"
-        },
-        score=0.95
+        meta={"title": "Neural Networks 101", "author": "Dr. Johnson", "category": "AI"},
+        score=0.95,
     )
 
     toon2 = haystack_to_toon(doc2)
@@ -76,7 +69,7 @@ def example_document_conversion():
     doc3 = Document(
         content="Name,Age,City\nAlice,30,NYC\nBob,25,LA",
         content_type="table",
-        meta={"format": "csv"}
+        meta={"format": "csv"},
     )
 
     toon3 = haystack_to_toon(doc3)
@@ -87,11 +80,12 @@ def example_document_conversion():
 # 2. ANSWER SERIALIZATION
 # =============================================================================
 
+
 def example_answer_serialization():
     """Example: Convert QA answers to/from TOON."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("2. ANSWER SERIALIZATION (QA CACHING)")
-    print("="*70)
+    print("=" * 70)
 
     # Create answers from a QA pipeline
     print("\n💬 Question: 'What is the capital of France?'")
@@ -106,7 +100,7 @@ def example_answer_serialization():
             offsets_in_document=[Span(start=23, end=28)],
             offsets_in_context=[Span(start=23, end=28)],
             document_id="doc_france_001",
-            meta={"source": "geography.txt"}
+            meta={"source": "geography.txt"},
         ),
         Answer(
             answer="Paris",
@@ -116,8 +110,8 @@ def example_answer_serialization():
             offsets_in_document=[Span(start=0, end=5)],
             offsets_in_context=[Span(start=0, end=5)],
             document_id="doc_france_002",
-            meta={"source": "demographics.txt"}
-        )
+            meta={"source": "demographics.txt"},
+        ),
     ]
 
     toon = answers_to_toon(answers)
@@ -140,22 +134,19 @@ def example_answer_serialization():
 # 3. BULK OPERATIONS
 # =============================================================================
 
+
 def example_bulk_operations():
     """Example: Convert multiple documents efficiently."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("3. BULK OPERATIONS")
-    print("="*70)
+    print("=" * 70)
 
     # Create a collection of documents
     docs = [
         Document(
             content=f"This is document {i} about machine learning topic {i % 3}.",
-            meta={
-                "doc_id": i,
-                "topic": f"ml_topic_{i % 3}",
-                "date": f"2024-01-{(i % 30) + 1:02d}"
-            },
-            score=0.9 - (i * 0.05)
+            meta={"doc_id": i, "topic": f"ml_topic_{i % 3}", "date": f"2024-01-{(i % 30) + 1:02d}"},
+            score=0.9 - (i * 0.05),
         )
         for i in range(5)
     ]
@@ -178,10 +169,7 @@ def example_bulk_operations():
     # Streaming for large collections
     print("\n📤 Streaming Large Collection (1000 docs):")
     large_docs = [
-        Document(
-            content=f"Document {i} content here.",
-            meta={"id": i, "batch": i // 100}
-        )
+        Document(content=f"Document {i} content here.", meta={"id": i, "batch": i // 100})
         for i in range(1000)
     ]
 
@@ -196,11 +184,12 @@ def example_bulk_operations():
 # 4. METADATA EXTRACTION
 # =============================================================================
 
+
 def example_metadata_extraction():
     """Example: Extract and analyze metadata."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("4. METADATA EXTRACTION")
-    print("="*70)
+    print("=" * 70)
 
     # Create documents with rich metadata
     docs = [
@@ -211,8 +200,8 @@ def example_metadata_extraction():
                 "page": 1,
                 "section": "Abstract",
                 "keywords": ["AI", "ML", "NLP"],
-                "citations": 42
-            }
+                "citations": 42,
+            },
         ),
         Document(
             content="Another document with lots of text...",
@@ -221,8 +210,8 @@ def example_metadata_extraction():
                 "page": 5,
                 "section": "Results",
                 "keywords": ["Analysis", "Data"],
-                "citations": 17
-            }
+                "citations": 17,
+            },
         ),
         Document(
             content="Third document content...",
@@ -231,9 +220,9 @@ def example_metadata_extraction():
                 "page": 12,
                 "section": "Methodology",
                 "keywords": ["Research", "Experiments"],
-                "citations": 89
-            }
-        )
+                "citations": 89,
+            },
+        ),
     ]
 
     # Extract only metadata (ignore content)
@@ -250,11 +239,12 @@ def example_metadata_extraction():
 # 5. SEARCH PIPELINE EXAMPLE
 # =============================================================================
 
+
 def example_search_pipeline():
     """Example: Search pipeline with token optimization."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("5. SEARCH PIPELINE WITH TOKEN OPTIMIZATION")
-    print("="*70)
+    print("=" * 70)
 
     # Simulate a search pipeline: retrieve relevant documents
     print("\n🔍 Step 1: Search query: 'machine learning frameworks'")
@@ -263,31 +253,19 @@ def example_search_pipeline():
     retrieved_docs = [
         Document(
             content="TensorFlow is an open-source machine learning framework developed by Google.",
-            meta={
-                "source": "tensorflow_guide.txt",
-                "relevance_score": 0.92,
-                "doc_id": "tf_001"
-            },
-            score=0.92
+            meta={"source": "tensorflow_guide.txt", "relevance_score": 0.92, "doc_id": "tf_001"},
+            score=0.92,
         ),
         Document(
             content="PyTorch is a popular machine learning library for Python and deep learning.",
-            meta={
-                "source": "pytorch_docs.md",
-                "relevance_score": 0.89,
-                "doc_id": "pt_002"
-            },
-            score=0.89
+            meta={"source": "pytorch_docs.md", "relevance_score": 0.89, "doc_id": "pt_002"},
+            score=0.89,
         ),
         Document(
             content="Scikit-learn provides simple tools for machine learning in Python.",
-            meta={
-                "source": "sklearn_intro.txt",
-                "relevance_score": 0.85,
-                "doc_id": "sk_003"
-            },
-            score=0.85
-        )
+            meta={"source": "sklearn_intro.txt", "relevance_score": 0.85, "doc_id": "sk_003"},
+            score=0.85,
+        ),
     ]
 
     for doc in retrieved_docs:
@@ -305,19 +283,14 @@ def example_search_pipeline():
 
     # Create JSON equivalent
     json_data = [
-        {
-            "content": doc.content,
-            "meta": doc.meta,
-            "score": doc.score
-        }
-        for doc in retrieved_docs
+        {"content": doc.content, "meta": doc.meta, "score": doc.score} for doc in retrieved_docs
     ]
     json_str = json.dumps(json_data, indent=2)
 
     toon_tokens = count_tokens(toon)
     json_tokens = count_tokens(json_str)
     savings = json_tokens - toon_tokens
-    savings_pct = (savings / json_tokens * 100)
+    savings_pct = savings / json_tokens * 100
 
     print(f"\n💰 Token Savings for Search Results:")
     print(f"  JSON format: {json_tokens} tokens")
@@ -334,11 +307,12 @@ def example_search_pipeline():
 # 6. QA PIPELINE CACHING
 # =============================================================================
 
+
 def example_qa_caching():
     """Example: Cache QA results for faster responses."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("6. QA PIPELINE CACHING")
-    print("="*70)
+    print("=" * 70)
 
     print("\n💾 Scenario: Cache frequently asked questions")
 
@@ -350,7 +324,7 @@ def example_qa_caching():
                 type="extractive",
                 score=0.98,
                 context="Haystack is an open-source framework for building search systems and QA applications powered by LLMs.",
-                document_id="haystack_intro"
+                document_id="haystack_intro",
             )
         ],
         "How to install Haystack?": [
@@ -359,7 +333,7 @@ def example_qa_caching():
                 type="extractive",
                 score=0.95,
                 context="To install Haystack, run: pip install farm-haystack",
-                document_id="haystack_install"
+                document_id="haystack_install",
             )
         ],
         "What databases does Haystack support?": [
@@ -368,9 +342,9 @@ def example_qa_caching():
                 type="extractive",
                 score=0.92,
                 context="Haystack supports multiple document stores including Elasticsearch, OpenSearch, Weaviate, Pinecone, and more.",
-                document_id="haystack_databases"
+                document_id="haystack_databases",
             )
-        ]
+        ],
     }
 
     # Convert cache to TOON
@@ -388,11 +362,9 @@ def example_qa_caching():
         toon_cache[question] = toon
 
         # Compare with JSON
-        json_str = json.dumps([{
-            "answer": a.answer,
-            "score": a.score,
-            "context": a.context
-        } for a in answers])
+        json_str = json.dumps(
+            [{"answer": a.answer, "score": a.score, "context": a.context} for a in answers]
+        )
 
         toon_tokens = count_tokens(toon)
         json_tokens = count_tokens(json_str)
@@ -403,7 +375,7 @@ def example_qa_caching():
         print(f"     JSON: {json_tokens} tokens | TOON: {toon_tokens} tokens")
 
     savings = total_json_tokens - total_toon_tokens
-    savings_pct = (savings / total_json_tokens * 100)
+    savings_pct = savings / total_json_tokens * 100
 
     print(f"\n💰 Total Cache Savings:")
     print(f"  JSON format: {total_json_tokens} tokens")
@@ -415,11 +387,12 @@ def example_qa_caching():
 # TOKEN SAVINGS ANALYSIS
 # =============================================================================
 
+
 def example_token_savings():
     """Example: Analyze token savings for different collection sizes."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("7. TOKEN SAVINGS ANALYSIS")
-    print("="*70)
+    print("=" * 70)
 
     import json
     from toonverter.analysis import count_tokens
@@ -428,7 +401,7 @@ def example_token_savings():
         ("Small (1 doc)", 1),
         ("Medium (10 docs)", 10),
         ("Large (100 docs)", 100),
-        ("Very Large (1000 docs)", 1000)
+        ("Very Large (1000 docs)", 1000),
     ]
 
     print("\n📊 Token Savings by Collection Size:\n")
@@ -440,12 +413,8 @@ def example_token_savings():
         docs = [
             Document(
                 content=f"This is document {i} with content about search topic {i % 5}.",
-                meta={
-                    "doc_id": i,
-                    "category": f"cat_{i % 5}",
-                    "priority": i % 3
-                },
-                score=0.9 - (i * 0.001)
+                meta={"doc_id": i, "category": f"cat_{i % 5}", "priority": i % 3},
+                score=0.9 - (i * 0.001),
             )
             for i in range(count)
         ]
@@ -454,17 +423,14 @@ def example_token_savings():
         toon = bulk_documents_to_toon(docs)
 
         # Convert to JSON
-        json_data = [
-            {"content": d.content, "meta": d.meta, "score": d.score}
-            for d in docs
-        ]
+        json_data = [{"content": d.content, "meta": d.meta, "score": d.score} for d in docs]
         json_str = json.dumps(json_data)
 
         # Count tokens
         toon_tokens = count_tokens(toon)
         json_tokens = count_tokens(json_str)
         savings = json_tokens - toon_tokens
-        savings_pct = (savings / json_tokens * 100)
+        savings_pct = savings / json_tokens * 100
 
         print(f"{label:<20} {json_tokens:<12} {toon_tokens:<12} {savings} ({savings_pct:.1f}%)")
 
@@ -473,11 +439,12 @@ def example_token_savings():
 # MAIN
 # =============================================================================
 
+
 def main():
     """Run all examples."""
-    print("\n" + "🚀 " + "="*66 + " 🚀")
+    print("\n" + "🚀 " + "=" * 66 + " 🚀")
     print("  TOONVERTER - HAYSTACK INTEGRATION EXAMPLES")
-    print("🚀 " + "="*66 + " 🚀")
+    print("🚀 " + "=" * 66 + " 🚀")
 
     example_document_conversion()
     example_answer_serialization()
@@ -487,9 +454,9 @@ def main():
     example_qa_caching()
     example_token_savings()
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("✅ All examples completed successfully!")
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
 
 
 if __name__ == "__main__":

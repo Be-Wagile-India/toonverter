@@ -18,7 +18,7 @@ from typing import Any, Dict
 class INIAdapter(FormatAdapter):
     """Custom adapter for INI format."""
 
-    def encode(self, data: Any, options: Dict[str, Any]) -> str:
+    def encode(self, data: Any, options: dict[str, Any]) -> str:
         """Encode data to INI format."""
         if not isinstance(data, dict):
             raise ValueError("INI format requires dict at root")
@@ -32,7 +32,7 @@ class INIAdapter(FormatAdapter):
             lines.append("")
         return "\n".join(lines)
 
-    def decode(self, data_str: str, options: Dict[str, Any]) -> Any:
+    def decode(self, data_str: str, options: dict[str, Any]) -> Any:
         """Decode INI format to data."""
         result = {}
         current_section = None
@@ -55,7 +55,7 @@ class INIAdapter(FormatAdapter):
 class MarkdownTableAdapter(FormatAdapter):
     """Custom adapter for Markdown tables."""
 
-    def encode(self, data: Any, options: Dict[str, Any]) -> str:
+    def encode(self, data: Any, options: dict[str, Any]) -> str:
         """Encode data to Markdown table."""
         if not isinstance(data, dict) or "rows" not in data:
             raise ValueError("Markdown table requires {'rows': [...]}")
@@ -79,7 +79,7 @@ class MarkdownTableAdapter(FormatAdapter):
 
         return "\n".join(lines)
 
-    def decode(self, data_str: str, options: Dict[str, Any]) -> Any:
+    def decode(self, data_str: str, options: dict[str, Any]) -> Any:
         """Decode Markdown table to data."""
         lines = [l.strip() for l in data_str.strip().split("\n") if l.strip()]
 
@@ -104,7 +104,7 @@ def example_register_adapter():
     print("\n--- Registering Custom Adapter ---")
 
     # Register INI adapter
-    registry.register('ini', INIAdapter())
+    registry.register("ini", INIAdapter())
     print("\nRegistered 'ini' format adapter")
 
     # Verify registration
@@ -116,27 +116,20 @@ def example_use_custom_format():
     print("\n--- Using Custom Format ---")
 
     data = {
-        "database": {
-            "host": "localhost",
-            "port": "5432",
-            "name": "mydb"
-        },
-        "cache": {
-            "enabled": "true",
-            "ttl": "3600"
-        }
+        "database": {"host": "localhost", "port": "5432", "name": "mydb"},
+        "cache": {"enabled": "true", "ttl": "3600"},
     }
 
     print("\nOriginal data:")
     print(data)
 
     # Encode to INI
-    ini_str = toon.encode(data, format='ini')
+    ini_str = toon.encode(data, format="ini")
     print("\nINI format:")
     print(ini_str)
 
     # Decode from INI
-    decoded = toon.decode(ini_str, format='ini')
+    decoded = toon.decode(ini_str, format="ini")
     print("\nDecoded:")
     print(decoded)
 
@@ -146,13 +139,13 @@ def example_markdown_table():
     print("\n--- Markdown Table Format ---")
 
     # Register adapter
-    registry.register('mdtable', MarkdownTableAdapter())
+    registry.register("mdtable", MarkdownTableAdapter())
 
     data = {
         "rows": [
             {"Name": "Alice", "Age": "30", "City": "NYC"},
             {"Name": "Bob", "Age": "25", "City": "LA"},
-            {"Name": "Charlie", "Age": "35", "City": "SF"}
+            {"Name": "Charlie", "Age": "35", "City": "SF"},
         ]
     }
 
@@ -160,12 +153,12 @@ def example_markdown_table():
     print(data)
 
     # Encode to Markdown table
-    md_str = toon.encode(data, format='mdtable')
+    md_str = toon.encode(data, format="mdtable")
     print("\nMarkdown table:")
     print(md_str)
 
     # Decode
-    decoded = toon.decode(md_str, format='mdtable')
+    decoded = toon.decode(md_str, format="mdtable")
     print("\nDecoded:")
     print(decoded)
 
@@ -177,22 +170,17 @@ def example_convert_between_formats():
     import tempfile
     import os
 
-    data = {
-        "server": {
-            "host": "example.com",
-            "port": "8080"
-        }
-    }
+    data = {"server": {"host": "example.com", "port": "8080"}}
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Save as INI
         ini_file = os.path.join(tmpdir, "config.ini")
-        toon.save(data, ini_file, format='ini')
+        toon.save(data, ini_file, format="ini")
         print(f"\nSaved as INI: {ini_file}")
 
         # Convert INI -> TOON
         toon_file = os.path.join(tmpdir, "config.toon")
-        toon.convert(source=ini_file, target=toon_file, from_format='ini', to_format='toon')
+        toon.convert(source=ini_file, target=toon_file, from_format="ini", to_format="toon")
         print(f"Converted to TOON: {toon_file}")
 
         # Show both

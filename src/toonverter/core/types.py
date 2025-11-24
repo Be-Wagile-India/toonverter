@@ -4,6 +4,16 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 
+# Optimization Policy needs to be forward referenced or imported carefully to avoid circular deps if it imports types
+# But OptimizationPolicy is in optimization/policy.py which shouldn't depend on types.py
+# However, to be safe, we use 'Any' or string forward ref if needed, but python handles imports.
+# Ideally we import it.
+try:
+    from toonverter.optimization.policy import OptimizationPolicy
+except ImportError:
+    OptimizationPolicy = Any  # type: ignore
+
+
 @dataclass
 class EncodeOptions:
     """Configuration options for encoding data to TOON format.
@@ -19,6 +29,8 @@ class EncodeOptions:
         sort_keys: Sort dictionary keys alphabetically
         ensure_ascii: Escape non-ASCII characters
         max_line_length: Maximum line length before wrapping
+        token_budget: Maximum token count for output (active optimization)
+        optimization_policy: Rules for intelligent degradation
     """
 
     indent: int = 2
@@ -28,6 +40,8 @@ class EncodeOptions:
     sort_keys: bool = False
     ensure_ascii: bool = False
     max_line_length: int | None = None
+    token_budget: int | None = None
+    optimization_policy: OptimizationPolicy | None = None
 
     @classmethod
     def create_compact(cls) -> "EncodeOptions":

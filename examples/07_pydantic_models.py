@@ -14,6 +14,7 @@ try:
     from typing import List, Optional
     from datetime import datetime
     from toonverter.integrations import pydantic_to_toon, toon_to_pydantic
+
     PYDANTIC_AVAILABLE = True
 except ImportError:
     PYDANTIC_AVAILABLE = False
@@ -25,6 +26,7 @@ import toonverter as toon
 # Define Pydantic models
 class Address(BaseModel):
     """Address model."""
+
     street: str
     city: str
     zip_code: str
@@ -33,26 +35,28 @@ class Address(BaseModel):
 
 class User(BaseModel):
     """User model with validation."""
+
     id: int
     name: str
     email: str
     age: int = Field(ge=0, le=150)
     active: bool = True
-    address: Optional[Address] = None
-    tags: List[str] = []
+    address: Address | None = None
+    tags: list[str] = []
 
-    @validator('email')
+    @validator("email")
     def validate_email(cls, v):
-        if '@' not in v:
-            raise ValueError('Invalid email')
+        if "@" not in v:
+            raise ValueError("Invalid email")
         return v
 
 
 class Project(BaseModel):
     """Project model."""
+
     name: str
     description: str
-    members: List[User]
+    members: list[User]
     created: datetime
     budget: float
 
@@ -65,13 +69,7 @@ def example_simple_model():
     print("\n--- Simple Model Conversion ---")
 
     # Create user
-    user = User(
-        id=1,
-        name="Alice",
-        email="alice@example.com",
-        age=30,
-        tags=["python", "ai", "ml"]
-    )
+    user = User(id=1, name="Alice", email="alice@example.com", age=30, tags=["python", "ai", "ml"])
 
     print("\nOriginal Pydantic model:")
     print(user)
@@ -103,12 +101,8 @@ def example_nested_models():
         name="Alice",
         email="alice@example.com",
         age=30,
-        address=Address(
-            street="123 Main St",
-            city="NYC",
-            zip_code="10001"
-        ),
-        tags=["python", "ai"]
+        address=Address(street="123 Main St", city="NYC", zip_code="10001"),
+        tags=["python", "ai"],
     )
 
     print("\nNested Pydantic model:")
@@ -136,7 +130,7 @@ def example_list_of_models():
     users = [
         User(id=1, name="Alice", email="alice@example.com", age=30),
         User(id=2, name="Bob", email="bob@example.com", age=25),
-        User(id=3, name="Charlie", email="charlie@example.com", age=35)
+        User(id=3, name="Charlie", email="charlie@example.com", age=35),
     ]
 
     print(f"\nCreated {len(users)} users")
@@ -149,6 +143,7 @@ def example_list_of_models():
 
     # Token analysis
     import json
+
     json_str = json.dumps(users_dict)
     print(f"\nJSON size: {len(json_str)} bytes")
     print(f"TOON size: {len(toon_str)} bytes")
@@ -163,12 +158,7 @@ def example_validation():
     print("\n--- Validation ---")
 
     # Valid user
-    valid_user = User(
-        id=1,
-        name="Alice",
-        email="alice@example.com",
-        age=30
-    )
+    valid_user = User(id=1, name="Alice", email="alice@example.com", age=30)
 
     toon_str = pydantic_to_toon(valid_user)
     print("\nValid user TOON:")
@@ -213,10 +203,10 @@ def example_complex_model():
         description="Next-generation AI platform",
         members=[
             User(id=1, name="Alice", email="alice@example.com", age=30),
-            User(id=2, name="Bob", email="bob@example.com", age=25)
+            User(id=2, name="Bob", email="bob@example.com", age=25),
         ],
         created=datetime(2025, 1, 15, 10, 30, 0),
-        budget=500000.00
+        budget=500000.00,
     )
 
     print("\nComplex Pydantic model:")
@@ -230,8 +220,9 @@ def example_complex_model():
 
     # Token analysis
     import json
+
     json_str = json.dumps(project_dict, default=str)
-    report = toon.analyze(project_dict, compare_formats=['json', 'toon'])
+    report = toon.analyze(project_dict, compare_formats=["json", "toon"])
 
     print(f"\nToken savings: {report.max_savings_percentage:.1f}%")
 
@@ -245,21 +236,21 @@ def example_api_response():
 
     # Simulate API response
     users = [
-        User(id=i, name=f"User{i}", email=f"user{i}@example.com", age=20 + i)
-        for i in range(1, 101)
+        User(id=i, name=f"User{i}", email=f"user{i}@example.com", age=20 + i) for i in range(1, 101)
     ]
 
     response = {
         "users": [u.model_dump() for u in users],
         "total": len(users),
         "page": 1,
-        "per_page": 100
+        "per_page": 100,
     }
 
     print(f"\nAPI response: {len(users)} users")
 
     # Compare formats
     import json
+
     json_str = json.dumps(response)
     toon_str = toon.encode(response)
 
@@ -268,7 +259,7 @@ def example_api_response():
     print(f"Bandwidth savings: {((len(json_str) - len(toon_str)) / len(json_str) * 100):.1f}%")
 
     # Token analysis
-    report = toon.analyze(response, compare_formats=['json', 'toon'])
+    report = toon.analyze(response, compare_formats=["json", "toon"])
     print(f"Token savings: {report.max_savings_percentage:.1f}%")
 
 
