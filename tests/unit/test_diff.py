@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from toonverter.diff import ChangeType, DiffChange, DiffFormatter, DiffResult, ToonDiffer
+from toonverter.differ import ChangeType, DiffChange, DiffFormatter, DiffResult, ToonDiffer
 
 
 class TestToonDiffer:
@@ -146,8 +146,8 @@ class TestDiffFormatter:
         assert len(data["changes"]) == 4
         assert data["changes"][0]["type"] == "add"
 
-    @patch("toonverter.diff.formatter.Console")
-    @patch("toonverter.diff.formatter.RICH_AVAILABLE", True)
+    @patch("toonverter.differ.formatter.Console")
+    @patch("toonverter.differ.formatter.RICH_AVAILABLE", True)
     def test_print_rich_match(self, mock_console_cls):
         mock_console = MagicMock()
         mock_console_cls.return_value = mock_console
@@ -160,8 +160,8 @@ class TestDiffFormatter:
         args = mock_console.print.call_args[0]
         assert "No differences found" in str(args[0])
 
-    @patch("toonverter.diff.formatter.Console")
-    @patch("toonverter.diff.formatter.RICH_AVAILABLE", True)
+    @patch("toonverter.differ.formatter.Console")
+    @patch("toonverter.differ.formatter.RICH_AVAILABLE", True)
     def test_print_rich_changes(self, mock_console_cls, sample_result):
         mock_console = MagicMock()
         mock_console_cls.return_value = mock_console
@@ -176,7 +176,7 @@ class TestDiffFormatter:
         assert isinstance(mock_console.print.call_args[0][0], Table)
 
     @patch("builtins.print")
-    @patch("toonverter.diff.formatter.RICH_AVAILABLE", False)
+    @patch("toonverter.differ.formatter.RICH_AVAILABLE", False)
     def test_print_rich_fallback(self, mock_print, sample_result):
         formatter = DiffFormatter()
         formatter.print_rich(sample_result)

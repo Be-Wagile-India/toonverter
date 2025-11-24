@@ -30,7 +30,7 @@ from .core import (
 )
 from .core.registry import get_registry
 from .decoders import ToonDecoder
-from .diff import DiffResult
+from .differ import DiffResult
 from .encoders import ToonEncoder
 from .formats import register_default_formats
 from .plugins import load_plugins
@@ -464,7 +464,7 @@ def diff(obj1: Any, obj2: Any) -> "DiffResult":
     Returns:
         DiffResult object
     """
-    from toonverter.diff import DiffResult, ToonDiffer
+    from toonverter.differ import DiffResult, ToonDiffer
 
     differ = ToonDiffer()
     return differ.diff(obj1, obj2)

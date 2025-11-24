@@ -219,7 +219,7 @@ def diff(file1: str, file2: str, format: str) -> None:
     Computes structural difference between two files.
     """
     import toonverter as toon
-    from toonverter.diff import DiffFormatter
+    from toonverter.differ import DiffFormatter
 
     try:
         # Load files
