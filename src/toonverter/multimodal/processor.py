@@ -92,8 +92,6 @@ class SmartImageProcessor:
         width, height = img.size
 
         # Calculate potential savings
-        (width + tile_size - 1) // tile_size
-        (height + tile_size - 1) // tile_size
 
         # Check if we can snap to grid within 10% visual loss limit
         new_w = width
