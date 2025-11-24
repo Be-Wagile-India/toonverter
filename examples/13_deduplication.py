@@ -28,7 +28,7 @@ def main():
 
     print("--- Original Data ---")
     for emp in data["employees"]:
-        print(f"ID: {emp['id']}, Role: {emp['role']}")
+        print(f"Employee record (details redacted)")
 
     print("\n--- Running Semantic Deduplication ---")
     # Optimize using default settings (all-MiniLM-L6-v2 model)
@@ -40,8 +40,8 @@ def main():
     )
 
     print("\n--- Deduplicated Data ---")
-    for emp in optimized_data["employees"]:
-        print(f"ID: {emp['id']}, Role: {emp['role']}")
+    for i, _ in enumerate(optimized_data["employees"], 1):
+        print(f"Employee #{i} (details redacted)")
         
     # You can also use the class directly for more control
     print("\n--- Using SemanticDeduplicator Class directly ---")
