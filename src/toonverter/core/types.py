@@ -178,6 +178,38 @@ class ComparisonReport:
         return ((worst - best) / worst) * 100
 
 
+@dataclass
+class DuplicateItem:
+    """Information about a detected duplicate.
+
+    Attributes:
+        original_index: Index of the first occurrence
+        duplicate_index: Index of this duplicate occurrence
+        item: The duplicate data item
+    """
+
+    original_index: int
+    duplicate_index: int
+    item: Any
+
+
+@dataclass
+class DeduplicationResult:
+    """Result of a deduplication operation.
+
+    Attributes:
+        unique_items: List of unique items found
+        duplicate_count: Total number of duplicates found
+        duplicates: Details of duplicates found
+        reduction_percentage: Percentage of items removed
+    """
+
+    unique_items: list[Any]
+    duplicate_count: int
+    duplicates: list[DuplicateItem] = field(default_factory=list)
+    reduction_percentage: float = 0.0
+
+
 # Type aliases for common structures
 ToonData = dict[str, Any] | list[Any] | str | int | float | bool | None
 FormatName = Literal["json", "yaml", "toml", "csv", "xml", "toon"]

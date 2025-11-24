@@ -47,13 +47,16 @@ class YamlFormatAdapter(BaseFormatAdapter):
             EncodingError: If encoding fails
         """
         try:
-            kwargs = {}
+            _kwargs: dict[str, Any] = {}
             if options:
-                kwargs["default_flow_style"] = options.compact
-                kwargs["sort_keys"] = options.sort_keys
-                kwargs["allow_unicode"] = not options.ensure_ascii
+                if options.compact is not None:
+                    _kwargs["default_flow_style"] = options.compact
+                if options.sort_keys is not None:
+                    _kwargs["sort_keys"] = options.sort_keys
+                if options.ensure_ascii is not None:
+                    _kwargs["allow_unicode"] = not options.ensure_ascii
 
-            return yaml.dump(data, **kwargs)
+            return yaml.dump(data, stream=None, **_kwargs)
         except yaml.YAMLError as e:
             msg = f"Failed to encode to YAML: {e}"
             raise EncodingError(msg) from e

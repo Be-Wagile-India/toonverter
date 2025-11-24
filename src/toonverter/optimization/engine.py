@@ -95,7 +95,7 @@ class ContextOptimizer:
         self._visit(data, [], candidates)
         return candidates
 
-    def _visit(self, node: Any, path: list[str], candidates: list[DegradationCandidate]):
+    def _visit(self, node: Any, path: list[str], candidates: list[DegradationCandidate]) -> None:
         """Recursive visitor."""
 
         # We only look at containers (Dict/List) and Strings for now.
@@ -120,7 +120,7 @@ class ContextOptimizer:
         candidates: list[DegradationCandidate],
         parent: Any,
         key: Any,
-    ):
+    ) -> None:
         """Analyze a specific node for degradation potential."""
 
         # Heuristic Priority
@@ -191,7 +191,7 @@ class ContextOptimizer:
                 )
             )
 
-    def _apply_degradation(self, candidate: DegradationCandidate):
+    def _apply_degradation(self, candidate: DegradationCandidate) -> None:
         """Apply the action to the data structure."""
         parent = candidate.node_ref
         key = candidate.key

@@ -141,6 +141,8 @@ Contents
    guides/quick_start
    guides/toon_format
    guides/configuration
+   guides/deduplication
+   guides/schema_tools
 
 .. toctree::
    :maxdepth: 2
@@ -166,6 +168,8 @@ Contents
    examples/nested_structures
    examples/token_analysis
    examples/cli_usage
+   examples/deduplication
+   examples/schema_tools
    examples/custom_adapters
 
 .. toctree::

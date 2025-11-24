@@ -10,10 +10,14 @@ Quick Start:
     >>> decoded = toon.decode(toon_str)
 """
 
+from collections.abc import Callable
 from typing import Any, Optional
+
+from toonverter.core.spec import ToonEncodeOptions
 
 from .__version__ import __author__, __license__, __version__
 from .analysis import FormatComparator, TiktokenCounter, compare, count_tokens
+from .analysis.deduplication import SemanticDeduplicator
 from .core import (
     ComparisonReport,
     ConversionError,
@@ -419,6 +423,11 @@ __all__ = [
     "validate_schema",
     # Diff
     "diff",
+    # Vision
+    "optimize_vision",
+    "deduplicate",
+    "compress",
+    "decompress",
 ]
 
 
@@ -468,3 +477,97 @@ def diff(obj1: Any, obj2: Any) -> "DiffResult":
 
     differ = ToonDiffer()
     return differ.diff(obj1, obj2)
+
+
+def optimize_vision(
+    image_data: bytes, provider: str = "openai", return_payload: bool = False
+) -> tuple[bytes, str] | dict[str, Any]:
+    """Optimize image for vision models.
+
+    Args:
+        image_data: Raw image bytes
+        provider: Target provider (openai, anthropic)
+        return_payload: If True, returns vendor-specific dict payload instead of bytes
+
+    Returns:
+        Tuple of (optimized_bytes, mime_type) OR dict payload
+    """
+    from toonverter.multimodal import SmartImageProcessor, get_vendor_adapter
+
+    processor = SmartImageProcessor()
+    opt_bytes, mime = processor.process(image_data, target_provider=provider)
+
+    if return_payload:
+        adapter = get_vendor_adapter(provider)
+        return adapter.format(opt_bytes, mime)
+
+    return opt_bytes, mime
+
+
+def compress(data: Any) -> dict[str, Any]:
+    """Compress data using Smart Dictionary Compression.
+
+    Args:
+        data: Input data
+
+    Returns:
+        Compressed payload wrapper
+    """
+    from toonverter.optimization import SmartCompressor
+
+    compressor = SmartCompressor()
+    return compressor.compress(data)
+
+
+def decompress(data: dict[str, Any]) -> Any:
+    """Decompress SDC data.
+
+    Args:
+        data: Compressed payload wrapper
+
+    Returns:
+        Original data
+    """
+    from toonverter.optimization import SmartCompressor
+
+    compressor = SmartCompressor()
+    return compressor.decompress(data)
+
+
+def deduplicate(
+    data: Any,
+    model_name: str = "all-MiniLM-L6-v2",
+    threshold: float = 0.9,
+    language_key: str = "language_code",
+    embedding_batch_size: int = 32,
+    text_extraction_func: Callable[[Any], str | None] | None = None,
+    spec: ToonEncodeOptions | None = None,
+) -> Any:
+    """
+    Detects and eliminates semantically duplicate items within lists in the data structure.
+
+    Args:
+        data: The input data structure.
+        model_name: The name of the sentence transformer model to use for embeddings.
+        threshold: The cosine similarity threshold above which items are considered duplicates.
+        language_key: The key used to identify language-specific content, if applicable.
+        embedding_batch_size: Batch size for sentence embedding generation.
+        text_extraction_func: A callable that extracts a string for embedding from an item.
+                              If None, a default extraction logic is used.
+        spec: The TOON specification to use.
+
+    Returns:
+        The optimized data structure with duplicates removed.
+    """
+    if spec is None:
+        spec = ToonEncodeOptions()
+
+    deduplicator = SemanticDeduplicator(
+        model_name=model_name,
+        threshold=threshold,
+        language_key=language_key,
+        embedding_batch_size=embedding_batch_size,
+        text_extraction_func=text_extraction_func,
+        spec=spec,
+    )
+    return deduplicator.optimize(data)

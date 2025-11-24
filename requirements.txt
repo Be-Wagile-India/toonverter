@@ -7,3 +7,5 @@ tomli-w>=1.0.0
 networkx>=3.0
 python-louvain>=0.16
 sentence-transformers>=2.2.2
+scikit-learn>=1.0.0
+torch>=1.11.0

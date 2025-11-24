@@ -9,10 +9,12 @@ This enables AI assistants to:
 - Validate TOON format compliance
 - Encode/decode data efficiently
 
-Install dependencies:
+Install dependencies::
+
     pip install toonverter[mcp]
 
-Usage:
+Usage::
+
     # Run as MCP server
     python -m toonverter.integrations.mcp_server
 

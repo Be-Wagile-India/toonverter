@@ -41,6 +41,7 @@ class CsvFormatAdapter(BaseFormatAdapter):
 
         try:
             output = io.StringIO()
+            writer: Any
 
             if isinstance(data[0], dict):
                 # List of dictionaries
@@ -104,7 +105,7 @@ class CsvFormatAdapter(BaseFormatAdapter):
         Returns:
             Dictionary with inferred types
         """
-        result = {}
+        result: dict[str, Any] = {}
         for key, value in row.items():
             if not value:
                 result[key] = None

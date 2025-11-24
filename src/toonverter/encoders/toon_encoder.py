@@ -72,7 +72,7 @@ class ToonEncoder:
         try:
             # OPTIMIZATION HOOK:
             # If a token budget is set, run the ContextOptimizer first
-            if self.options.token_budget and ContextOptimizer:
+            if self.options.token_budget and ContextOptimizer is not None:
                 optimizer = ContextOptimizer(
                     budget=self.options.token_budget, policy=self.options.optimization_policy
                 )
@@ -262,23 +262,22 @@ def _convert_options(options: EncodeOptions | ToonEncodeOptions | None) -> ToonE
         return options
 
     # Convert EncodeOptions to ToonEncodeOptions
-    if isinstance(options, EncodeOptions):
-        # Convert string delimiter to Delimiter enum
-        delimiter = Delimiter.from_string(options.delimiter)
+    # At this point, options MUST be an instance of EncodeOptions if the type hints are correct.
+    # No need for 'if isinstance(options, EncodeOptions):' or 'else:'
+    # Directly process options as EncodeOptions
+    delimiter = Delimiter.from_string(options.delimiter)
 
-        # Map compact mode to indent_size
-        indent_size = 0 if options.compact else options.indent
+    # Map compact mode to indent_size
+    indent_size = 0 if options.compact else options.indent
 
-        return ToonEncodeOptions(
-            indent_size=indent_size,
-            delimiter=delimiter,
-            key_folding="none",  # EncodeOptions doesn't have key_folding
-            strict=True,
-            token_budget=options.token_budget,
-            optimization_policy=options.optimization_policy,
-        )
-
-    return None
+    return ToonEncodeOptions(
+        indent_size=indent_size,
+        delimiter=delimiter,
+        key_folding="none",  # EncodeOptions doesn't have key_folding
+        strict=True,
+        token_budget=options.token_budget,
+        optimization_policy=options.optimization_policy,
+    )
 
 
 def encode(data: ToonValue, options: EncodeOptions | ToonEncodeOptions | None = None) -> str:

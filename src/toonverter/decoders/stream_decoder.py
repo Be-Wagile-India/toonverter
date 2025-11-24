@@ -121,19 +121,18 @@ class StreamDecoder:
         items_yielded = 0
 
         while items_yielded < length:
-            # Scan for next item start
-            t = tokens.peek()
-            if not t or t.type == TokenType.EOF:
+            t_peeked = tokens.peek()
+            if t_peeked is None or t_peeked.type == TokenType.EOF:
                 break
 
             # Skip structural
-            if t.type in (TokenType.NEWLINE, TokenType.INDENT, TokenType.DEDENT):
+            if t_peeked.type in (TokenType.NEWLINE, TokenType.INDENT, TokenType.DEDENT):
                 next(tokens)
                 continue
 
             # List Item Marker
-            if t.type == TokenType.DASH:
-                next(tokens)  # Consume '-'
+            if t_peeked.type == TokenType.DASH:
+                _ = next(tokens)  # Consume '-'
 
                 # Capture value tokens
                 val_tokens = self._collect_value_tokens(tokens)
@@ -173,7 +172,7 @@ class StreamDecoder:
 
         while True:
             t = tokens.peek()
-            if not t or t.type == TokenType.EOF:
+            if t is None or t.type == TokenType.EOF:
                 break
 
             # Stop conditions

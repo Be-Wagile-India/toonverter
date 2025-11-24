@@ -116,3 +116,125 @@ class TestTOMLRoundtrip:
         encoded = self.adapter.encode(data, {})
         decoded = self.adapter.decode(encoded, {})
         assert decoded == data
+
+
+class TestTOMLValidation:
+    """Test TOML validation."""
+
+    def setup_method(self):
+        """Set up TOML format adapter."""
+        self.adapter = TOMLFormat()
+
+    def test_validate_valid(self):
+        """Test validating valid TOML."""
+        assert self.adapter.validate('name = "test"') is True
+
+    def test_validate_invalid(self):
+        """Test validating invalid TOML."""
+        assert self.adapter.validate("invalid toml =") is False
+
+
+class TestTOMLEdgeCases:
+    """Test TOML edge cases."""
+
+    def setup_method(self):
+        """Set up TOML format adapter."""
+        self.adapter = TOMLFormat()
+
+    def test_encode_non_dict(self):
+        """Test encoding non-dictionary data."""
+        from toonverter.core.exceptions import EncodingError
+
+        with pytest.raises(EncodingError, match="only supports dictionary"):
+            self.adapter.encode(["not", "a", "dict"])
+
+    def test_encode_write_not_available(self):
+        """Test encoding when write support is not available."""
+        from unittest.mock import patch
+
+        from toonverter.core.exceptions import EncodingError
+
+        with (
+            patch("toonverter.formats.toml_format.TOML_WRITE_AVAILABLE", False),
+            pytest.raises(EncodingError, match="TOML writing requires"),
+        ):
+            self.adapter.encode({"a": 1})
+
+    def test_init_read_not_available(self):
+        """Test initialization when read support is not available."""
+        from unittest.mock import patch
+
+        with (
+            patch("toonverter.formats.toml_format.TOML_READ_AVAILABLE", False),
+            pytest.raises(ImportError, match="TOML support requires"),
+        ):
+            TOMLFormat()
+
+    def test_decode_non_strict(self):
+        """Test non-strict decoding."""
+        from toonverter.core.types import DecodeOptions
+
+        options = DecodeOptions(strict=False)
+        result = self.adapter.decode("invalid toml =", options)
+        assert result == "invalid toml ="
+
+    def test_encode_error(self):
+        """Test encoding error handling."""
+        from toonverter.core.exceptions import EncodingError
+
+        class Unserializable:
+            pass
+
+        with pytest.raises(EncodingError, match="Failed to encode"):
+            self.adapter.encode({"obj": Unserializable()})
+
+
+class TestTOMLLegacy:
+    """Tests simulating Python < 3.11 environment logic inside methods."""
+
+    def setup_method(self):
+        """Set up TOML format adapter."""
+        self.adapter = TOMLFormat()
+
+    def test_legacy_encode(self):
+        """Test legacy encoding path."""
+        from unittest.mock import MagicMock, patch
+
+        mock_toml = MagicMock()
+        mock_toml.dumps.return_value = 'mock = "toml"'
+
+        with (
+            patch("sys.version_info", (3, 10)),
+            patch("toonverter.formats.toml_format.toml", mock_toml, create=True),
+        ):
+            result = self.adapter.encode({"a": 1})
+            assert result == 'mock = "toml"'
+            mock_toml.dumps.assert_called_once()
+
+    def test_legacy_decode(self):
+        """Test legacy decoding path."""
+        from unittest.mock import MagicMock, patch
+
+        mock_toml = MagicMock()
+        mock_toml.loads.return_value = {"mock": "data"}
+
+        with (
+            patch("sys.version_info", (3, 10)),
+            patch("toonverter.formats.toml_format.toml", mock_toml, create=True),
+        ):
+            result = self.adapter.decode('mock = "toml"')
+            assert result == {"mock": "data"}
+            mock_toml.loads.assert_called_once()
+
+    def test_legacy_validate(self):
+        """Test legacy validation path."""
+        from unittest.mock import MagicMock, patch
+
+        mock_toml = MagicMock()
+
+        with (
+            patch("sys.version_info", (3, 10)),
+            patch("toonverter.formats.toml_format.toml", mock_toml, create=True),
+        ):
+            assert self.adapter.validate("valid") is True
+            mock_toml.loads.assert_called_once()
