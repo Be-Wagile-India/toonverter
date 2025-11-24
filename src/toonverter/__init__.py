@@ -30,9 +30,11 @@ from .core import (
 )
 from .core.registry import get_registry
 from .decoders import ToonDecoder
+from .diff import DiffResult
 from .encoders import ToonEncoder
 from .formats import register_default_formats
 from .plugins import load_plugins
+from .schema import SchemaField, SchemaInferrer, SchemaValidator
 from .utils import read_file, write_file
 
 
@@ -372,11 +374,10 @@ __all__ = [
     "ComparisonReport",
     "ConversionError",
     "ConversionResult",
-    # Level 2 OOP API
-    "Converter",
     "DecodeOptions",
     "Decoder",
     "DecodingError",
+    "DiffResult",
     # Types
     "EncodeOptions",
     "Encoder",
@@ -392,6 +393,10 @@ __all__ = [
     "ValidationError",
     "__author__",
     "__license__",
+    # Schema
+    "SchemaField",
+    "SchemaInferrer",
+    "SchemaValidator",
     # Version info
     "__version__",
     "analyze",
@@ -409,4 +414,57 @@ __all__ = [
     # Utilities
     "registry",
     "save",
+    # Schema Tools
+    "infer_schema",
+    "validate_schema",
+    # Diff
+    "diff",
 ]
+
+
+def infer_schema(data: Any) -> "SchemaField":
+    """Infer schema from data.
+
+    Args:
+        data: Data to analyze
+
+    Returns:
+        SchemaField definition
+    """
+    from toonverter.schema import SchemaField, SchemaInferrer
+
+    inferrer = SchemaInferrer()
+    return inferrer.infer(data)
+
+
+def validate_schema(data: Any, schema: "SchemaField", strict: bool = False) -> list[str]:
+    """Validate data against schema.
+
+    Args:
+        data: Data to validate
+        schema: Schema definition
+        strict: Strict validation mode
+
+    Returns:
+        List of error messages (empty if valid)
+    """
+    from toonverter.schema import SchemaField, SchemaValidator
+
+    validator = SchemaValidator()
+    return validator.validate(data, schema, strict=strict)
+
+
+def diff(obj1: Any, obj2: Any) -> "DiffResult":
+    """Compute difference between two objects.
+
+    Args:
+        obj1: Original object
+        obj2: New object
+
+    Returns:
+        DiffResult object
+    """
+    from toonverter.diff import DiffResult, ToonDiffer
+
+    differ = ToonDiffer()
+    return differ.diff(obj1, obj2)

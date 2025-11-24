@@ -261,6 +261,7 @@ ignore = [
 "__init__.py" = [
     "F401",     # unused imports (re-exports)
     "ARG",      # unused arguments in API (kept for future compatibility)
+    "PLC0415",  # imports not at top (lazy loading)
 ]
 "src/toonverter/cli/*.py" = [
     "PLC0415",  # lazy imports in CLI (intentional for performance)
