@@ -78,7 +78,7 @@ def step3_backward_compatibility():
             content = f.read()
             try:
                 return toon.decode(content, format="toon")
-            except:
+            except Exception:
                 return json.loads(content)
 
     print("Unified config loader supports both JSON and TOON")
