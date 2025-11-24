@@ -158,7 +158,7 @@ class TestSmartImageProcessor:
         processor = SmartImageProcessor()
 
         # Access protected method for direct testing
-        _optimized = processor._optimize_for_tiles(mock_img_instance)
+        processor._optimize_for_tiles(mock_img_instance)
 
         mock_img_instance.resize.assert_called()
 
