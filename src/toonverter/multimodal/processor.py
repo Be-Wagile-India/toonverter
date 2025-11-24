@@ -112,7 +112,7 @@ class SmartImageProcessor:
             # Better strategy: Resize strictly maintaining aspect ratio to fit within the *smaller* grid.
 
             target_w = (width // tile_size) * tile_size
-            (height // tile_size) * tile_size
+            target_h = (height // tile_size) * tile_size
 
             # If dimensions are close to grid, force resize
             if width > target_w and (width - target_w) < 50:
