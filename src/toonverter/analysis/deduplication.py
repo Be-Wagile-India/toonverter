@@ -224,7 +224,7 @@ class ExactDeduplicator:
         if isinstance(data, (list, tuple)):
             return [self._canonicalize(i) for i in data]
         if isinstance(data, set):
-            return sorted([self._canonicalize(i) for i in data], key=lambda x: str(x))
+            return sorted([self._canonicalize(i) for i in data], key=str)
         return data
 
     def _extract_text(self, item: Any) -> str | None:
