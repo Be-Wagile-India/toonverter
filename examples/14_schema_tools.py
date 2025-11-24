@@ -10,7 +10,6 @@ This example demonstrates how to use TOON Converter's schema tools:
 
 import json
 from toonverter import infer_schema, validate_schema
-from toonverter.schema import SchemaField
 
 def main():
     # 1. Infer Schema from Data
