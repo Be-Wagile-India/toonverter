@@ -33,7 +33,6 @@ from toonverter.encoders.toon_encoder import ToonEncoder
 
 # Robust feature-detection for multiple Haystack package layouts.
 HAYSTACK_AVAILABLE = False
-_HAYSTACK_HAS_SPAN = False
 try:
     # Import the minimum required symbol(s) first. If these succeed, mark
     # Haystack as available even if some optional submodules differ across
@@ -46,10 +45,8 @@ try:
     # but don't fail the whole import if it's missing.
     try:
         from haystack.dataclasses.answers import Span  # type: ignore
-
-        _HAYSTACK_HAS_SPAN = True
     except Exception:
-        _HAYSTACK_HAS_SPAN = False
+        pass
 
 except Exception:
     # Keep HAYSTACK_AVAILABLE = False
