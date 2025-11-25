@@ -61,7 +61,6 @@ if TYPE_CHECKING:
     from haystack.dataclasses import Document as HaystackDocument
 
     # Span may not exist at runtime; TYPE_CHECKING allows mypy checks only.
-    from haystack.dataclasses.answers import Span as HaystackSpan  # Mypy alias for Span
 
     from toonverter.core.spec import ToonValue
 
