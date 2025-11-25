@@ -74,7 +74,7 @@ def _get_message_classes_or_skip():
         pass
 
     pytest.skip("LangChain message classes not available")
-
+    return None
 
 class TestLangChainDocuments:
     """Test LangChain Document handling."""
