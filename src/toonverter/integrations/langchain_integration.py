@@ -78,7 +78,7 @@ except Exception:
 
 if TYPE_CHECKING:
 
-    from toonverter.core.spec import ToonEncodeOptions, ToonValue
+    from toonverter.core.spec import ToonValue
     from toonverter.core.types import DecodeOptions, EncodeOptions
 
 
