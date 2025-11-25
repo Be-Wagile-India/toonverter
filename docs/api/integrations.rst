@@ -98,3 +98,12 @@ Instructor Integration
    :members:
    :undoc-members:
    :show-inheritance:
+
+.. _api/integrations:redis integration:
+
+Redis Integration
+-----------------
+.. automodule:: toonverter.integrations.redis_integration
+   :members:
+   :undoc-members:
+   :show-inheritance:

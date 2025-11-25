@@ -79,7 +79,7 @@ Core Capabilities
 * **Type Inference**: Automatic type detection and preservation
 * **Strict Validation**: Optional strict mode for production safety
 
-Framework Integrations (10)
+Framework Integrations (11)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * **Pandas**: DataFrame ↔ TOON with tabular optimization
@@ -92,6 +92,7 @@ Framework Integrations (10)
 * **Haystack**: Document integration for pipelines
 * **DSPy**: Example and prediction support
 * **Instructor**: Response model integration
+* **Redis**: Efficient serialization for RAG metadata and key-value stores
 
 
 Quick Start
@@ -158,6 +159,7 @@ Contents
    guides/integrations/haystack
    guides/integrations/dspy
    guides/integrations/instructor
+   guides/integrations/redis
 
 .. toctree::
    :maxdepth: 2

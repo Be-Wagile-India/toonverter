@@ -12,7 +12,12 @@ Demonstrates:
 try:
     from langchain.schema import Document, HumanMessage, AIMessage
     from langchain.text_splitter import RecursiveCharacterTextSplitter
-    from toonverter.integrations import langchain_to_toon, toon_to_langchain
+    from toonverter.integrations import (
+        langchain_to_toon,
+        messages_to_toon,
+        toon_to_langchain,
+        toon_to_messages,
+    )
 
     LANGCHAIN_AVAILABLE = True
 except ImportError:
@@ -46,16 +51,19 @@ def example_document_conversion():
         print(f"  Content: {doc.page_content[:50]}...")
         print(f"  Metadata: {doc.metadata}")
 
-    # Convert to TOON
-    toon_docs = [langchain_to_toon(doc) for doc in [doc1, doc2]]
+    # Convert to TOON (using list conversion for efficiency)
+    toon_docs_str = langchain_to_toon([doc1, doc2])
 
-    print("\nTOON representations:")
-    for i, toon_str in enumerate(toon_docs, 1):
-        print(f"\nDocument {i} (TOON):")
-        print(toon_str)
+    print("\nTOON representation (List):")
+    print(toon_docs_str)
 
     # Convert back
-    restored_docs = [toon_to_langchain(toon_str) for toon_str in toon_docs]
+    # toon_to_langchain handles lists automatically if the TOON string represents a list
+    restored_docs = toon_to_langchain(toon_docs_str)
+    
+    # Ensure it's a list (since it can return a single Document too)
+    if not isinstance(restored_docs, list):
+        restored_docs = [restored_docs]
 
     print("\nRestored documents:")
     for i, doc in enumerate(restored_docs, 1):
@@ -85,13 +93,15 @@ def example_message_conversion():
         role = "Human" if isinstance(msg, HumanMessage) else "AI"
         print(f"  {role}: {msg.content[:50]}...")
 
-    # Convert to TOON
-    toon_messages = [langchain_to_toon(msg) for msg in messages]
+    # Convert to TOON (using specialized message converter)
+    toon_str = messages_to_toon(messages)
 
-    print("\nTOON representations:")
-    for i, toon_str in enumerate(toon_messages, 1):
-        print(f"\nMessage {i} (TOON):")
-        print(toon_str)
+    print("\nTOON representation:")
+    print(toon_str)
+    
+    # Restore messages
+    restored_messages = toon_to_messages(toon_str)
+    print(f"\nRestored {len(restored_messages)} messages.")
 
 
 def example_rag_pipeline():

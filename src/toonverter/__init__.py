@@ -11,7 +11,7 @@ Quick Start:
 """
 
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from toonverter.core.spec import ToonEncodeOptions
 
@@ -36,7 +36,9 @@ from .core.registry import get_registry
 from .decoders import ToonDecoder
 from .differ import DiffResult
 from .encoders import ToonEncoder
+from .encoders.toon_encoder import _convert_options  # Added import
 from .formats import register_default_formats
+from .integrations.redis_integration import RedisToonWrapper
 from .plugins import load_plugins
 from .schema import SchemaField, SchemaInferrer, SchemaValidator
 from .utils import read_file, write_file
@@ -128,8 +130,20 @@ def encode(data: Any, to_format: str = "toon", **options: Any) -> str:
         '{name:Alice}'
     """
     adapter = registry.get(to_format)
-    encode_opts = EncodeOptions(**options) if options else None
-    return adapter.encode(data, encode_opts)
+
+    # Construct options object based on the target format
+    encode_opts: EncodeOptions | ToonEncodeOptions | None = None
+    if options:
+        if to_format == "toon":
+            # First, create a temporary EncodeOptions to correctly parse generic kwargs
+            temp_generic_options = EncodeOptions(**options)
+            # Then, convert to ToonEncodeOptions using the dedicated converter
+            encode_opts = _convert_options(temp_generic_options)
+        else:
+            # For other formats, use the generic EncodeOptions directly
+            encode_opts = EncodeOptions(**options)
+
+    return adapter.encode(data, cast("Any", encode_opts))
 
 
 def decode(data_str: str, from_format: str = "toon", **options: Any) -> Any:
@@ -428,6 +442,8 @@ __all__ = [
     "deduplicate",
     "compress",
     "decompress",
+    # Redis
+    "RedisToonWrapper",
 ]
 
 

@@ -17,16 +17,23 @@ from .base import BaseFormatAdapter
 def _convert_decode_options(
     options: DecodeOptions | ToonDecodeOptions | None,
 ) -> ToonDecodeOptions | None:
+    """Convert decode options to ToonDecodeOptions.
+
+    Args:
+        options: Decoding options
+
+    Returns:
+        ToonDecodeOptions if conversion is possible, otherwise None
+    """
     if options is None:
         return None
     if isinstance(options, ToonDecodeOptions):
         return options
-    if isinstance(options, DecodeOptions):
-        return ToonDecodeOptions(
-            strict=options.strict,
-            type_inference=options.type_inference,
-        )
-    return None
+    # Must be DecodeOptions at this point
+    return ToonDecodeOptions(
+        strict=options.strict,
+        type_inference=options.type_inference,
+    )
 
 
 class ToonFormatAdapter(BaseFormatAdapter):

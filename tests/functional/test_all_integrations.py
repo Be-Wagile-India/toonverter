@@ -124,15 +124,39 @@ class TestPydanticIntegrationComplete:
 # =============================================================================
 
 
+def _get_langchain_document_or_skip():
+    """Return a LangChain Document class from known locations, or skip if none available."""
+    try:
+        # Newer layout
+        from langchain_core.documents import Document  # type: ignore
+
+        return Document
+    except Exception:
+        pass
+
+    try:
+        from langchain.schema import Document
+
+        return Document
+    except Exception:
+        pass
+
+    try:
+        from langchain.docstore.document import Document
+
+        return Document
+    except Exception:
+        pass
+
+    pytest.skip("langchain not installed")
+
+
 class TestLangChainIntegrationComplete:
     """Complete functional tests for LangChain integration."""
 
     def test_document_encoding_new_imports(self):
         """Test LangChain Document encoding with new imports."""
-        try:
-            from langchain_core.documents import Document
-        except ImportError:
-            pytest.skip("langchain-core not installed")
+        Document = _get_langchain_document_or_skip()
 
         from toonverter.integrations.langchain_integration import langchain_to_toon
 
@@ -143,10 +167,7 @@ class TestLangChainIntegrationComplete:
 
     def test_document_encoding_old_imports(self):
         """Test LangChain Document encoding with old imports (backward compat)."""
-        try:
-            from langchain.schema import Document
-        except ImportError:
-            pytest.skip("langchain not installed")
+        Document = _get_langchain_document_or_skip()
 
         from toonverter.integrations.langchain_integration import langchain_to_toon
 
@@ -156,13 +177,7 @@ class TestLangChainIntegrationComplete:
 
     def test_with_options(self):
         """Test LangChain encoding with custom options."""
-        try:
-            try:
-                from langchain_core.documents import Document
-            except ImportError:
-                from langchain.schema import Document
-        except ImportError:
-            pytest.skip("langchain not installed")
+        Document = _get_langchain_document_or_skip()
 
         from toonverter.integrations.langchain_integration import langchain_to_toon
 
@@ -173,13 +188,7 @@ class TestLangChainIntegrationComplete:
 
     def test_roundtrip(self):
         """Test LangChain Document roundtrip."""
-        try:
-            try:
-                from langchain_core.documents import Document
-            except ImportError:
-                from langchain.schema import Document
-        except ImportError:
-            pytest.skip("langchain not installed")
+        Document = _get_langchain_document_or_skip()
 
         from toonverter.integrations.langchain_integration import (
             langchain_to_toon,
@@ -231,32 +240,38 @@ class TestHaystackIntegrationComplete:
 
     def test_document_encoding(self):
         """Test Haystack Document encoding."""
+        pytest.importorskip("haystack")
+        # Prefer the dataclasses export used by modern Haystack distributions
         try:
-            from haystack import Document
-        except ImportError:
-            pytest.skip("haystack not installed")
+            from haystack.dataclasses import Document as HaystackDocument  # type: ignore
+        except Exception:
+            # Fall back to legacy top-level Document if present
+            from haystack import Document as HaystackDocument  # type: ignore
 
         from toonverter.integrations.haystack_integration import haystack_to_toon
 
-        doc = Document(content="Hello World", meta={"source": "test.txt"})
+        # haystack.dataclasses.Document uses `content` and `meta` attributes
+        doc = HaystackDocument(content="Hello World", meta={"source": "test.txt"})
         result = haystack_to_toon(doc)
         assert "Hello World" in result
 
     def test_roundtrip(self):
         """Test Haystack Document roundtrip."""
+        pytest.importorskip("haystack")
         try:
-            from haystack import Document
-        except ImportError:
-            pytest.skip("haystack not installed")
+            from haystack.dataclasses import Document as HaystackDocument  # type: ignore
+        except Exception:
+            from haystack import Document as HaystackDocument  # type: ignore
 
         from toonverter.integrations.haystack_integration import (
             haystack_to_toon,
             toon_to_haystack,
         )
 
-        doc = Document(content="Test", meta={"key": "value"})
+        doc = HaystackDocument(content="Test", meta={"key": "value"})
         toon_str = haystack_to_toon(doc)
         result_doc = toon_to_haystack(toon_str)
+        # haystack.dataclasses.Document exposes .content attribute
         assert result_doc.content == doc.content
 
 

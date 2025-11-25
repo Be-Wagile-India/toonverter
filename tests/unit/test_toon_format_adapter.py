@@ -38,9 +38,6 @@ class TestToonFormatAdapter:
         assert converted.strict is True
         assert converted.type_inference is False
 
-    def test_convert_decode_options_other(self):
-        assert _convert_decode_options("invalid") is None
-
     def test_decode_with_options(self):
         adapter = ToonFormatAdapter()
         data = "key: value"

@@ -23,7 +23,7 @@ Basic usage:
 """
 
 from collections.abc import Iterator
-from typing import Any, Union
+from typing import Any, Union, cast
 
 from toonverter.core.exceptions import ConversionError
 from toonverter.core.spec import ToonDecodeOptions, ToonEncodeOptions
@@ -121,7 +121,7 @@ def toon_to_llamaindex(
     try:
         decoder = ToonDecoder(options)
         data = decoder.decode(toon_str)
-        return _dict_to_obj(data, node_type)
+        return _dict_to_obj(cast("dict[str, Any]", data), node_type)
 
     except Exception as e:
         msg = f"Failed to convert TOON to LlamaIndex object: {e}"
@@ -161,8 +161,7 @@ def bulk_documents_to_toon(
     try:
         encoder = ToonEncoder(options)
         data_list = [_obj_to_dict(doc, include_relationships) for doc in documents]
-        return encoder.encode(data_list)
-
+        return encoder.encode(cast("Any", data_list))
     except Exception as e:
         msg = f"Failed to convert documents to TOON: {e}"
         raise ConversionError(msg)
@@ -197,8 +196,7 @@ def bulk_toon_to_documents(
             msg = "Expected TOON array format"
             raise ConversionError(msg)
 
-        return [_dict_to_obj(data, node_type) for data in data_list]
-
+        return [_dict_to_obj(cast("dict[str, Any]", data), node_type) for data in data_list]
     except Exception as e:
         msg = f"Failed to convert TOON to documents: {e}"
         raise ConversionError(msg)
@@ -236,7 +234,7 @@ def stream_documents_to_toon(
         for i in range(0, len(documents), chunk_size):
             chunk = documents[i : i + chunk_size]
             data_list = [_obj_to_dict(doc, include_relationships) for doc in chunk]
-            yield encoder.encode(data_list)
+            yield encoder.encode(cast("Any", data_list))
 
     except Exception as e:
         msg = f"Failed to stream documents to TOON: {e}"
@@ -333,8 +331,18 @@ def extract_metadata_to_toon(
 
     try:
         encoder = ToonEncoder(options)
-        metadata_list = [doc.metadata or {} for doc in documents]
-        return encoder.encode(metadata_list)
+        processed_metadata_list = []
+        for doc in documents:
+            meta_dict = doc.metadata or {}
+            # Convert potentially non-serializable values to strings for robust encoding
+            serializable_meta = {
+                k: str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v
+                for k, v in meta_dict.items()
+            }
+            processed_metadata_list.append(serializable_meta)
+
+        # Encode the list of processed metadata dictionaries
+        return encoder.encode(cast("Any", processed_metadata_list))
 
     except Exception as e:
         msg = f"Failed to extract metadata to TOON: {e}"
@@ -446,7 +454,13 @@ def _dict_to_obj(
         )
 
     if node_type == "index":
-        return IndexNode(text=text, metadata=metadata, id_=doc_id, index_id=data.get("index_id"))
+        node = IndexNode(
+            index_id=str(data.get("index_id")),
+            id_=doc_id if doc_id is not None else "",
+        )
+        node.text = text
+        node.metadata = metadata
+        return node
 
     # Try to detect from data
     detected_type = data.get("node_type", "TextNode")

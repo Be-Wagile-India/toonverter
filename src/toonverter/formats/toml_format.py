@@ -42,6 +42,9 @@ except ImportError:
     toml = None  # type: ignore
     StrictTomlEncoder = None  # type: ignore
 
+# Define type for StrictTomlEncoder
+StrictTomlEncoderType = Any
+
 
 # Python 3.11+ has tomllib built-in, earlier versions need toml package
 if sys.version_info >= (3, 11):
@@ -111,7 +114,7 @@ class TomlFormatAdapter(BaseFormatAdapter):
                 return tomli_w.dumps(data)
 
             # Use strict encoder for legacy toml package if available
-            if StrictTomlEncoder:
+            if StrictTomlEncoder is not None:
                 return toml.dumps(data, encoder=StrictTomlEncoder())  # type: ignore
             return toml.dumps(data)  # type: ignore
         except Exception as e:

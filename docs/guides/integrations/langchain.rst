@@ -18,22 +18,31 @@ Document Conversion
    from langchain.schema import Document
    from toonverter.integrations import langchain_to_toon, toon_to_langchain
 
-   # Create document
-   doc = Document(
-       page_content="Important information about AI",
-       metadata={"source": "doc.pdf", "page": 1}
-   )
+   # Create documents
+   docs = [
+       Document(page_content="Info about AI", metadata={"id": 1}),
+       Document(page_content="Info about ML", metadata={"id": 2})
+   ]
 
-   # Convert to TOON
-   toon_str = langchain_to_toon(doc)
-   # Output:
-   # page_content: Important information about AI
-   # metadata:
-   #   source: doc.pdf
-   #   page: 1
+   # Convert single document
+   toon_doc = langchain_to_toon(docs[0])
+
+   # Convert list of documents (more efficient)
+   toon_docs_str = langchain_to_toon(docs)
+   
+   # Output (approximate):
+   # - page_content: Info about AI
+   #   metadata: {id: 1}
+   # - page_content: Info about ML
+   #   metadata: {id: 2}
 
    # Convert back
-   restored_doc = toon_to_langchain(toon_str)
+   # Returns a single Document if input was a single item's TOON string
+   restored_doc = toon_to_langchain(toon_doc)
+   
+   # Returns a list of Documents if input was a list's TOON string
+   # Note: toon_to_langchain currently returns a single Document or list based on structure,
+   # but explicitly checking the type is recommended.
 
 Message Conversion
 ------------------
@@ -41,16 +50,19 @@ Message Conversion
 .. code-block:: python
 
    from langchain.schema import HumanMessage, AIMessage
-   from toonverter.integrations import langchain_to_toon, toon_to_langchain
+   from toonverter.integrations import messages_to_toon, toon_to_messages
 
    messages = [
        HumanMessage(content="What is TOON?"),
        AIMessage(content="TOON is a token-optimized format")
    ]
 
-   # Convert messages
-   for msg in messages:
-       toon_str = langchain_to_toon(msg)
+   # Convert list of messages
+   # This wraps them in a structure like {"messages": [...]} for safe parsing
+   toon_str = messages_to_toon(messages)
+
+   # Convert back to list of Message objects
+   restored_msgs = toon_to_messages(toon_str)
 
 Use Cases
 ---------

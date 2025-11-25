@@ -23,7 +23,11 @@ Basic usage:
 """
 
 from collections.abc import Iterator
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
+
+
+if TYPE_CHECKING:
+    from toonverter.core.spec import ToonValue
 
 from toonverter.core.exceptions import ConversionError
 from toonverter.core.spec import ToonDecodeOptions, ToonEncodeOptions
@@ -89,7 +93,7 @@ def response_to_toon(
         else:
             data = response.model_dump()
 
-        return encoder.encode(data)
+        return encoder.encode(cast("ToonValue", data))
 
     except Exception as e:
         msg = f"Failed to convert response to TOON: {e}"
@@ -125,6 +129,9 @@ def toon_to_response(
         if isinstance(data, dict) and "_data" in data:
             data = data["_data"]
 
+        if not isinstance(data, dict):
+            msg = "Decoded TOON data must be an object for model conversion"
+            raise ConversionError(msg)
         # Validate and instantiate model
         return model_class(**data)
 
@@ -178,7 +185,7 @@ def bulk_responses_to_toon(
         else:
             data_list = [r.model_dump() for r in responses]
 
-        return encoder.encode(data_list)
+        return encoder.encode(cast("ToonValue", data_list))
 
     except Exception as e:
         msg = f"Failed to convert responses to TOON: {e}"
@@ -219,6 +226,9 @@ def bulk_toon_to_responses(
             # Extract data if metadata wrapper exists
             if isinstance(data, dict) and "_data" in data:
                 data = data["_data"]
+            if not isinstance(data, dict):
+                msg = "Decoded TOON data must be an object for model conversion in bulk responses"
+                raise ConversionError(msg)
             responses.append(model_class(**data))
 
         return responses
@@ -270,7 +280,7 @@ def stream_responses_to_toon(
             else:
                 data_list = [r.model_dump() for r in chunk]
 
-            yield encoder.encode(data_list)
+            yield encoder.encode(cast("ToonValue", data_list))
 
     except Exception as e:
         msg = f"Failed to stream responses to TOON: {e}"
@@ -341,7 +351,7 @@ def validation_results_to_toon(
     """
     try:
         encoder = ToonEncoder(options)
-        return encoder.encode(results)
+        return encoder.encode(cast("ToonValue", results))
 
     except Exception as e:
         msg = f"Failed to convert validation results to TOON: {e}"
@@ -390,7 +400,7 @@ def extraction_batch_to_toon(
         if source_metadata:
             data["metadata"] = source_metadata
 
-        return encoder.encode(data)
+        return encoder.encode(cast("ToonValue", data))
 
     except Exception as e:
         msg = f"Failed to convert extraction batch to TOON: {e}"
@@ -422,12 +432,21 @@ def toon_to_extraction_batch(
         decoder = ToonDecoder(options)
         data = decoder.decode(toon_str)
 
-        if not isinstance(data, dict) or "extractions" not in data:
-            msg = "Expected extraction batch format"
+        if (
+            not isinstance(data, dict)
+            or "extractions" not in data
+            or not isinstance(data["extractions"], list)
+        ):
+            msg = "Expected extraction batch format with 'extractions' as a list"
             raise ConversionError(msg)
 
         # Convert extractions to model instances
-        extractions = [model_class(**ex_data) for ex_data in data["extractions"]]
+        extractions = []
+        for ex_data in data["extractions"]:
+            if not isinstance(ex_data, dict):
+                msg = "Extraction item must be an object"
+                raise ConversionError(msg)
+            extractions.append(model_class(**ex_data))
 
         return {
             "extractions": extractions,

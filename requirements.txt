@@ -4,6 +4,10 @@ tiktoken>=0.5.0
 PyYAML>=6.0
 tomli>=2.0.0; python_version<'3.11'
 tomli-w>=1.0.0
+click>=8.1.0
+rich>=13.0.0
+
+# ML/Chunking dependencies (Semantic features)
 networkx>=3.0
 python-louvain>=0.16
 sentence-transformers>=2.2.2

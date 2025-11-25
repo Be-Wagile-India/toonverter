@@ -149,11 +149,13 @@ try:
         cache_response,
         extraction_batch_to_toon,
         response_to_toon,
-        schema_to_toon,
         stream_responses_to_toon,
         toon_to_extraction_batch,
         toon_to_response,
         validation_results_to_toon,
+    )
+    from .instructor_integration import (
+        schema_to_toon as instructor_schema_to_toon,  # Renamed to avoid conflict
     )
 
     __all_instructor__ = [
@@ -162,7 +164,7 @@ try:
         "bulk_responses_to_toon",
         "bulk_toon_to_responses",
         "stream_responses_to_toon",
-        "schema_to_toon",
+        "instructor_schema_to_toon",  # Use the aliased name
         "validation_results_to_toon",
         "extraction_batch_to_toon",
         "toon_to_extraction_batch",
@@ -170,6 +172,14 @@ try:
     ]
 except ImportError:
     __all_instructor__ = []
+
+# Redis integration
+try:
+    from .redis_integration import RedisToonWrapper
+
+    __all_redis__ = ["RedisToonWrapper"]
+except ImportError:
+    __all_redis__ = []
 
 __all__ = (
     __all_pandas__
@@ -182,4 +192,5 @@ __all__ = (
     + __all_haystack__
     + __all_dspy__
     + __all_instructor__
+    + __all_redis__
 )

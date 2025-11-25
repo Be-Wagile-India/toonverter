@@ -80,6 +80,7 @@ llamaindex = ["llama-index>=0.10.0"]
 haystack = ["haystack-ai>=2.0.0"]
 dspy = ["dspy-ai>=2.4.0"]
 instructor = ["instructor>=1.0.0", "pydantic>=2.0.0"]
+redis = ["redis>=5.0.0"]
 
 # Semantic chunking dependencies
 chunker = [
@@ -133,6 +134,7 @@ integrations = [
     "haystack-ai>=2.0.0",
     "dspy-ai>=2.4.0",
     "instructor>=1.0.0",
+    "redis>=5.0.0",
 ]
 
 # CLI support (click and rich are now required dependencies)

@@ -26,6 +26,8 @@ class StringEncoder:
     - Equals or starts with "-"
     """
 
+    _TRANS_TABLE = str.maketrans(ESCAPE_CHARS)
+
     def __init__(self, delimiter: Delimiter) -> None:
         """Initialize string encoder.
 
@@ -71,8 +73,18 @@ class StringEncoder:
         if not s:
             return True
 
+        # Equals dash or starts with dash (could be confused with list item)
+        # Per TOON v2.0 spec: always quote strings equal to or starting with "-"
+        if s.startswith("-"):
+            return True
+
         # Leading or trailing whitespace
-        if s != s.strip():
+        if s[0].isspace() or s[-1].isspace():
+            return True
+
+        # Contains structural characters that need quoting or delimiter
+        # Combined check for efficiency
+        if any(c in QUOTE_REQUIRED_CHARS or c == self.delimiter for c in s):
             return True
 
         # Reserved words (case-insensitive)
@@ -80,20 +92,7 @@ class StringEncoder:
             return True
 
         # Looks like a number
-        if NUMBER_PATTERN.match(s):
-            return True
-
-        # Contains structural characters that need quoting
-        if any(c in s for c in QUOTE_REQUIRED_CHARS):
-            return True
-
-        # Contains active delimiter
-        if self.delimiter in s:
-            return True
-
-        # Equals dash or starts with dash (could be confused with list item)
-        # Per TOON v2.0 spec: always quote strings equal to or starting with "-"
-        return bool(s == "-" or s.startswith("-"))
+        return bool(NUMBER_PATTERN.match(s))
 
     def _quote_and_escape(self, s: str) -> str:
         """Add quotes and escape special characters.
@@ -118,13 +117,7 @@ class StringEncoder:
             >>> encoder._quote_and_escape('say "hi"')
             '"say \\\\"hi\\\\""'
         """
-        escaped = s
-
-        # Order matters! Escape backslash first
-        for char, escape_seq in ESCAPE_CHARS.items():
-            escaped = escaped.replace(char, escape_seq)
-
-        return f'"{escaped}"'
+        return f'"{s.translate(self._TRANS_TABLE)}"'
 
     def decode(self, s: str) -> str:
         """Decode potentially quoted string.

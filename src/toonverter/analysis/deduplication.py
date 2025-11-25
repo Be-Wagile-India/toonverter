@@ -281,6 +281,7 @@ class SemanticDeduplicator:
         self.text_extraction_func = text_extraction_func
         self.spec = spec if spec is not None else ToonEncodeOptions()  # Default to an instance
         self.registry = get_registry()  # To get access to format adapters if needed
+        self._embedding_cache: dict[str, Any] = {}  # Cache for embeddings
 
     def optimize(self, data: _T) -> _T:
         """
@@ -329,18 +330,35 @@ class SemanticDeduplicator:
             texts.append(text)
 
         # Filter out items that couldn't provide text for embedding
-        valid_items_indices = [i for i, text in enumerate(texts) if text is not None]
-        valid_texts = [texts[i] for i in valid_items_indices]
+        valid_items_indices: list[int] = []
+        valid_texts: list[str] = []
+        for i, text in enumerate(texts):
+            if text is not None:
+                valid_items_indices.append(i)
+                valid_texts.append(text)
 
         if not valid_texts or len(valid_texts) < 2:
             return  # Not enough valid texts to deduplicate
 
-        # Generate embeddings in batches
-        embeddings = self.model.encode(
-            [t for t in valid_texts if t is not None],
-            batch_size=self.embedding_batch_size,
-            show_progress_bar=False,
-        )
+        # Check cache for existing embeddings
+        # Get unique uncached texts while preserving order
+        unique_valid_texts = list(dict.fromkeys(valid_texts))
+        uncached_texts: list[str] = [
+            t for t in unique_valid_texts if t not in self._embedding_cache
+        ]
+
+        # Encode new texts in batches if needed
+        if uncached_texts:
+            new_embeddings = self.model.encode(
+                uncached_texts,
+                batch_size=self.embedding_batch_size,
+                show_progress_bar=False,
+            )
+            for text, emb in zip(uncached_texts, new_embeddings, strict=True):
+                self._embedding_cache[text] = emb
+
+        # Retrieve all embeddings from cache (now guaranteed to exist)
+        embeddings = [self._embedding_cache[t] for t in valid_texts]
 
         # Calculate similarity matrix
         similarity_matrix = cosine_similarity(embeddings)

@@ -89,7 +89,7 @@ def sqlalchemy_to_toon(
 
     try:
         # Get model inspector
-        mapper = inspect(instance.__class__)
+        mapper: Mapper = inspect(instance.__class__)
 
         # Build dictionary from model
         data: dict[str, Any] = {}
@@ -451,7 +451,7 @@ def bulk_insert_from_toon(
             raise ConversionError(msg)
 
         # Get valid column names
-        mapper = inspect(model_class)
+        mapper: Mapper = inspect(model_class)  # type: ignore
         column_names = {col.key for col in mapper.columns}
 
         total_inserted = 0
@@ -704,7 +704,7 @@ def _table_to_dict(table: Table) -> dict[str, ToonValue]:
             }
             for idx in table.indexes
         ],
-        "foreign_keys": foreign_keys_list,
+        "foreign_keys": cast("list[ToonValue]", foreign_keys_list),
     }
 
 
