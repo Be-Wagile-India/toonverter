@@ -5,13 +5,6 @@ from unittest.mock import MagicMock, Mock
 import pytest
 
 
-try:
-    import redis  # noqa: F401
-
-    REDIS_AVAILABLE = True
-except ImportError:
-    REDIS_AVAILABLE = False
-
 from toonverter.integrations.redis_integration import RedisToonWrapper
 
 
