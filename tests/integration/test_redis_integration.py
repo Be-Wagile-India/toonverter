@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, Mock
 
 import pytest
 
-
 from toonverter.integrations.redis_integration import RedisToonWrapper
 
 

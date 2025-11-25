@@ -151,6 +151,7 @@ def _get_langchain_document_or_skip():
     pytest.skip("langchain not installed")
     return None
 
+
 class TestLangChainIntegrationComplete:
     """Complete functional tests for LangChain integration."""
 
