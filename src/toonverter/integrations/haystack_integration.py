@@ -46,6 +46,7 @@ try:
     try:
         from haystack.dataclasses.answers import Span  # type: ignore
     except Exception:
+        # span import optional: it's missing in some haystack versions/distributions
         pass
 
 except Exception:
