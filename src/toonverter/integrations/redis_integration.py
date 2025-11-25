@@ -8,7 +8,6 @@ metadata overhead is high. It supports Redis JSON and Hash types.
 from typing import Any, cast
 
 from toonverter.core import registry
-from toonverter.core.spec import ToonEncodeOptions
 
 
 try:
