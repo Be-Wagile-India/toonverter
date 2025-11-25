@@ -77,7 +77,6 @@ except Exception:
         _LANGCHAIN_MESSAGE_CLASSES = {}
 
 if TYPE_CHECKING:
-    from collections.abc import Collection
 
     from toonverter.core.spec import ToonEncodeOptions, ToonValue
     from toonverter.core.types import DecodeOptions, EncodeOptions
