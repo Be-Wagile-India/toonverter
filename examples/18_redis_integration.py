@@ -17,7 +17,7 @@ except ImportError:
     REDIS_AVAILABLE = False
     print("Install redis: pip install toonverter[redis]")
 
-import toonverter as toon
+
 
 
 def main():
