@@ -4,7 +4,6 @@ This example demonstrates how to use toonverter's vision optimization tools
 to reduce token usage and costs when working with multimodal LLMs.
 """
 
-import base64
 import os
 from pathlib import Path
 
