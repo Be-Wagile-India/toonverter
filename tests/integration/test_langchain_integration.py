@@ -50,7 +50,7 @@ def _get_document_class_or_skip():
         pass
 
     pytest.skip("LangChain Document not available")
-
+    return None
 
 def _get_message_classes_or_skip():
     """Return a tuple of (HumanMessageClass, AIMessageClass, SystemMessageClass) or skip.
