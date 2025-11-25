@@ -130,14 +130,14 @@ class TestRedisIntegration:
         assert "id" in result
         assert "1" in result
 
-        def test_empty_results(self, mock_redis):
-            """Test empty result sets."""
-            wrapper = RedisToonWrapper(mock_redis)
+    def test_empty_results(self, mock_redis):
+        """Test empty result sets."""
+        wrapper = RedisToonWrapper(mock_redis)
 
-            # Mock mget to return an empty list when called with an empty list of keys
-            mock_redis.json.return_value.mget.return_value = []
+        # Mock mget to return an empty list when called with an empty list of keys
+        mock_redis.json.return_value.mget.return_value = []
 
-            assert wrapper.mget_json([]) == "[]"
+        assert wrapper.mget_json([]) == "[]"
 
-            # Also test search_results with empty input
-            assert wrapper.search_results([]) == "[]"
+        # Also test search_results with empty input
+        assert wrapper.search_results([]) == "[]"
