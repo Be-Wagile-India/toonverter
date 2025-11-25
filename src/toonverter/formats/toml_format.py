@@ -1,5 +1,6 @@
 """TOML format adapter."""
 
+import datetime
 import sys
 from typing import Any
 
@@ -7,6 +8,39 @@ from toonverter.core.exceptions import DecodingError, EncodingError
 from toonverter.core.types import DecodeOptions, EncodeOptions
 
 from .base import BaseFormatAdapter
+
+
+# Try to import toml for legacy support (Python < 3.11) or fallback
+try:
+    import toml
+
+    class StrictTomlEncoder(toml.TomlEncoder):  # type: ignore
+        """Strict encoder that raises TypeError for unsupported types."""
+
+        def dump_value(self, v: Any) -> str:
+            if isinstance(
+                v,
+                (
+                    str,
+                    int,
+                    float,
+                    bool,
+                    datetime.datetime,
+                    datetime.date,
+                    datetime.time,
+                ),
+            ):
+                return super().dump_value(v)  # type: ignore
+            if isinstance(v, list):
+                return super().dump_value(v)  # type: ignore
+            if isinstance(v, dict):
+                return super().dump_value(v)  # type: ignore
+            msg = f"Object of type '{type(v).__name__}' is not TOML serializable"
+            raise TypeError(msg)
+
+except ImportError:
+    toml = None  # type: ignore
+    StrictTomlEncoder = None  # type: ignore
 
 
 # Python 3.11+ has tomllib built-in, earlier versions need toml package
@@ -20,17 +54,14 @@ if sys.version_info >= (3, 11):
     except ImportError:
         TOML_WRITE_AVAILABLE = False
     TOML_READ_AVAILABLE = True
+elif toml:
+    TOML_READ_AVAILABLE = True
+    TOML_WRITE_AVAILABLE = True
+    tomllib = toml  # type: ignore
+    tomli_w = toml  # type: ignore
 else:
-    try:
-        import toml
-
-        TOML_READ_AVAILABLE = True
-        TOML_WRITE_AVAILABLE = True
-        tomllib = toml  # type: ignore
-        tomli_w = toml  # type: ignore
-    except ImportError:
-        TOML_READ_AVAILABLE = False
-        TOML_WRITE_AVAILABLE = False
+    TOML_READ_AVAILABLE = False
+    TOML_WRITE_AVAILABLE = False
 
 
 class TomlFormatAdapter(BaseFormatAdapter):
@@ -78,6 +109,10 @@ class TomlFormatAdapter(BaseFormatAdapter):
         try:
             if sys.version_info >= (3, 11):
                 return tomli_w.dumps(data)
+
+            # Use strict encoder for legacy toml package if available
+            if StrictTomlEncoder:
+                return toml.dumps(data, encoder=StrictTomlEncoder())  # type: ignore
             return toml.dumps(data)  # type: ignore
         except Exception as e:
             msg = f"Failed to encode to TOML: {e}"

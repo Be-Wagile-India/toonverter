@@ -177,12 +177,20 @@ Contents
    :caption: API Reference
 
    api/facade
-   api/encoder
-   api/decoder
+   api/analysis
    api/converter
-   api/analyzer
+   api/core
+   api/decoder
+   api/differ
+   api/encoder
    api/formats
    api/integrations
+   api/multimodal
+   api/optimization
+   api/plugins
+   api/rag
+   api/schema
+   api/utils
 
 .. toctree::
    :maxdepth: 1

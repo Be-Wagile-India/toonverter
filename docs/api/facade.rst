@@ -6,7 +6,7 @@ The Facade API provides simple functions for common tasks - the recommended API 
 .. automodule:: toonverter
    :members: encode, decode, convert, analyze, load, save, list_formats, is_supported, deduplicate, compress, decompress, diff, infer_schema, validate_schema, optimize_vision
    :undoc-members:
-   :exclude-members: Analyzer, Converter, Decoder, Encoder, ComparisonReport, ConversionResult, DecodeOptions, EncodeOptions, TokenAnalysis, SchemaField, DiffResult
+   :exclude-members: Analyzer, Converter, Decoder, Encoder, ComparisonReport, ConversionResult, DecodeOptions, EncodeOptions, TokenAnalysis, SchemaField, DiffResult, FormatComparator, TiktokenCounter, ConversionError, DecodingError, EncodingError, FormatNotSupportedError, ToonConverterError, ValidationError, ToonDecoder, ToonEncoder, SchemaInferrer, SchemaValidator, Plugin
 
 Core Functions
 --------------

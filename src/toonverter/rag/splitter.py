@@ -13,11 +13,8 @@ class ToonHybridSplitter:
 
     It uses a hybrid approach:
     1. Structural Traversal: Recursively walks the object tree.
-    2. Buffer Accumulation: Groups small sibling nodes (e.g., dict keys or list items)
-       together to maximize context preservation within a chunk.
-    3. Semantic Text Splitting: For string values that exceed the chunk size,
-       it splits them textually (e.g., by paragraphs) while attaching the
-       structural path to every segment.
+    2. Buffer Accumulation: Groups small sibling nodes (e.g., dict keys or list items) together to maximize context preservation within a chunk.
+    3. Semantic Text Splitting: For string values that exceed the chunk size, it splits them textually (e.g., by paragraphs) while attaching the structural path to every segment.
     """
 
     def __init__(
@@ -48,9 +45,7 @@ class ToonHybridSplitter:
 
     def _visit(
         self, node: Any, path: list[str], metadata: dict[str, Any]
-    ) -> (
-        Any
-    ):  # Generator[Chunk, None, None] typed as Any to avoid import hassle for now or fix properly
+    ) -> Any:  # Generator[Chunk, None, None] typed as Any to avoid import hassle
         """
         Recursive visitor that decides whether to emit a node as a chunk
         or recurse deeper.
