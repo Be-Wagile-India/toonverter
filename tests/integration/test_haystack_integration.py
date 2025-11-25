@@ -7,7 +7,7 @@ from toonverter.integrations.haystack_integration import haystack_to_toon, toon_
 
 # Check if haystack is available
 try:
-    import haystack.dataclasses
+    import haystack.dataclasses  # noqa: F401
 
     HAYSTACK_AVAILABLE = True
 except ImportError:
