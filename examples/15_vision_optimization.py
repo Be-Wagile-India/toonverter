@@ -30,7 +30,7 @@ def create_sample_image(path: str) -> None:
 
 def run_vision_optimization():
     """Run vision optimization examples."""
-    print("---""" Vision Optimization Example ---"""")
+    print("--- Vision Optimization Example ---")
 
     if not PIL_AVAILABLE:
         print("Error: This example requires Pillow. Install with: pip install Pillow")
