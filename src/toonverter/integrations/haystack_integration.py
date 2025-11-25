@@ -22,7 +22,7 @@ Basic usage:
     document = toon_to_haystack(toon_str)
 """
 
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any, Union, cast
 
 from toonverter.core.exceptions import ConversionError
