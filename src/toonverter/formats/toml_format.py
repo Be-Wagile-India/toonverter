@@ -79,7 +79,7 @@ class TomlFormatAdapter(BaseFormatAdapter):
             if sys.version_info >= (3, 11):
                 return tomli_w.dumps(data)
             return toml.dumps(data)  # type: ignore
-        except (TypeError, ValueError) as e:
+        except Exception as e:
             msg = f"Failed to encode to TOML: {e}"
             raise EncodingError(msg) from e
 
