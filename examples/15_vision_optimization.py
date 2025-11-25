@@ -5,7 +5,6 @@ to reduce token usage and costs when working with multimodal LLMs.
 """
 
 import os
-from pathlib import Path
 
 try:
     from PIL import Image
