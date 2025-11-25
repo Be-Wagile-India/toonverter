@@ -44,7 +44,7 @@ try:
     # Span lives in haystack.dataclasses.answers in some versions; try it
     # but don't fail the whole import if it's missing.
     try:
-        from haystack.dataclasses.answers import Span  # type: ignore
+        # from haystack.dataclasses.answers import Span  # type: ignore
     except Exception:
         # span import optional: it's missing in some haystack versions/distributions
         pass
