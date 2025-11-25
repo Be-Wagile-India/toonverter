@@ -171,6 +171,9 @@ Contents
    examples/deduplication
    examples/schema_tools
    examples/custom_adapters
+   examples/smart_compression
+   examples/structural_diff
+   examples/vision_optimization
 
 .. toctree::
    :maxdepth: 2

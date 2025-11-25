@@ -38,6 +38,8 @@
 - **100% TOON v2.0 Spec Compliant**: All 26 specification tests passing
 - **30-60% Token Savings**: Verified with benchmarks on real-world data
 - **Multi-Format Support**: JSON, YAML, TOML, CSV, XML ↔ TOON
+- **Vision Optimization**: Reduce image token costs for multimodal models
+- **Semantic Deduplication**: Remove semantically identical content using embeddings
 - **Tabular Optimization**: Exceptional efficiency for DataFrame-like structures
 - **Token Analysis**: Compare token usage across formats using tiktoken
 - **Type Inference**: Automatic type detection and preservation
@@ -180,6 +182,70 @@ encoded = encoder.encode(data)
 analyzer = Analyzer(model='gpt-4')
 report = analyzer.analyze_multi_format(data, formats=['json', 'toon'])
 print(report.max_savings_percentage)
+```
+
+### Advanced Capabilities
+
+#### Vision Optimization
+Reduce image token costs for multimodal models (GPT-4o, Claude 3.5).
+
+```python
+from toonverter import optimize_vision
+
+# Optimize image (resize, format, quality) for provider
+img_bytes, mime = optimize_vision(
+    raw_image_bytes, 
+    provider="openai"  # or 'anthropic'
+)
+```
+
+#### Semantic Deduplication
+Remove semantically identical items from lists using embeddings.
+
+```python
+from toonverter import deduplicate
+
+# Remove duplicates based on meaning (threshold 0.0-1.0)
+clean_data = deduplicate(data, threshold=0.9)
+```
+
+#### Schema Tools
+Infer structure from data and validate new instances.
+
+```python
+from toonverter import infer_schema, validate_schema
+
+# Learn schema from existing data
+schema = infer_schema(data)
+
+# Validate new data against schema
+errors = validate_schema(new_data, schema)
+if not errors:
+    print("Valid!")
+```
+
+#### Structural Diff
+Compare complex objects to find semantic differences.
+
+```python
+from toonverter import diff
+
+# Get structural differences
+result = diff(old_ver, new_ver)
+print(f"Found {len(result.changes)} changes")
+```
+
+#### Smart Compression
+Apply Smart Dictionary Compression (SDC) for maximum efficiency.
+
+```python
+from toonverter import compress, decompress
+
+# Compress large dataset
+compressed = compress(large_data)
+
+# Restore original
+original = decompress(compressed)
 ```
 
 ### Integration Examples
