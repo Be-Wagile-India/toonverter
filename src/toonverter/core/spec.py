@@ -7,7 +7,14 @@ TOON specification at https://github.com/toon-format/spec
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Literal
+from typing import Any, Literal
+
+
+# See note in types.py regarding imports
+try:
+    from toonverter.optimization.policy import OptimizationPolicy
+except ImportError:
+    OptimizationPolicy = Any  # type: ignore
 
 
 # Spec version
@@ -117,12 +124,16 @@ class ToonEncodeOptions:
         delimiter: Delimiter character for arrays and fields (default: comma)
         key_folding: Key folding mode - "safe" or "none" (default: "none")
         strict: Enable strict validation of output (default: True)
+        token_budget: Maximum token count for output (active optimization)
+        optimization_policy: Rules for intelligent degradation
     """
 
     indent_size: int = DEFAULT_INDENT_SIZE
     delimiter: Delimiter = DEFAULT_DELIMITER
     key_folding: Literal["safe", "none"] = "none"
     strict: bool = True
+    token_budget: int | None = None
+    optimization_policy: OptimizationPolicy | None = None
 
     def __post_init__(self) -> None:
         """Validate options."""

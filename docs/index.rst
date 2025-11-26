@@ -79,7 +79,7 @@ Core Capabilities
 * **Type Inference**: Automatic type detection and preservation
 * **Strict Validation**: Optional strict mode for production safety
 
-Framework Integrations (10)
+Framework Integrations (11)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 * **Pandas**: DataFrame ↔ TOON with tabular optimization
@@ -92,6 +92,7 @@ Framework Integrations (10)
 * **Haystack**: Document integration for pipelines
 * **DSPy**: Example and prediction support
 * **Instructor**: Response model integration
+* **Redis**: Efficient serialization for RAG metadata and key-value stores
 
 
 Quick Start
@@ -141,6 +142,8 @@ Contents
    guides/quick_start
    guides/toon_format
    guides/configuration
+   guides/deduplication
+   guides/schema_tools
 
 .. toctree::
    :maxdepth: 2
@@ -156,6 +159,7 @@ Contents
    guides/integrations/haystack
    guides/integrations/dspy
    guides/integrations/instructor
+   guides/integrations/redis
 
 .. toctree::
    :maxdepth: 2
@@ -166,19 +170,32 @@ Contents
    examples/nested_structures
    examples/token_analysis
    examples/cli_usage
+   examples/deduplication
+   examples/schema_tools
    examples/custom_adapters
+   examples/smart_compression
+   examples/structural_diff
+   examples/vision_optimization
 
 .. toctree::
    :maxdepth: 2
    :caption: API Reference
 
    api/facade
-   api/encoder
-   api/decoder
+   api/analysis
    api/converter
-   api/analyzer
+   api/core
+   api/decoder
+   api/differ
+   api/encoder
    api/formats
    api/integrations
+   api/multimodal
+   api/optimization
+   api/plugins
+   api/rag
+   api/schema
+   api/utils
 
 .. toctree::
    :maxdepth: 1

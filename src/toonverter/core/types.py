@@ -4,6 +4,16 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 
+# Optimization Policy needs to be forward referenced or imported carefully to avoid circular deps if it imports types
+# But OptimizationPolicy is in optimization/policy.py which shouldn't depend on types.py
+# However, to be safe, we use 'Any' or string forward ref if needed, but python handles imports.
+# Ideally we import it.
+try:
+    from toonverter.optimization.policy import OptimizationPolicy
+except ImportError:
+    OptimizationPolicy = Any  # type: ignore
+
+
 @dataclass
 class EncodeOptions:
     """Configuration options for encoding data to TOON format.
@@ -19,6 +29,8 @@ class EncodeOptions:
         sort_keys: Sort dictionary keys alphabetically
         ensure_ascii: Escape non-ASCII characters
         max_line_length: Maximum line length before wrapping
+        token_budget: Maximum token count for output (active optimization)
+        optimization_policy: Rules for intelligent degradation
     """
 
     indent: int = 2
@@ -28,6 +40,8 @@ class EncodeOptions:
     sort_keys: bool = False
     ensure_ascii: bool = False
     max_line_length: int | None = None
+    token_budget: int | None = None
+    optimization_policy: OptimizationPolicy | None = None
 
     @classmethod
     def create_compact(cls) -> "EncodeOptions":
@@ -162,6 +176,38 @@ class ComparisonReport:
             return 0.0
 
         return ((worst - best) / worst) * 100
+
+
+@dataclass
+class DuplicateItem:
+    """Information about a detected duplicate.
+
+    Attributes:
+        original_index: Index of the first occurrence
+        duplicate_index: Index of this duplicate occurrence
+        item: The duplicate data item
+    """
+
+    original_index: int
+    duplicate_index: int
+    item: Any
+
+
+@dataclass
+class DeduplicationResult:
+    """Result of a deduplication operation.
+
+    Attributes:
+        unique_items: List of unique items found
+        duplicate_count: Total number of duplicates found
+        duplicates: Details of duplicates found
+        reduction_percentage: Percentage of items removed
+    """
+
+    unique_items: list[Any]
+    duplicate_count: int
+    duplicates: list[DuplicateItem] = field(default_factory=list)
+    reduction_percentage: float = 0.0
 
 
 # Type aliases for common structures

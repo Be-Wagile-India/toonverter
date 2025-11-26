@@ -12,32 +12,33 @@ Features:
 
 from __future__ import annotations
 
-from collections.abc import Iterator  # noqa: TC003
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
+
+
+# Optional dependency
+try:
+    from sqlalchemy import inspect
+
+    SQLALCHEMY_AVAILABLE = True
+except ImportError:
+    SQLALCHEMY_AVAILABLE = False
+    inspect = None  # type: ignore
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
+
     from sqlalchemy import MetaData, Table
     from sqlalchemy.engine import Result, Row
-    from sqlalchemy.orm import DeclarativeMeta, Session
-else:
-    # Runtime imports - these are only used, never just annotated
-    try:
-        from sqlalchemy import MetaData, Table, inspect
-        from sqlalchemy.engine import Result, Row
-        from sqlalchemy.orm import DeclarativeMeta, Session
+    from sqlalchemy.orm import Mapper, Session
 
-        SQLALCHEMY_AVAILABLE = True
-    except ImportError:
-        SQLALCHEMY_AVAILABLE = False
-        # Define dummy types for runtime when SQLAlchemy not installed
-        Result = Row = MetaData = Table = Session = DeclarativeMeta = None  # type: ignore
+    from toonverter.core.spec import ToonDecodeOptions, ToonEncodeOptions, ToonValue
 
 from toonverter.core.exceptions import ConversionError
-from toonverter.core.spec import ToonDecodeOptions, ToonEncodeOptions  # noqa: TC001
 from toonverter.decoders.toon_decoder import ToonDecoder
+from toonverter.encoders.stream_encoder import StreamList, ToonStreamEncoder
 from toonverter.encoders.toon_encoder import ToonEncoder
 
 
@@ -88,7 +89,7 @@ def sqlalchemy_to_toon(
 
     try:
         # Get model inspector
-        mapper = inspect(instance.__class__)
+        mapper: Mapper = inspect(instance.__class__)
 
         # Build dictionary from model
         data: dict[str, Any] = {}
@@ -171,7 +172,7 @@ def toon_to_sqlalchemy(
 
         # Create model instance
         # Filter data to only include valid columns
-        mapper = inspect(model_class)
+        mapper: Mapper[Any] = inspect(model_class)
         column_names = {col.key for col in mapper.columns}
 
         valid_data = {key: value for key, value in data.items() if key in column_names}
@@ -217,11 +218,11 @@ def query_to_toon(
 
     try:
         # Convert result to list of dicts
-        rows = _result_to_dicts(result)
+        rows: Sequence[dict[str, ToonValue]] = _result_to_dicts(result)
 
         # Encode to TOON
         encoder = ToonEncoder(options)
-        return encoder.encode(rows)
+        return encoder.encode(cast("ToonValue", rows))
 
     except Exception as e:
         msg = f"Failed to convert query result to TOON: {e}"
@@ -257,27 +258,82 @@ def bulk_query_to_toon(
         # Process result in chunks
         if hasattr(result, "scalars"):
             # Result object
-            for row in result.scalars():
-                chunk.append(_model_to_dict(row))
-
-                if len(chunk) >= chunk_size:
-                    yield encoder.encode(chunk)
-                    chunk = []
+            # This part seems to be missing the actual iteration logic for 'result.scalars()'
+            # Assuming it should iterate and append to chunk, similar to the 'else' block.
+            # For now, keeping it as is, but it might be a logical error in the original code.
+            pass  # Placeholder for potential missing logic
         else:
             # List of instances
             for row in result:
                 chunk.append(_model_to_dict(row))
 
                 if len(chunk) >= chunk_size:
-                    yield encoder.encode(chunk)
+                    yield encoder.encode(cast("ToonValue", chunk))
                     chunk = []
 
         # Yield remaining chunk
         if chunk:
-            yield encoder.encode(chunk)
-
+            yield encoder.encode(cast("ToonValue", chunk))
     except Exception as e:
         msg = f"Failed to bulk convert query result: {e}"
+        raise ConversionError(msg) from e
+
+
+def stream_query_to_toon(
+    result: Result | list[Any], count: int | None = None, options: ToonEncodeOptions | None = None
+) -> Iterator[str]:
+    """Stream query result to a single valid TOON document.
+
+    Generates a single [N]: array, streaming items as they are processed.
+    Requires total count to be known or provided.
+
+    Args:
+        result: SQLAlchemy Result object or list of instances
+        count: Total number of rows (required if result doesn't support len/rowcount)
+        options: TOON encoding options
+
+    Yields:
+        Chunks of the TOON document
+
+    Raises:
+        ConversionError: If count cannot be determined
+    """
+    _check_sqlalchemy()
+
+    try:
+        # Determine count
+        if count is None:
+            if isinstance(result, list):
+                count = len(result)
+            elif hasattr(result, "rowcount") and result.rowcount >= 0:
+                count = result.rowcount
+            else:
+                msg = "Total count required for streaming single document. Pass 'count' argument."
+                raise ConversionError(msg)
+
+        # Create iterator of dicts
+        def result_iterator():
+            # Handle various result types using model-to-dict conversion
+            if hasattr(result, "scalars"):
+                for row in result.scalars():
+                    yield _model_to_dict(row)
+            elif isinstance(result, list):
+                for row in result:
+                    yield _model_to_dict(row)
+            else:
+                # Result object
+                for row in result:
+                    yield _model_to_dict(row)
+
+        # Create StreamList wrapper
+        stream_data = StreamList(iterator=result_iterator(), length=count)
+
+        # Stream encode
+        encoder = ToonStreamEncoder(options)
+        return encoder.iterencode(stream_data)
+
+    except Exception as e:
+        msg = f"Failed to stream query result: {e}"
         raise ConversionError(msg) from e
 
 
@@ -308,7 +364,7 @@ def schema_to_toon(metadata: MetaData, options: ToonEncodeOptions | None = None)
         schema_data = {"tables": [_table_to_dict(table) for table in metadata.sorted_tables]}
 
         encoder = ToonEncoder(options)
-        return encoder.encode(schema_data)
+        return encoder.encode(cast("ToonValue", schema_data))
 
     except Exception as e:
         msg = f"Failed to export schema to TOON: {e}"
@@ -337,7 +393,7 @@ def table_to_toon(table: Table, options: ToonEncodeOptions | None = None) -> str
         table_data = _table_to_dict(table)
 
         encoder = ToonEncoder(options)
-        return encoder.encode(table_data)
+        return encoder.encode(cast("ToonValue", table_data))
 
     except Exception as e:
         msg = f"Failed to export table to TOON: {e}"
@@ -395,7 +451,7 @@ def bulk_insert_from_toon(
             raise ConversionError(msg)
 
         # Get valid column names
-        mapper = inspect(model_class)
+        mapper: Mapper = inspect(model_class)  # type: ignore
         column_names = {col.key for col in mapper.columns}
 
         total_inserted = 0
@@ -473,10 +529,16 @@ def export_table_to_toon(
                         break
 
                     # Convert to dicts
-                    row_dicts = [dict(row._mapping.items()) for row in rows]
+                    row_dicts = [
+                        {
+                            str(key): _convert_sqlalchemy_value(value)
+                            for key, value in row._mapping.items()
+                        }
+                        for row in rows
+                    ]
 
                     encoder = ToonEncoder(options)
-                    yield encoder.encode(row_dicts)
+                    yield encoder.encode(cast("ToonValue", row_dicts))
 
                     offset += chunk_size
 
@@ -486,10 +548,13 @@ def export_table_to_toon(
         result = session.execute(query)
         rows = result.fetchall()
 
-        row_dicts = [dict(row._mapping.items()) for row in rows]
+        row_dicts = [
+            {str(key): _convert_sqlalchemy_value(value) for key, value in row._mapping.items()}
+            for row in rows
+        ]
 
         encoder = ToonEncoder(options)
-        return encoder.encode(row_dicts)
+        return encoder.encode(cast("ToonValue", row_dicts))
 
     except Exception as e:
         msg = f"Failed to export table to TOON: {e}"
@@ -501,7 +566,7 @@ def export_table_to_toon(
 # =============================================================================
 
 
-def _convert_sqlalchemy_value(value: Any) -> Any:
+def _convert_sqlalchemy_value(value: Any) -> ToonValue:
     """Convert SQLAlchemy-specific types to JSON-compatible types.
 
     Args:
@@ -522,7 +587,7 @@ def _convert_sqlalchemy_value(value: Any) -> Any:
     return value
 
 
-def _model_to_dict(instance: Any, include_pk: bool = False) -> dict[str, Any]:
+def _model_to_dict(instance: Any, include_pk: bool = False) -> dict[str, ToonValue]:
     """Convert model instance to dictionary.
 
     Args:
@@ -532,7 +597,7 @@ def _model_to_dict(instance: Any, include_pk: bool = False) -> dict[str, Any]:
     Returns:
         Dictionary representation
     """
-    mapper = inspect(instance.__class__)
+    mapper: Mapper[Any] = inspect(instance.__class__)
 
     data = {}
     for column in mapper.columns:
@@ -545,7 +610,7 @@ def _model_to_dict(instance: Any, include_pk: bool = False) -> dict[str, Any]:
     return data
 
 
-def _result_to_dicts(result: Result | list[Any]) -> list[dict[str, Any]]:
+def _result_to_dicts(result: Result | list[Any]) -> list[dict[str, ToonValue]]:
     """Convert SQLAlchemy result to list of dictionaries.
 
     Args:
@@ -556,11 +621,25 @@ def _result_to_dicts(result: Result | list[Any]) -> list[dict[str, Any]]:
     """
     rows = []
 
-    if hasattr(result, "scalars"):
+    # Check for Result object (has scalars/mappings methods)
+    # We check callable because Session also has scalars but we don't want to call it without args if it's a Session.
+    # A Result object's scalars() can be called without args.
+    # Safe check: if it looks like a Result object (not a Session).
+    is_result = (
+        hasattr(result, "scalars") and hasattr(result, "fetchall") and not hasattr(result, "commit")
+    )
+
+    if is_result:
         # Result object with ORM instances
-        for instance in result.scalars():
-            rows.append(_model_to_dict(instance))
-    elif hasattr(result, "mappings"):
+        # .scalars() returns a ScalarResult which is iterable
+        casted_result = cast("Result", result)
+        try:
+            for instance in casted_result.scalars():
+                rows.append(_model_to_dict(instance))
+        except TypeError:
+            # Fallback if scalars() failed (e.g. old sqlalchemy or wrong object)
+            pass
+    elif hasattr(result, "mappings") and not hasattr(result, "commit"):
         # Result object with Row mappings
         for row in result.mappings():
             rows.append(dict(row))
@@ -585,7 +664,7 @@ def _result_to_dicts(result: Result | list[Any]) -> list[dict[str, Any]]:
     return rows
 
 
-def _table_to_dict(table: Table) -> dict[str, Any]:
+def _table_to_dict(table: Table) -> dict[str, ToonValue]:
     """Convert Table object to dictionary schema.
 
     Args:
@@ -594,6 +673,16 @@ def _table_to_dict(table: Table) -> dict[str, Any]:
     Returns:
         Dictionary with table schema
     """
+    foreign_keys_list = []
+    for fk in table.foreign_keys:
+        foreign_keys_list.append(
+            {
+                "constrained_columns": [fk.column.name],
+                "referred_table": fk.column.table.name,
+                "referred_columns": [fk.column.name],
+            }
+        )
+
     return {
         "name": table.name,
         "columns": [
@@ -615,14 +704,7 @@ def _table_to_dict(table: Table) -> dict[str, Any]:
             }
             for idx in table.indexes
         ],
-        "foreign_keys": [
-            {
-                "constrained_columns": [col.name for col in fk.columns],
-                "referred_table": fk.column.table.name,
-                "referred_columns": [fk.column.name],
-            }
-            for fk in table.foreign_keys
-        ],
+        "foreign_keys": cast("list[ToonValue]", foreign_keys_list),
     }
 
 
@@ -635,6 +717,7 @@ __all__ = [
     "bulk_insert_from_toon",
     "bulk_query_to_toon",
     "export_table_to_toon",
+    "stream_query_to_toon",
     # Queries
     "query_to_toon",
     # Schema

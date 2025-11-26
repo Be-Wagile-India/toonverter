@@ -86,14 +86,10 @@ class NumberEncoder:
                 # This converts 1.23e-5 -> 0.0000123
                 d = d.normalize()
 
-                # If normalize still has exponent, use quantize
-                if "E" in str(d):
-                    # Get exponent
-                    d_str = f"{d:.20f}"  # Format with enough precision
-                    d = Decimal(d_str)
-
-            # Remove trailing zeros after decimal point
-            result = str(d)
+                # If normalize still has exponent, use string formatting
+                result = f"{d:.20f}" if "E" in str(d) else str(d)
+            else:
+                result = str(d)
 
             # Strip trailing zeros and trailing decimal point
             if "." in result:

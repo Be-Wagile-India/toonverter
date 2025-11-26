@@ -24,7 +24,7 @@ def example_basic_types():
         "float": 3.14,
         "boolean_true": True,
         "boolean_false": False,
-        "null": None
+        "null": None,
     }
 
     print("\nOriginal types:")
@@ -49,7 +49,7 @@ def example_datetime_types():
     data = {
         "datetime": datetime(2025, 1, 15, 10, 30, 0),
         "date": date(2025, 1, 15),
-        "timestamp": "2025-01-15T10:30:00"
+        "timestamp": "2025-01-15T10:30:00",
     }
 
     print("\nOriginal:")
@@ -75,7 +75,7 @@ def example_numeric_precision():
         "integer": 123456789,
         "float": 3.141592653589793,
         "scientific": 1.23e-4,
-        "large": 1000000000000
+        "large": 1000000000000,
     }
 
     print("\nOriginal values:")
@@ -99,11 +99,7 @@ def example_type_annotations():
 
     from toonverter import Encoder
 
-    data = {
-        "count": 100,
-        "price": 19.99,
-        "active": True
-    }
+    data = {"count": 100, "price": 19.99, "active": True}
 
     # Encode with type annotations
     encoder = Encoder(use_type_annotations=True)

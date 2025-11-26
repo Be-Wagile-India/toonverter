@@ -61,23 +61,44 @@ class ArrayEncoder:
         if not arr:
             return ArrayForm.INLINE
 
-        # Check if all elements are primitives
-        if all(self._is_primitive(item) for item in arr):
+        is_inline = True
+        is_tabular = True
+        tabular_keys: tuple[str, ...] | None = None
+
+        for i, item in enumerate(arr):
+            # Check Primitive (for Inline)
+            if is_inline:
+                if not self._is_primitive(item):
+                    is_inline = False
+
+            # Check Dict & Uniform Keys & Primitive Values (for Tabular)
+            if is_tabular:
+                if not isinstance(item, dict):
+                    is_tabular = False
+                else:
+                    # Check keys consistency
+                    # Use tuple of sorted keys for stable comparison
+                    current_keys = tuple(sorted(item.keys()))
+                    if i == 0:
+                        tabular_keys = current_keys
+                    elif current_keys != tabular_keys:
+                        is_tabular = False
+
+                    # Check values are primitive (required for tabular)
+                    if is_tabular:
+                        for val in item.values():
+                            if not self._is_primitive(val):
+                                is_tabular = False
+                                break
+
+            # Early exit if both impossible
+            if not is_inline and not is_tabular:
+                return ArrayForm.LIST
+
+        if is_inline:
             return ArrayForm.INLINE
-
-        # Check if all elements are dicts with same keys and primitive values (tabular)
-        # Per TOON spec: tabular arrays only support primitive values
-        if all(isinstance(item, dict) for item in arr) and len(arr) > 0:
-            first_keys = set(arr[0].keys())
-            if all(set(item.keys()) == first_keys for item in arr[1:]):
-                # Check if all values are primitives
-                all_values_primitive = all(
-                    self._is_primitive(val) for item in arr for val in item.values()
-                )
-                if all_values_primitive:
-                    return ArrayForm.TABULAR
-
-        # Default: list form for mixed/nested structures
+        if is_tabular:
+            return ArrayForm.TABULAR
         return ArrayForm.LIST
 
     def _is_primitive(self, val: Any) -> bool:

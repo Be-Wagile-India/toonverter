@@ -214,6 +214,7 @@ You can run multiple toonverter servers with different configs:
 # USAGE DEMONSTRATIONS
 # =============================================================================
 
+
 def print_setup_guide():
     """Print setup instructions."""
     print(SETUP_INSTRUCTIONS)
@@ -223,40 +224,40 @@ def example_prompts():
     """Example prompts for Claude Desktop."""
     examples = {
         "Basic Conversion": [
-            "Convert this JSON to TOON format: {\"name\": \"Alice\", \"age\": 30}",
+            'Convert this JSON to TOON format: {"name": "Alice", "age": 30}',
             "Convert this YAML to JSON: name: Bob\\nage: 25",
-            "Transform this CSV to TOON: name,age\\nAlice,30\\nBob,25"
+            "Transform this CSV to TOON: name,age\\nAlice,30\\nBob,25",
         ],
         "Token Optimization": [
             "Compress this data for minimum tokens: {large_json_data}",
             "How much can I save by using TOON instead of JSON for this?",
-            "Optimize this API response for LLM context: [...]"
+            "Optimize this API response for LLM context: [...]",
         ],
         "Format Analysis": [
             "Compare token usage for this data in JSON, YAML, and TOON",
             "Which format uses fewer tokens for database results?",
-            "Analyze the token efficiency of this data structure"
+            "Analyze the token efficiency of this data structure",
         ],
         "Validation": [
             "Is this valid TOON format? [3]: 1,2,3",
             "Validate this TOON data against the v2.0 spec",
-            "Check if this TOON is properly formatted"
+            "Check if this TOON is properly formatted",
         ],
         "Complex Workflows": [
             "Take this JSON, convert to TOON, analyze savings, then validate",
             "Compare all supported formats and recommend the most efficient",
-            "Convert this database export to the most token-efficient format"
-        ]
+            "Convert this database export to the most token-efficient format",
+        ],
     }
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print(" EXAMPLE PROMPTS FOR CLAUDE DESKTOP")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     for category, prompts in examples.items():
         print(f"### {category}\n")
         for i, prompt in enumerate(prompts, 1):
-            print(f"{i}. \"{prompt}\"")
+            print(f'{i}. "{prompt}"')
         print()
 
 
@@ -264,14 +265,15 @@ def example_prompts():
 # TESTING THE SERVER
 # =============================================================================
 
+
 async def test_mcp_server():
     """Test the MCP server locally."""
     import json
     from toonverter.integrations.mcp_server import ToonverterMCPServer
 
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print(" TESTING TOONVERTER MCP SERVER")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     server = ToonverterMCPServer()
 
@@ -301,24 +303,27 @@ async def test_mcp_server():
     # Test 4: Compress
     print("Test 4: Compress Data")
     print("-" * 40)
-    large_data = json.dumps({
-        "users": [
-            {"name": f"User{i}", "email": f"user{i}@example.com", "age": 20+i}
-            for i in range(5)
-        ]
-    })
+    large_data = json.dumps(
+        {
+            "users": [
+                {"name": f"User{i}", "email": f"user{i}@example.com", "age": 20 + i}
+                for i in range(5)
+            ]
+        }
+    )
     result = await server._compress(large_data)
     print(result)
     print()
 
-    print("="*80)
+    print("=" * 80)
     print("✅ All tests completed successfully!")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
 
 # =============================================================================
 # MAIN
 # =============================================================================
+
 
 def main():
     """Main function."""
@@ -331,9 +336,9 @@ def main():
     example_prompts()
 
     # Run tests
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print(" Running server tests...")
-    print("="*80 + "\n")
+    print("=" * 80 + "\n")
 
     try:
         asyncio.run(test_mcp_server())

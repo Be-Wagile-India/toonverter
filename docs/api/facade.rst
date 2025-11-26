@@ -4,8 +4,9 @@ Facade API
 The Facade API provides simple functions for common tasks - the recommended API for 90% of users.
 
 .. automodule:: toonverter
-   :members: encode, decode, convert, analyze, load, save, list_formats, is_supported
+   :members: encode, decode, convert, analyze, load, save, list_formats, is_supported, deduplicate, compress, decompress, diff, infer_schema, validate_schema, optimize_vision
    :undoc-members:
+   :exclude-members: Analyzer, Converter, Decoder, Encoder, ComparisonReport, ConversionResult, DecodeOptions, EncodeOptions, TokenAnalysis, SchemaField, DiffResult, FormatComparator, TiktokenCounter, ConversionError, DecodingError, EncodingError, FormatNotSupportedError, ToonConverterError, ValidationError, ToonDecoder, ToonEncoder, SchemaInferrer, SchemaValidator, Plugin
 
 Core Functions
 --------------
@@ -16,6 +17,12 @@ These functions provide a simple interface to toonverter's functionality:
 * ``decode(data_str, from_format='toon')`` - Decode data from a format
 * ``convert(source, target, from_format, to_format)`` - Convert files between formats
 * ``analyze(data, compare_formats)`` - Analyze token usage across formats
+* ``deduplicate(data, ...)`` - Remove semantic duplicates from data
+* ``infer_schema(data)`` - Generate schema from data
+* ``validate_schema(data, schema)`` - Validate data against schema
+* ``diff(obj1, obj2)`` - Structurally compare two objects
+* ``compress(data)`` - Apply Smart Dictionary Compression
+* ``decompress(data)`` - Restore compressed data
 * ``load(path, format)`` - Load data from file
 * ``save(data, path, format)`` - Save data to file
 * ``list_formats()`` - List all supported formats

@@ -38,6 +38,8 @@
 - **100% TOON v2.0 Spec Compliant**: All 26 specification tests passing
 - **30-60% Token Savings**: Verified with benchmarks on real-world data
 - **Multi-Format Support**: JSON, YAML, TOML, CSV, XML ↔ TOON
+- **Vision Optimization**: Reduce image token costs for multimodal models
+- **Semantic Deduplication**: Remove semantically identical content using embeddings
 - **Tabular Optimization**: Exceptional efficiency for DataFrame-like structures
 - **Token Analysis**: Compare token usage across formats using tiktoken
 - **Type Inference**: Automatic type detection and preservation
@@ -79,6 +81,7 @@ pip install toonverter[llamaindex]  # Node support
 pip install toonverter[haystack]    # Pipeline integration
 pip install toonverter[dspy]        # Example support
 pip install toonverter[instructor]  # Response models
+pip install toonverter[redis]       # Redis JSON/Hash support
 
 # Web frameworks
 pip install toonverter[fastapi]     # TOONResponse class
@@ -182,6 +185,81 @@ report = analyzer.analyze_multi_format(data, formats=['json', 'toon'])
 print(report.max_savings_percentage)
 ```
 
+### Advanced Capabilities
+
+#### Vision Optimization
+Reduce image token costs for multimodal models (GPT-4o, Claude 3.5).
+
+```python
+from toonverter import optimize_vision
+
+# Optimize image (resize, format, quality) for provider
+img_bytes, mime = optimize_vision(
+    raw_image_bytes, 
+    provider="openai"  # or 'anthropic'
+)
+```
+
+#### Semantic Deduplication
+Remove semantically identical items from lists using embeddings.
+
+```python
+from toonverter import deduplicate
+
+# Remove duplicates based on meaning (threshold 0.0-1.0)
+clean_data = deduplicate(data, threshold=0.9)
+```
+
+#### Schema Tools
+Infer structure from data and validate new instances.
+
+```python
+from toonverter import infer_schema, validate_schema
+
+# Learn schema from existing data
+schema = infer_schema(data)
+
+# Validate new data against schema
+errors = validate_schema(new_data, schema)
+if not errors:
+    print("Valid!")
+```
+
+#### Structural Diff
+Compare complex objects to find semantic differences.
+
+```python
+from toonverter import diff
+
+# Get structural differences
+result = diff(old_ver, new_ver)
+print(f"Found {len(result.changes)} changes")
+```
+
+#### Smart Compression
+Apply Smart Dictionary Compression (SDC) for maximum efficiency.
+
+```python
+from toonverter import compress, decompress
+
+# Compress large dataset
+compressed = compress(large_data)
+
+# Restore original
+original = decompress(compressed)
+```
+
+#### Context Optimization
+Intelligently prune, truncate, or round data to fit within a strict token budget.
+
+```python
+from toonverter.optimization import ContextOptimizer
+
+# Optimize data to fit in 1000 tokens
+optimizer = ContextOptimizer(budget=1000)
+optimized_data = optimizer.optimize(large_data)
+```
+
 ### Integration Examples
 
 #### Pandas DataFrame
@@ -233,19 +311,22 @@ restored_user = toon_to_pydantic(toon_str, User)
 
 ```python
 from langchain_core.documents import Document
-from toonverter.integrations import langchain_to_toon, toon_to_langchain
+from langchain_core.messages import HumanMessage
+from toonverter.integrations import langchain_to_toon, toon_to_langchain, messages_to_toon
 
-# Convert LangChain documents to TOON for efficient storage
-doc = Document(
-    page_content="Important information...",
-    metadata={"source": "doc1.pdf", "page": 1}
-)
+# Convert LangChain documents to TOON (supports lists)
+docs = [
+    Document(page_content="Info 1...", metadata={"id": 1}),
+    Document(page_content="Info 2...", metadata={"id": 2})
+]
+toon_str = langchain_to_toon(docs)
 
-toon_str = langchain_to_toon(doc)
-# Use in vector database with 30-60% token savings
+# Convert Chat Messages
+messages = [HumanMessage(content="Hello")]
+toon_msgs = messages_to_toon(messages)
 
 # Restore document
-restored_doc = toon_to_langchain(toon_str)
+restored_docs = toon_to_langchain(toon_str)
 ```
 
 #### FastAPI
@@ -348,6 +429,25 @@ class UserResponse(BaseModel):
 # Convert Instructor-structured responses
 response = UserResponse(name="Alice", age=30, email="alice@example.com")
 toon_str = to_toon_response(response)
+```
+
+#### Redis Integration
+
+```python
+import redis
+from toonverter.integrations import RedisToonWrapper
+
+# Initialize Redis wrapper
+r = redis.Redis(decode_responses=True)
+wrapper = RedisToonWrapper(r)
+
+# Retrieve JSON document as TOON (optimized)
+# Automatically converts Redis JSON to TOON format
+toon_str = wrapper.get_json("user:1001")
+
+# Retrieve multiple documents (tabular optimization)
+# Great for RAG retrieval - returns compact table
+docs = wrapper.mget_json(["doc:1", "doc:2", "doc:3"])
 ```
 
 #### Model Context Protocol (MCP)

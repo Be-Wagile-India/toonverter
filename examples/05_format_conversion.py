@@ -21,12 +21,12 @@ def example_direct_conversion():
     data = {
         "users": [
             {"name": "Alice", "age": 30, "city": "NYC"},
-            {"name": "Bob", "age": 25, "city": "LA"}
+            {"name": "Bob", "age": 25, "city": "LA"},
         ]
     }
 
     # Convert to different formats
-    formats = ['json', 'yaml', 'toon']
+    formats = ["json", "yaml", "toon"]
 
     print("\nOriginal data:")
     print(data)
@@ -43,15 +43,8 @@ def example_file_conversion():
 
     data = {
         "config": {
-            "database": {
-                "host": "localhost",
-                "port": 5432,
-                "name": "mydb"
-            },
-            "cache": {
-                "enabled": True,
-                "ttl": 3600
-            }
+            "database": {"host": "localhost", "port": 5432, "name": "mydb"},
+            "cache": {"enabled": True, "ttl": 3600},
         }
     }
 
@@ -59,16 +52,16 @@ def example_file_conversion():
     with tempfile.TemporaryDirectory() as tmpdir:
         # Save as JSON
         json_file = os.path.join(tmpdir, "config.json")
-        toon.save(data, json_file, format='json')
+        toon.save(data, json_file, format="json")
         print(f"\nSaved JSON: {json_file}")
 
         # Convert JSON -> TOON
         toon_file = os.path.join(tmpdir, "config.toon")
-        toon.convert(source=json_file, target=toon_file, from_format='json', to_format='toon')
+        toon.convert(source=json_file, target=toon_file, from_format="json", to_format="toon")
         print(f"Converted to TOON: {toon_file}")
 
         # Load TOON file
-        loaded_data = toon.load(toon_file, format='toon')
+        loaded_data = toon.load(toon_file, format="toon")
         print(f"\nLoaded from TOON:")
         print(loaded_data)
 
@@ -89,24 +82,19 @@ def example_batch_conversion():
     print("\n--- Batch Conversion ---")
 
     datasets = {
-        "users": {
-            "users": [
-                {"id": 1, "name": "Alice"},
-                {"id": 2, "name": "Bob"}
-            ]
-        },
+        "users": {"users": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]},
         "products": {
             "products": [
                 {"id": 101, "name": "Widget", "price": 19.99},
-                {"id": 102, "name": "Gadget", "price": 29.99}
+                {"id": 102, "name": "Gadget", "price": 29.99},
             ]
         },
         "orders": {
             "orders": [
                 {"id": 1001, "user_id": 1, "product_id": 101},
-                {"id": 1002, "user_id": 2, "product_id": 102}
+                {"id": 1002, "user_id": 2, "product_id": 102},
             ]
-        }
+        },
     }
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -115,17 +103,19 @@ def example_batch_conversion():
         for name, data in datasets.items():
             # Save as JSON
             json_file = os.path.join(tmpdir, f"{name}.json")
-            toon.save(data, json_file, format='json')
+            toon.save(data, json_file, format="json")
 
             # Convert to TOON
             toon_file = os.path.join(tmpdir, f"{name}.toon")
-            toon.convert(source=json_file, target=toon_file, from_format='json', to_format='toon')
+            toon.convert(source=json_file, target=toon_file, from_format="json", to_format="toon")
 
             json_size = os.path.getsize(json_file)
             toon_size = os.path.getsize(toon_file)
-            savings = ((json_size - toon_size) / json_size * 100)
+            savings = (json_size - toon_size) / json_size * 100
 
-            print(f"  {name:10s}: {json_size:4d} bytes -> {toon_size:4d} bytes ({savings:5.1f}% savings)")
+            print(
+                f"  {name:10s}: {json_size:4d} bytes -> {toon_size:4d} bytes ({savings:5.1f}% savings)"
+            )
 
 
 def example_format_detection():
@@ -143,11 +133,11 @@ def example_format_detection():
 
     # Decode without specifying format (auto-detection)
     print(f"\nJSON string: {json_str}")
-    decoded_json = toon.decode(json_str, format='json')
+    decoded_json = toon.decode(json_str, format="json")
     print(f"Decoded: {decoded_json}")
 
     print(f"\nTOON string: {toon_str}")
-    decoded_toon = toon.decode(toon_str, format='toon')
+    decoded_toon = toon.decode(toon_str, format="toon")
     print(f"Decoded: {decoded_toon}")
 
 
@@ -171,13 +161,13 @@ def example_streaming_large_files():
         # Save as JSON
         json_file = os.path.join(tmpdir, "large.json")
         start = time.time()
-        toon.save(large_data, json_file, format='json')
+        toon.save(large_data, json_file, format="json")
         json_time = time.time() - start
 
         # Convert to TOON
         toon_file = os.path.join(tmpdir, "large.toon")
         start = time.time()
-        toon.convert(source=json_file, target=toon_file, from_format='json', to_format='toon')
+        toon.convert(source=json_file, target=toon_file, from_format="json", to_format="toon")
         convert_time = time.time() - start
 
         # Compare
@@ -185,8 +175,8 @@ def example_streaming_large_files():
         toon_size = os.path.getsize(toon_file)
 
         print(f"\nPerformance:")
-        print(f"  JSON save time: {json_time*1000:.2f}ms")
-        print(f"  Convert time:   {convert_time*1000:.2f}ms")
+        print(f"  JSON save time: {json_time * 1000:.2f}ms")
+        print(f"  Convert time:   {convert_time * 1000:.2f}ms")
 
         print(f"\nFile sizes:")
         print(f"  JSON: {json_size:,} bytes")

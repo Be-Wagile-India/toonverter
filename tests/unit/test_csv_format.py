@@ -1,8 +1,9 @@
-"""Comprehensive tests for CSV format adapter."""
+"Comprehensive tests for CSV format adapter."
 
 import pytest
 
 from toonverter.core.exceptions import EncodingError
+from toonverter.core.types import DecodeOptions, EncodeOptions
 from toonverter.formats.csv_format import CsvFormatAdapter as CSVFormat
 
 
@@ -67,6 +68,29 @@ class TestCSVEncoding:
         with pytest.raises(EncodingError):
             self.adapter.encode(data, None)
 
+    def test_encode_list_of_lists(self):
+        """Test encoding list of lists."""
+        data = [["name", "age"], ["Alice", 30], ["Bob", 25]]
+        result = self.adapter.encode(data, None)
+        assert "name,age" in result
+        assert "Alice,30" in result
+
+    def test_encode_with_sort_keys(self):
+        """Test encoding with sorted keys."""
+        data = [{"b": 2, "a": 1}]
+        options = EncodeOptions(sort_keys=True)
+        result = self.adapter.encode(data, options)
+        # Should be a,b order
+        lines = result.strip().split("\n")
+        assert lines[0].strip() == "a,b"
+        assert lines[1].strip() == "1,2"
+
+    def test_encode_invalid_list_content(self):
+        """Test encoding list with invalid content raises error."""
+        data = [1, 2, 3]  # List of integers, not dicts or lists
+        with pytest.raises(EncodingError, match="requires list of dictionaries or list of lists"):
+            self.adapter.encode(data, None)
+
 
 class TestCSVDecoding:
     """Test CSV decoding functionality."""
@@ -113,6 +137,54 @@ class TestCSVDecoding:
         csv_str = 'text,value\n"Line1\nLine2",100'
         result = self.adapter.decode(csv_str, None)
         assert "Line1" in result[0]["text"]
+
+    def test_decode_with_type_inference(self):
+        """Test decoding with type inference."""
+        csv_str = "int,float,bool_true,bool_false,str,empty\n42,3.14,True,FALSE,hello,"
+        options = DecodeOptions(type_inference=True)
+        result = self.adapter.decode(csv_str, options)
+        row = result[0]
+        assert row["int"] == 42
+        assert isinstance(row["int"], int)
+        assert row["float"] == 3.14
+        assert isinstance(row["float"], float)
+        assert row["bool_true"] is True
+        assert row["bool_false"] is False
+        assert row["str"] == "hello"
+        assert row["empty"] is None
+
+    def test_decode_scientific_notation(self):
+        """Test decoding float in scientific notation."""
+        csv_str = "val\n1e-5"
+        options = DecodeOptions(type_inference=True)
+        result = self.adapter.decode(csv_str, options)
+        assert result[0]["val"] == 1e-5
+
+    def test_decode_negative_int(self):
+        """Test decoding negative integer."""
+        csv_str = "val\n-5"
+        options = DecodeOptions(type_inference=True)
+        result = self.adapter.decode(csv_str, options)
+        assert result[0]["val"] == -5
+
+
+class TestCSVValidation:
+    """Test CSV validation functionality."""
+
+    def setup_method(self):
+        """Set up CSV format adapter."""
+        self.adapter = CSVFormat()
+
+    def test_validate_valid_csv(self):
+        """Test validation with valid CSV."""
+        assert self.adapter.validate("a,b\n1,2") is True
+        assert self.adapter.validate("") is True  # Empty string is valid CSV (empty)
+
+    def test_validate_invalid_csv_structure(self):
+        """Test validation with something that might break CSV reader."""
+        # It's hard to break csv.reader with a string as it accepts almost anything.
+        # However, we can check basic validity.
+        assert self.adapter.validate("a,b") is True
 
 
 class TestCSVRoundtrip:

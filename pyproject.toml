@@ -65,6 +65,7 @@ dependencies = [
     # CLI support (required for console script entry point)
     "click>=8.1.0",
     "rich>=13.0.0",
+    "scikit-learn>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -79,6 +80,14 @@ llamaindex = ["llama-index>=0.10.0"]
 haystack = ["haystack-ai>=2.0.0"]
 dspy = ["dspy-ai>=2.4.0"]
 instructor = ["instructor>=1.0.0", "pydantic>=2.0.0"]
+redis = ["redis>=5.0.0"]
+
+# Semantic chunking dependencies
+chunker = [
+    "networkx>=3.0",
+    "python-louvain>=0.16",
+    "sentence-transformers>=2.2.2",
+]
 
 # Grouped integrations - AI/ML frameworks
 ai = [
@@ -107,6 +116,12 @@ llm = [
     "mcp>=0.9.0",
 ]
 
+# Vision dependencies
+vision = [
+    "Pillow>=9.0.0",
+    "numpy>=1.24.0",
+]
+
 # All integrations
 integrations = [
     "pandas>=2.0.0",
@@ -119,6 +134,7 @@ integrations = [
     "haystack-ai>=2.0.0",
     "dspy-ai>=2.4.0",
     "instructor>=1.0.0",
+    "redis>=5.0.0",
 ]
 
 # CLI support (click and rich are now required dependencies)
@@ -251,9 +267,14 @@ ignore = [
     "N802",     # function name conventions (test method names)
     "N806",     # variable name conventions (SQLAlchemy Session)
 ]
+"src/toonverter/optimization/deduplicator.py" = [
+    "TC003",    # Callable is used at runtime, cannot be in TYPE_CHECKING block
+    "TC001",    # ToonEncodeOptions is used at runtime as a default argument, cannot be in TYPE_CHECKING block
+]
 "__init__.py" = [
     "F401",     # unused imports (re-exports)
     "ARG",      # unused arguments in API (kept for future compatibility)
+    "PLC0415",  # imports at top (lazy loading)
 ]
 "src/toonverter/cli/*.py" = [
     "PLC0415",  # lazy imports in CLI (intentional for performance)
@@ -286,6 +307,15 @@ ignore = [
 ]
 "src/toonverter/integrations/mcp_server.py" = [
     "E722",     # bare except for JSON parsing (intentional fallback)
+]
+"examples/*.py" = [
+    "T201",     # prints allowed in examples
+    "I001",     # import sorting (less strict in examples)
+    "F401",     # unused imports (examples)
+    "PLC0415",  # top-level imports
+    "Q000",     # quotes
+    "F541",     # f-strings
+    "E402",     # imports at top
 ]
 
 [tool.ruff.lint.isort]
@@ -341,6 +371,8 @@ module = [
     "instructor.*",
     "hypothesis.*",
     "click.*",
+    "sklearn.*",
+    "sentence_transformers.*",
 ]
 ignore_missing_imports = true
 

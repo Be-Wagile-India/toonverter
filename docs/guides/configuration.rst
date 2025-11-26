@@ -342,4 +342,5 @@ See Also
 
 * :doc:`../api/encoder` - Encoder API reference
 * :doc:`../api/decoder` - Decoder API reference
-* :doc:`../api/analyzer` - Analyzer API reference
+
+For more details on token counting and analysis, see the :doc:`../api/analysis` reference.

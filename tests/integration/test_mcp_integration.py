@@ -37,18 +37,20 @@ class TestMCPServer:
     @pytest.mark.asyncio
     async def test_analyze_tool(self, server):
         """Test analyze tool."""
-        toon = "name: Alice\nage: 30"
-        result = await server.analyze(toon)
+        json_data = '{"name": "Alice", "age": 30}'
+        result = await server.analyze(json_data, compare_formats=["json", "toon"])
 
-        assert "token_count" in result or isinstance(result, dict)
+        assert "Token Usage Analysis" in result
+        assert "TOON Savings" in result
 
     @pytest.mark.asyncio
     async def test_validate_tool(self, server):
         """Test validate tool."""
         toon = "name: Alice\nage: 30"
-        result = await server.validate(toon)
+        result = await server.validate(toon, strict=True)
 
-        assert result is True or isinstance(result, dict)
+        assert "TOON format is valid" in result
+        assert "Strict" in result
 
     @pytest.mark.asyncio
     async def test_compress_tool(self, server):
@@ -57,5 +59,6 @@ class TestMCPServer:
         result = await server.compress(data)
 
         assert isinstance(result, str)
-        # Should be smaller than original JSON
-        assert len(result) < len(data)
+        assert "Data compressed to TOON format" in result
+        assert "Token Reduction" in result
+        assert "Compressed data" in result

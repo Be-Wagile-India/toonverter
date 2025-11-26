@@ -1,4 +1,6 @@
-"""Comprehensive tests for YAML format adapter."""
+"Comprehensive tests for YAML format adapter."
+
+from unittest.mock import patch
 
 import pytest
 
@@ -10,7 +12,8 @@ try:
 except ImportError:
     YAML_AVAILABLE = False
 
-from toonverter.core.exceptions import DecodingError
+from toonverter.core.exceptions import DecodingError, EncodingError
+from toonverter.core.types import DecodeOptions, EncodeOptions
 from toonverter.formats.yaml_format import YamlFormatAdapter as YAMLFormat
 
 
@@ -64,6 +67,40 @@ class TestYAMLEncoding:
         decoded = yaml.safe_load(result)
         assert decoded == data
 
+    def test_encode_with_options(self):
+        """Test encoding with options."""
+        data = {"name": "Alice", "age": 30}
+
+        # Test compact
+        options = EncodeOptions(compact=True)
+        result = self.adapter.encode(data, options)
+        assert "{" in result and "}" in result
+
+        # Test explicit not compact
+        options = EncodeOptions(compact=False)
+        result = self.adapter.encode(data, options)
+        assert "name: Alice" in result
+
+        # Test sort keys
+        data_unordered = {"z": 1, "a": 2}
+        options = EncodeOptions(sort_keys=True)
+        result = self.adapter.encode(data_unordered, options)
+        assert result.index("a") < result.index("z")
+
+    def test_encode_ensure_ascii(self):
+        """Test ensure_ascii option."""
+        data = {"text": "Hello 世界"}
+
+        # ensure_ascii=True -> allow_unicode=False
+        options = EncodeOptions(ensure_ascii=True)
+        result = self.adapter.encode(data, options)
+        assert "世界" not in result
+
+        # ensure_ascii=False -> allow_unicode=True
+        options = EncodeOptions(ensure_ascii=False)
+        result = self.adapter.encode(data, options)
+        assert "世界" in result
+
 
 @pytest.mark.skipif(not YAML_AVAILABLE, reason="PyYAML not installed")
 class TestYAMLDecoding:
@@ -106,7 +143,14 @@ class TestYAMLDecoding:
     def test_decode_invalid_yaml(self):
         """Test decoding invalid YAML."""
         with pytest.raises(DecodingError):
-            self.adapter.decode("invalid:\n  - item1\n  item2: broken indentation", None)
+            self.adapter.decode("invalid: [\n  item1\n  item2: broken indentation", None)
+
+    def test_decode_strict_false(self):
+        """Test decoding with strict=False."""
+        invalid_yaml = "invalid: [\n  broken"
+        options = DecodeOptions(strict=False)
+        result = self.adapter.decode(invalid_yaml, options)
+        assert result == invalid_yaml
 
 
 @pytest.mark.skipif(not YAML_AVAILABLE, reason="PyYAML not installed")
@@ -133,3 +177,49 @@ class TestYAMLRoundtrip:
         encoded = self.adapter.encode(data, {})
         decoded = self.adapter.decode(encoded, {})
         assert decoded == data
+
+
+@pytest.mark.skipif(not YAML_AVAILABLE, reason="PyYAML not installed")
+class TestYAMLValidation:
+    """Test YAML validation functionality."""
+
+    def setup_method(self):
+        """Set up YAML format adapter."""
+        self.adapter = YAMLFormat()
+
+    def test_validate_success(self):
+        """Test validating valid YAML."""
+        assert self.adapter.validate("name: Alice") is True
+
+    def test_validate_failure(self):
+        """Test validating invalid YAML."""
+        assert self.adapter.validate("invalid: [") is False
+
+
+class TestYAMLErrors:
+    """Test YAML error handling and edge cases."""
+
+    @patch("yaml.dump")
+    def test_encode_error(self, mock_dump):
+        """Test encoding error handling."""
+        mock_dump.side_effect = yaml.YAMLError("Mock error")
+        adapter = YAMLFormat()
+        with pytest.raises(EncodingError) as exc:
+            adapter.encode({"a": 1})
+        assert "Failed to encode to YAML" in str(exc.value)
+
+    @patch("yaml.safe_load")
+    def test_decode_error_strict(self, mock_load):
+        """Test decoding error with strict mode (default)."""
+        mock_load.side_effect = yaml.YAMLError("Mock error")
+        adapter = YAMLFormat()
+        with pytest.raises(DecodingError) as exc:
+            adapter.decode("bad yaml")
+        assert "Failed to decode YAML" in str(exc.value)
+
+    def test_missing_dependency(self):
+        """Test behavior when yaml is missing."""
+        with patch("toonverter.formats.yaml_format.YAML_AVAILABLE", False):
+            with pytest.raises(ImportError) as exc:
+                YAMLFormat()
+            assert "PyYAML is required" in str(exc.value)

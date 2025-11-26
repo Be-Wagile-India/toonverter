@@ -50,7 +50,7 @@ class TestPydanticModelSerialization:
         user_original = User(id=1, name="Bob", age=25, active=False, email="bob@example.com")
 
         toon = pydantic_to_toon(user_original)
-        user_result = toon_to_pydantic(toon, model=User)
+        user_result = toon_to_pydantic(toon, model_class=User)
 
         assert user_result.name == "Bob"
         assert user_result.age == 25
@@ -105,11 +105,11 @@ class TestPydanticValidation:
         toon = "name: Alice\nage: invalid"
 
         with pytest.raises(Exception):  # ValidationError or similar
-            toon_to_pydantic(toon, model=User)
+            toon_to_pydantic(toon, model_class=User)
 
     def test_missing_required_field(self):
         """Test missing required field."""
         toon = "name: Alice"  # Missing id and age
 
         with pytest.raises(Exception):
-            toon_to_pydantic(toon, model=User)
+            toon_to_pydantic(toon, model_class=User)

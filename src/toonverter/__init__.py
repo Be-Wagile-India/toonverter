@@ -10,10 +10,14 @@ Quick Start:
     >>> decoded = toon.decode(toon_str)
 """
 
-from typing import Any, Optional
+from collections.abc import Callable
+from typing import Any, Optional, cast
+
+from toonverter.core.spec import ToonEncodeOptions
 
 from .__version__ import __author__, __license__, __version__
 from .analysis import FormatComparator, TiktokenCounter, compare, count_tokens
+from .analysis.deduplication import SemanticDeduplicator
 from .core import (
     ComparisonReport,
     ConversionError,
@@ -30,9 +34,13 @@ from .core import (
 )
 from .core.registry import get_registry
 from .decoders import ToonDecoder
+from .differ import DiffResult
 from .encoders import ToonEncoder
+from .encoders.toon_encoder import _convert_options  # Added import
 from .formats import register_default_formats
+from .integrations.redis_integration import RedisToonWrapper
 from .plugins import load_plugins
+from .schema import SchemaField, SchemaInferrer, SchemaValidator
 from .utils import read_file, write_file
 
 
@@ -122,8 +130,20 @@ def encode(data: Any, to_format: str = "toon", **options: Any) -> str:
         '{name:Alice}'
     """
     adapter = registry.get(to_format)
-    encode_opts = EncodeOptions(**options) if options else None
-    return adapter.encode(data, encode_opts)
+
+    # Construct options object based on the target format
+    encode_opts: EncodeOptions | ToonEncodeOptions | None = None
+    if options:
+        if to_format == "toon":
+            # First, create a temporary EncodeOptions to correctly parse generic kwargs
+            temp_generic_options = EncodeOptions(**options)
+            # Then, convert to ToonEncodeOptions using the dedicated converter
+            encode_opts = _convert_options(temp_generic_options)
+        else:
+            # For other formats, use the generic EncodeOptions directly
+            encode_opts = EncodeOptions(**options)
+
+    return adapter.encode(data, cast("Any", encode_opts))
 
 
 def decode(data_str: str, from_format: str = "toon", **options: Any) -> Any:
@@ -372,11 +392,10 @@ __all__ = [
     "ComparisonReport",
     "ConversionError",
     "ConversionResult",
-    # Level 2 OOP API
-    "Converter",
     "DecodeOptions",
     "Decoder",
     "DecodingError",
+    "DiffResult",
     # Types
     "EncodeOptions",
     "Encoder",
@@ -392,6 +411,10 @@ __all__ = [
     "ValidationError",
     "__author__",
     "__license__",
+    # Schema
+    "SchemaField",
+    "SchemaInferrer",
+    "SchemaValidator",
     # Version info
     "__version__",
     "analyze",
@@ -409,4 +432,158 @@ __all__ = [
     # Utilities
     "registry",
     "save",
+    # Schema Tools
+    "infer_schema",
+    "validate_schema",
+    # Diff
+    "diff",
+    # Vision
+    "optimize_vision",
+    "deduplicate",
+    "compress",
+    "decompress",
+    # Redis
+    "RedisToonWrapper",
 ]
+
+
+def infer_schema(data: Any) -> "SchemaField":
+    """Infer schema from data.
+
+    Args:
+        data: Data to analyze
+
+    Returns:
+        SchemaField definition
+    """
+    from toonverter.schema import SchemaField, SchemaInferrer
+
+    inferrer = SchemaInferrer()
+    return inferrer.infer(data)
+
+
+def validate_schema(data: Any, schema: "SchemaField", strict: bool = False) -> list[str]:
+    """Validate data against schema.
+
+    Args:
+        data: Data to validate
+        schema: Schema definition
+        strict: Strict validation mode
+
+    Returns:
+        List of error messages (empty if valid)
+    """
+    from toonverter.schema import SchemaField, SchemaValidator
+
+    validator = SchemaValidator()
+    return validator.validate(data, schema, strict=strict)
+
+
+def diff(obj1: Any, obj2: Any) -> "DiffResult":
+    """Compute difference between two objects.
+
+    Args:
+        obj1: Original object
+        obj2: New object
+
+    Returns:
+        DiffResult object
+    """
+    from toonverter.differ import DiffResult, ToonDiffer
+
+    differ = ToonDiffer()
+    return differ.diff(obj1, obj2)
+
+
+def optimize_vision(
+    image_data: bytes, provider: str = "openai", return_payload: bool = False
+) -> tuple[bytes, str] | dict[str, Any]:
+    """Optimize image for vision models.
+
+    Args:
+        image_data: Raw image bytes
+        provider: Target provider (openai, anthropic)
+        return_payload: If True, returns vendor-specific dict payload instead of bytes
+
+    Returns:
+        Tuple of (optimized_bytes, mime_type) OR dict payload
+    """
+    from toonverter.multimodal import SmartImageProcessor, get_vendor_adapter
+
+    processor = SmartImageProcessor()
+    opt_bytes, mime = processor.process(image_data, target_provider=provider)
+
+    if return_payload:
+        adapter = get_vendor_adapter(provider)
+        return adapter.format(opt_bytes, mime)
+
+    return opt_bytes, mime
+
+
+def compress(data: Any) -> dict[str, Any]:
+    """Compress data using Smart Dictionary Compression.
+
+    Args:
+        data: Input data
+
+    Returns:
+        Compressed payload wrapper
+    """
+    from toonverter.optimization import SmartCompressor
+
+    compressor = SmartCompressor()
+    return compressor.compress(data)
+
+
+def decompress(data: dict[str, Any]) -> Any:
+    """Decompress SDC data.
+
+    Args:
+        data: Compressed payload wrapper
+
+    Returns:
+        Original data
+    """
+    from toonverter.optimization import SmartCompressor
+
+    compressor = SmartCompressor()
+    return compressor.decompress(data)
+
+
+def deduplicate(
+    data: Any,
+    model_name: str = "all-MiniLM-L6-v2",
+    threshold: float = 0.9,
+    language_key: str = "language_code",
+    embedding_batch_size: int = 32,
+    text_extraction_func: Callable[[Any], str | None] | None = None,
+    spec: ToonEncodeOptions | None = None,
+) -> Any:
+    """
+    Detects and eliminates semantically duplicate items within lists in the data structure.
+
+    Args:
+        data: The input data structure.
+        model_name: The name of the sentence transformer model to use for embeddings.
+        threshold: The cosine similarity threshold above which items are considered duplicates.
+        language_key: The key used to identify language-specific content, if applicable.
+        embedding_batch_size: Batch size for sentence embedding generation.
+        text_extraction_func: A callable that extracts a string for embedding from an item.
+                              If None, a default extraction logic is used.
+        spec: The TOON specification to use.
+
+    Returns:
+        The optimized data structure with duplicates removed.
+    """
+    if spec is None:
+        spec = ToonEncodeOptions()
+
+    deduplicator = SemanticDeduplicator(
+        model_name=model_name,
+        threshold=threshold,
+        language_key=language_key,
+        embedding_batch_size=embedding_batch_size,
+        text_extraction_func=text_extraction_func,
+        spec=spec,
+    )
+    return deduplicator.optimize(data)

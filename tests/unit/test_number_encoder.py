@@ -89,6 +89,13 @@ class TestNumberEncoderEncoding:
         result = self.encoder.encode(1e10)
         assert "e" not in result.lower()  # No exponent notation
 
+    def test_encode_exponential_normalization(self):
+        """Test encoding number that requires normalization from exponent."""
+        # 1e-7 usually converts to 1E-7 in string, triggering the E path
+        result = self.encoder.encode(1e-7)
+        assert result == "0.0000001"
+        assert "E" not in result
+
     def test_encode_precision_maintained(self):
         """Test precision is maintained."""
         assert self.encoder.encode(1.23456789) == "1.23456789"
@@ -255,3 +262,16 @@ class TestNumberEncoderEdgeCases:
         result = self.encoder._format_decimal(3.14159)
         assert result == "3.14159"
         assert "e" not in result.lower()
+
+    def test_encode_decimal_conversion_error(self):
+        """Test encoding when Decimal conversion fails."""
+        from decimal import InvalidOperation
+        from unittest.mock import patch
+
+        # We need to patch Decimal in the module where it is used
+        with patch("toonverter.encoders.number_encoder.Decimal") as mock_decimal:
+            mock_decimal.side_effect = InvalidOperation
+
+            # Should fallback to string formatting
+            result = self.encoder.encode(3.14159)
+            assert result == "3.14159"

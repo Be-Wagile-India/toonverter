@@ -17,12 +17,7 @@ def main():
     print("=" * 60)
 
     # Create a simple Python dictionary
-    data = {
-        "name": "Alice",
-        "age": 30,
-        "city": "NYC",
-        "active": True
-    }
+    data = {"name": "Alice", "age": 30, "city": "NYC", "active": True}
 
     print("\n1. Original Python dict:")
     print(data)
@@ -43,7 +38,7 @@ def main():
 
     # Analyze token savings
     print("\n5. Token Analysis:")
-    report = toon.analyze(data, compare_formats=['json', 'toon'])
+    report = toon.analyze(data, compare_formats=["json", "toon"])
     print(f"Best format: {report.best_format}")
     print(f"Token savings: {report.max_savings_percentage:.1f}%")
     print(f"JSON tokens: {report.format_results['json'].token_count}")

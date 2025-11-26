@@ -127,5 +127,275 @@ def formats() -> None:
         click.echo(f"  • {fmt}")
 
 
+@cli.command()
+@click.argument("input_file", type=click.Path(exists=True))
+@click.option("--output", "-o", type=click.Path(), help="Output file for schema (JSON)")
+def infer(input_file: str, output: str | None) -> None:
+    """Infer schema from data file.
+
+    Analyzes the input data and generates a TOON Schema description.
+    This schema can be used for validation and documentation.
+    """
+    import json
+
+    import toonverter as toon
+    from toonverter.schema import SchemaInferrer
+
+    try:
+        # Load data
+        ext = Path(input_file).suffix[1:]
+        data = toon.load(input_file, format=ext if ext else "json")
+
+        # Infer schema
+        inferrer = SchemaInferrer()
+        # TODO: Support streaming inference for large files
+        schema = inferrer.infer(data)
+        schema_dict = schema.to_dict()
+
+        if output:
+            with Path(output).open("w") as f:
+                json.dump(schema_dict, f, indent=2)
+            click.echo(f"✓ Schema saved to {output}")
+        else:
+            click.echo(json.dumps(schema_dict, indent=2))
+
+    except Exception as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("input_file", type=click.Path(exists=True))
+@click.option(
+    "--schema", "-s", type=click.Path(exists=True), required=True, help="Schema file (JSON)"
+)
+@click.option("--strict", is_flag=True, help="Strict validation (no extra fields)")
+def validate(input_file: str, schema: str, strict: bool) -> None:
+    """Validate data against a TOON Schema.
+
+    Checks if the input data conforms to the structure defined in the schema file.
+    """
+    import json
+
+    import toonverter as toon
+    from toonverter.schema import SchemaField, SchemaValidator
+
+    try:
+        # Load data
+        ext = Path(input_file).suffix[1:]
+        data = toon.load(input_file, format=ext if ext else "json")
+
+        # Load schema
+        with Path(schema).open() as f:
+            schema_dict = json.load(f)
+        schema_def = SchemaField.from_dict(schema_dict)
+
+        # Validate
+        validator = SchemaValidator()
+        errors = validator.validate(data, schema_def, strict=strict)
+
+        if errors:
+            click.echo(f"✗ Validation failed with {len(errors)} errors:", err=True)
+            for error in errors:
+                click.echo(f"  - {error}", err=True)
+            sys.exit(1)
+        else:
+            click.echo(f"✓ Data is valid against schema {schema}")
+
+    except Exception as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("file1", type=click.Path(exists=True))
+@click.argument("file2", type=click.Path(exists=True))
+@click.option(
+    "--format", type=click.Choice(["text", "json", "rich"]), default="rich", help="Output format"
+)
+def diff(file1: str, file2: str, format: str) -> None:
+    """Compare two data files (TOON, JSON, etc.).
+
+    Computes structural difference between two files.
+    """
+    import toonverter as toon
+    from toonverter.differ import DiffFormatter
+
+    try:
+        # Load files
+        ext1 = Path(file1).suffix[1:]
+        data1 = toon.load(file1, format=ext1 if ext1 else "json")
+
+        ext2 = Path(file2).suffix[1:]
+        data2 = toon.load(file2, format=ext2 if ext2 else "json")
+
+        # Compute diff
+        result = toon.diff(data1, data2)
+
+        # Format output
+        formatter = DiffFormatter()
+
+        if format == "json":
+            click.echo(formatter.format_json(result))
+        elif format == "text":
+            click.echo(formatter.format_text(result))
+        else:  # rich
+            formatter.print_rich(result)
+
+        if not result.match:
+            sys.exit(1)
+
+    except Exception as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("input_file", type=click.Path(exists=True))
+@click.option("--output", "-o", type=click.Path(), required=True, help="Output file")
+def compress(input_file: str, output: str) -> None:
+    """Compress data using Smart Dictionary Compression."""
+    import json
+
+    import toonverter as toon
+
+    try:
+        # Load
+        ext = Path(input_file).suffix[1:]
+        data = toon.load(input_file, format=ext if ext else "json")
+
+        # Compress
+        compressed = toon.compress(data)
+
+        # Save (always as JSON/TOON compatible structure)
+        with Path(output).open("w") as f:
+            json.dump(compressed, f, separators=(",", ":"))
+
+        click.echo(f"✓ Compressed to {output}")
+
+    except Exception as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("input_file", type=click.Path(exists=True))
+@click.option("--output", "-o", type=click.Path(), required=True, help="Output file")
+def decompress(input_file: str, output: str) -> None:
+    """Decompress SDC data."""
+    import json
+
+    import toonverter as toon
+
+    try:
+        # Load raw JSON structure
+        with Path(input_file).open() as f:
+            compressed = json.load(f)
+
+        # Decompress
+        data = toon.decompress(compressed)
+
+        # Save
+        ext = Path(output).suffix[1:]
+        toon.save(data, output, format=ext if ext else "json")
+
+        click.echo(f"✓ Decompressed to {output}")
+
+    except Exception as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("input_file", type=click.Path(exists=True))
+@click.option("--output", "-o", type=click.Path(), help="Output file")
+@click.option("--model", default="all-MiniLM-L6-v2", help="Embedding model name")
+@click.option("--threshold", default=0.9, help="Similarity threshold (0.0-1.0)")
+@click.option("--language-key", default="language_code", help="Language key for content")
+def deduplicate(
+    input_file: str,
+    output: str | None,
+    model: str,
+    threshold: float,
+    language_key: str,
+) -> None:
+    """Deduplicate data using semantic analysis.
+
+    Detects and eliminates semantically duplicate items within lists.
+    """
+    import json
+
+    import toonverter as toon
+
+    try:
+        # Load data
+        ext = Path(input_file).suffix[1:]
+        data = toon.load(input_file, format=ext if ext else "json")
+
+        # Deduplicate
+        optimized = toon.deduplicate(
+            data,
+            model_name=model,
+            threshold=threshold,
+            language_key=language_key,
+        )
+
+        if output:
+            # Save using original format if possible
+            toon.save(optimized, output, format=ext if ext else "json")
+            click.echo(f"✓ Deduplicated data saved to {output}")
+        else:
+            # Print to stdout
+            click.echo(json.dumps(optimized, indent=2, default=str))
+
+    except Exception as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("schema_files", nargs=-1, type=click.Path(exists=True), required=True)
+@click.option("--output", "-o", type=click.Path(), help="Output file for merged schema")
+def schema_merge(schema_files: tuple[str, ...], output: str | None) -> None:
+    """Merge multiple TOON schemas into one.
+
+    Combines multiple schema files, widening types where necessary.
+    Useful for building a unified schema from multiple data samples.
+    """
+    import json
+
+    from toonverter.schema import SchemaField
+
+    try:
+        if len(schema_files) < 2:
+            click.echo("Warning: Merging less than 2 files is just copying.", err=True)
+
+        merged: SchemaField | None = None
+
+        for sf in schema_files:
+            with Path(sf).open() as f:
+                schema_dict = json.load(f)
+            schema = SchemaField.from_dict(schema_dict)
+
+            merged = schema if merged is None else merged.merge(schema)
+
+        if merged is None:
+            click.echo("No schemas provided", err=True)
+            sys.exit(1)
+
+        result = merged.to_dict()
+
+        if output:
+            with Path(output).open("w") as f:
+                json.dump(result, f, indent=2)
+            click.echo(f"✓ Merged schema saved to {output}")
+        else:
+            click.echo(json.dumps(result, indent=2))
+
+    except Exception as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     cli()

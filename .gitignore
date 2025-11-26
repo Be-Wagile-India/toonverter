@@ -150,3 +150,6 @@ cython_debug/
 *.toon
 benchmark_results/
 .prof
+
+# Gemini
+.gemini

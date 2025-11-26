@@ -9,10 +9,12 @@ This enables AI assistants to:
 - Validate TOON format compliance
 - Encode/decode data efficiently
 
-Install dependencies:
+Install dependencies::
+
     pip install toonverter[mcp]
 
-Usage:
+Usage::
+
     # Run as MCP server
     python -m toonverter.integrations.mcp_server
 
@@ -202,21 +204,21 @@ class ToonverterMCPServer:
             """Handle tool calls."""
             try:
                 if name == "toonverter_convert":
-                    result = await self._convert(
+                    result = await self.convert(
                         arguments["data"], arguments["from_format"], arguments["to_format"]
                     )
                 elif name == "toonverter_encode":
-                    result = await self._encode(arguments["data"])
+                    result = await self.encode(arguments["data"])
                 elif name == "toonverter_decode":
-                    result = await self._decode(arguments["toon"])
+                    result = await self.decode(arguments["toon"])
                 elif name == "toonverter_analyze":
-                    result = await self._analyze(
+                    result = await self.analyze(
                         arguments["data"], arguments.get("compare_formats", ["json", "toon"])
                     )
                 elif name == "toonverter_validate":
-                    result = await self._validate(arguments["toon"], arguments.get("strict", True))
+                    result = await self.validate(arguments["toon"], arguments.get("strict", True))
                 elif name == "toonverter_compress":
-                    result = await self._compress(arguments["data"])
+                    result = await self.compress(arguments["data"])
                 else:
                     result = f"Unknown tool: {name}"
 
@@ -230,18 +232,17 @@ class ToonverterMCPServer:
     # TOOL IMPLEMENTATIONS
     # =========================================================================
 
-    async def _convert(self, data: str, from_format: str, to_format: str) -> str:
+    async def convert(self, data: str, from_format: str, to_format: str) -> str:
         """Convert between formats."""
         try:
-            # Import format adapters dynamically
-            from toonverter.formats import get_format_adapter
+            from toonverter.core.registry import registry
 
             # Parse input format
-            source_adapter = get_format_adapter(from_format)
+            source_adapter = registry.get(from_format)
             parsed_data = source_adapter.decode(data)
 
             # Encode to target format
-            target_adapter = get_format_adapter(to_format)
+            target_adapter = registry.get(to_format)
             result = target_adapter.encode(parsed_data)
 
             # Add metadata
@@ -253,7 +254,7 @@ class ToonverterMCPServer:
         except Exception as e:
             return f"❌ Conversion failed: {e!s}"
 
-    async def _encode(self, data: str) -> str:
+    async def encode(self, data: str) -> str:
         """Encode data to TOON."""
         try:
             # Try to parse as JSON first
@@ -286,7 +287,7 @@ class ToonverterMCPServer:
         except Exception as e:
             return f"❌ Encoding failed: {e!s}"
 
-    async def _decode(self, toon: str) -> str:
+    async def decode(self, toon: str) -> str:
         """Decode TOON to JSON."""
         try:
             # Decode TOON
@@ -302,7 +303,7 @@ class ToonverterMCPServer:
         except Exception as e:
             return f"❌ Decoding failed: {e!s}"
 
-    async def _analyze(self, data: str, compare_formats: list[str]) -> str:
+    async def analyze(self, data: str, compare_formats: list[str]) -> str:
         """Analyze token usage."""
         try:
             import json
@@ -363,7 +364,7 @@ class ToonverterMCPServer:
         except Exception as e:
             return f"❌ Analysis failed: {e!s}"
 
-    async def _validate(self, toon: str, strict: bool) -> str:
+    async def validate(self, toon: str, strict: bool) -> str:
         """Validate TOON format."""
         try:
             from toonverter.core.spec import ToonDecodeOptions
@@ -389,7 +390,7 @@ class ToonverterMCPServer:
         except Exception as e:
             return f"❌ Validation error: {e!s}"
 
-    async def _compress(self, data: str) -> str:
+    async def compress(self, data: str) -> str:
         """Compress data for minimum tokens."""
         try:
             import json

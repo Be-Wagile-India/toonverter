@@ -5,6 +5,7 @@ Adapter patterns for extensibility and loose coupling.
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from typing import Any
 
 from .types import DecodeOptions, EncodeOptions, TokenAnalysis
@@ -68,12 +69,47 @@ class FormatAdapter(ABC):
         """
 
     def supports_streaming(self) -> bool:
-        """Check if adapter supports streaming for large files.
+        """
+        Check if the adapter supports streaming operations.
 
         Returns:
-            True if streaming is supported
+            bool: True if streaming is supported, False otherwise.
         """
         return False
+
+    def encode_stream(self, data: Any, **kwargs: Any) -> Iterator[str]:
+        """
+        Encode data to the format as a stream of strings.
+
+        Args:
+            data: The data to encode
+            **kwargs: Additional encoding options
+
+        Returns:
+            Iterator[str]: An iterator yielding chunks of the encoded data
+
+        Raises:
+            NotImplementedError: If the adapter does not support streaming
+        """
+        msg = "Streaming encoding not supported by this adapter"
+        raise NotImplementedError(msg)
+
+    def decode_stream(self, stream: Iterator[str], **kwargs: Any) -> Iterator[Any]:
+        """
+        Decode data from a stream of strings.
+
+        Args:
+            stream: An iterator yielding chunks of the encoded data
+            **kwargs: Additional decoding options
+
+        Returns:
+            Iterator[Any]: An iterator yielding decoded objects
+
+        Raises:
+            NotImplementedError: If the adapter does not support streaming
+        """
+        msg = "Streaming decoding not supported by this adapter"
+        raise NotImplementedError(msg)
 
 
 class TokenCounter(ABC):
