@@ -17,6 +17,10 @@ class DecodingError(ToonConverterError):
     """Raised when decoding from TOON format fails."""
 
 
+class ToonDecodeError(DecodingError):
+    """Raised for specific errors during TOON decoding process."""
+
+
 class ValidationError(ToonConverterError):
     """Raised when input validation fails."""
 

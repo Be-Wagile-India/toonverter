@@ -1,0 +1,3 @@
+[core]
+use_rust_decoder = true
+use_rust_encoder = true

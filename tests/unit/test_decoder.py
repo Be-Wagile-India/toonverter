@@ -11,7 +11,7 @@ class TestToonDecoder:
     def test_decode_simple_dict(self):
         """Test decoding of simple dictionary."""
         decoder = ToonDecoder()
-        toon_str = "{name:Alice,age:30}"
+        toon_str = "name: Alice\nage: 30"
         result = decoder.decode(toon_str)
         assert result["name"] == "Alice"
         assert result["age"] == 30
@@ -78,7 +78,7 @@ class TestToonDecoder:
 
     def test_convenience_function(self):
         """Test convenience decode function."""
-        result = decode("{name:Alice}")
+        result = decode("name: Alice")
         assert result["name"] == "Alice"
 
     def test_roundtrip(self, sample_dict):

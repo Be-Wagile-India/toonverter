@@ -1,0 +1,16 @@
+[package]
+name = "toonverter-core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "_toonverter_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.21.0", features = ["extension-module"] }
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1

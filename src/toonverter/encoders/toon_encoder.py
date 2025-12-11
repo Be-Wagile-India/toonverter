@@ -6,6 +6,7 @@ according to the official TOON specification from github.com/toon-format/spec
 
 from typing import Any
 
+from toonverter.core.config import USE_RUST_ENCODER, rust_core
 from toonverter.core.exceptions import EncodingError, ValidationError
 from toonverter.core.spec import ArrayForm, Delimiter, RootForm, ToonEncodeOptions, ToonValue
 from toonverter.core.types import EncodeOptions
@@ -77,6 +78,28 @@ class ToonEncoder:
                     budget=self.options.token_budget, policy=self.options.optimization_policy
                 )
                 data = optimizer.optimize(data)
+
+            # Try Rust encoder if available and options allow
+            # Rust encoder currently supports default options (indent=2, comma delimiter)
+            if (
+                USE_RUST_ENCODER
+                and self.options.indent_size == 2
+                and self.options.delimiter == Delimiter.COMMA
+                and self.options.key_folding == "none"
+                and self.options.optimization_policy is None
+            ):
+                try:
+                    return rust_core.encode_toon(data)
+                except ValueError as e:
+                    # Fallback on error or raise?
+                    # Since we want to rely on Rust if enabled, let's verify if it covers all cases.
+                    # Currently Rust encoder is partial (simple/nested), might fail on complex tabular/list detection mismatch.
+                    # Let's fallback to Python if Rust fails for now, or raise EncodingError.
+                    msg = f"Failed to encode data (Rust): {e}"
+                    raise EncodingError(msg) from e
+                except Exception:
+                    # Fallback to Python if unexpected error
+                    pass
 
             return self._encode_root(data)
         except (TypeError, ValueError, RecursionError) as e:

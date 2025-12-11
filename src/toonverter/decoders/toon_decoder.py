@@ -6,6 +6,7 @@ the official TOON v2.0 specification.
 
 from typing import Any
 
+from toonverter.core.config import USE_RUST_DECODER, rust_core
 from toonverter.core.exceptions import DecodingError, ValidationError
 from toonverter.core.spec import ArrayForm, Delimiter, RootForm, ToonDecodeOptions, ToonValue
 
@@ -55,6 +56,20 @@ class ToonDecoder:
             >>> decoder.decode("[3]: 1,2,3")
             [1, 2, 3]
         """
+        # Try Rust decoder if available and options allow
+        # Rust decoder currently implies strict=True and type_inference=True
+        if USE_RUST_DECODER and self.options.strict and self.options.type_inference:
+            try:
+                return rust_core.decode_toon(data_str)
+            except ValueError as e:
+                # Map Rust/PyO3 ValueError to our DecodingError
+                msg = f"Failed to decode TOON data (Rust): {e}"
+                raise DecodingError(msg) from e
+            except Exception:
+                # If Rust decoder fails unexpectedly, fall back to Python
+                pass
+
+        # Fallback to Python implementation if Rust decoder is not available or disabled
         try:
             # Handle empty documents → {}
             if not data_str or not data_str.strip():
@@ -80,70 +95,62 @@ class ToonDecoder:
             raise DecodingError(msg) from e
 
     def _detect_root_form(self) -> RootForm:
-        """Detect the form of root document.
+        """Detect the root form of the TOON document (object, array, or primitive).
 
         Returns:
-            RootForm enum value
+            RootForm: The detected root form.
         """
-        # Skip indent tokens
-        while self.pos < len(self.tokens) and self.tokens[self.pos].type == TokenType.INDENT:
-            self.pos += 1
+        if not self.tokens:
+            return RootForm.OBJECT  # Empty document is an empty object
 
-        if self.pos >= len(self.tokens):
-            return RootForm.OBJECT
+        # Skip leading newlines/whitespace
+        idx = 0
+        while idx < len(self.tokens) and self.tokens[idx].type == TokenType.NEWLINE:
+            idx += 1
 
-        first_token = self.tokens[self.pos]
+        if idx >= len(self.tokens):
+            return RootForm.OBJECT  # Document with only whitespace is an empty object
 
-        # Array header at root: [N]: or [N]{fields}:
-        if first_token.type == TokenType.ARRAY_START:
+        first_token = self.tokens[idx]
+
+        if first_token.type in (TokenType.ARRAY_START, TokenType.DASH):
             return RootForm.ARRAY
 
-        # Check if it's a key:value pair (object) or just a value (primitive)
-        # Look ahead for colon - it might be after an array header like: key[N]:
-        lookahead_pos = self.pos + 1
-        while lookahead_pos < len(self.tokens):
-            look_token = self.tokens[lookahead_pos]
+        # If the first token is an identifier or quoted string,
+        # we need to check the *next* meaningful token to see if it's a key or a primitive.
+        if first_token.type in (TokenType.IDENTIFIER, TokenType.QUOTED_STRING):
+            # Scan for the next non-newline token
+            next_idx = idx + 1
+            while next_idx < len(self.tokens) and self.tokens[next_idx].type == TokenType.NEWLINE:
+                next_idx += 1
 
-            # Found colon - it's an object
-            if look_token.type == TokenType.COLON:
-                return RootForm.OBJECT
+            if next_idx < len(self.tokens):
+                next_token = self.tokens[next_idx]
+                # If followed by a colon or array start, it's an an object key-value pair.
+                if next_token.type in (TokenType.COLON, TokenType.ARRAY_START):
+                    return RootForm.OBJECT
 
-            # Array markers can appear between key and colon
-            if look_token.type in (
-                TokenType.ARRAY_START,
-                TokenType.ARRAY_END,
-                TokenType.BRACE_START,
-                TokenType.BRACE_END,
-                TokenType.NUMBER,
-                TokenType.COMMA,
-                TokenType.IDENTIFIER,
-            ):
-                lookahead_pos += 1
-                continue
+            # If not followed by a colon or array start, it's a primitive.
+            return RootForm.PRIMITIVE
 
-            # Hit something else - likely a primitive
-            break
-
-        # Single primitive value
+        # Anything else is a primitive at the root level (e.g., a bare number or string)
         return RootForm.PRIMITIVE
 
     def _parse_root_object(self) -> dict[str, Any]:
-        """Parse root-level object.
+        """Parse a root-level object.
 
         Returns:
             Dictionary
         """
         result: dict[str, Any] = {}
-
         while self.pos < len(self.tokens):
             token = self.tokens[self.pos]
 
-            # End of input
-            if token.type in (TokenType.EOF, TokenType.DEDENT):
+            if token.type == TokenType.EOF:
                 break
 
-            # Skip newlines and indents at root level
-            if token.type in (TokenType.NEWLINE, TokenType.INDENT):
+            # Skip newlines
+            if token.type == TokenType.NEWLINE:
                 self.pos += 1
                 continue
 
@@ -158,7 +165,7 @@ class ToonDecoder:
                     and self.tokens[self.pos].type == TokenType.ARRAY_START
                 ):
                     # Array value - parse array header and content
-                    value = self._parse_value(depth=0)
+                    value = self._parse_value(0)  # depth 0 for root
                     result[key] = value
                 else:
                     # Regular value - expect colon
@@ -171,11 +178,18 @@ class ToonDecoder:
                     self.pos += 1
 
                     # Parse value
-                    value = self._parse_value(depth=0)
+                    value = self._parse_value(0)  # depth 0 for root
                     result[key] = value
-            else:
-                self.pos += 1
 
+                # After parsing a key-value pair, skip any trailing newlines before the next key-value pair.
+                # This is crucial for multi-line objects.
+                while (
+                    self.pos < len(self.tokens) and self.tokens[self.pos].type == TokenType.NEWLINE
+                ):
+                    self.pos += 1
+                continue  # Continue to the next iteration of the while loop to find the next key-value pair.
+            msg = f"Unexpected token at root object: {token.type} value: {token.value!r} at pos: {self.pos}"
+            raise DecodingError(msg)
         return result
 
     def _parse_root_array(self) -> list[Any]:
@@ -184,16 +198,28 @@ class ToonDecoder:
         Returns:
             List
         """
-        # Parse array header
-        header = self._parse_array_header()
-
-        # Parse array content based on form
-        if header["form"] == ArrayForm.INLINE:
-            return self._parse_inline_array(header)
-        if header["form"] == ArrayForm.TABULAR:
-            return self._parse_tabular_array(header)
-        # ArrayForm.LIST
-        return self._parse_list_array(header, depth=0)
+        token = self.tokens[self.pos]
+        if token.type == TokenType.DASH:
+            # Root list array (e.g., - 1\n- 2)
+            # Create a dummy header to indicate indefinite length
+            header = {
+                "length": -1,
+                "form": ArrayForm.LIST,
+                "delimiter": Delimiter.COMMA,
+                "fields": None,
+            }
+            return self._parse_list_array(header, depth=0)
+        if token.type == TokenType.ARRAY_START:
+            # Explicit array header (e.g., [3]: 1,2,3)
+            header = self._parse_array_header()
+            if header["form"] == ArrayForm.INLINE:
+                return self._parse_inline_array(header)
+            if header["form"] == ArrayForm.TABULAR:
+                return self._parse_tabular_array(header)
+            # ArrayForm.LIST
+            return self._parse_list_array(header, depth=0)
+        msg = f"Unexpected token at start of root array: {token.type} value: {token.value!r} at pos: {self.pos}"
+        raise DecodingError(msg)
 
     def _parse_root_primitive(self) -> Any:
         """Parse root-level primitive value.
@@ -307,8 +333,15 @@ class ToonDecoder:
                     # Parse value
                     value = self._parse_value(depth + 1)
                     result[key] = value
-            else:
-                self.pos += 1
+
+                # After parsing a key-value pair, skip any trailing newlines before the next key-value pair.
+                while (
+                    self.pos < len(self.tokens) and self.tokens[self.pos].type == TokenType.NEWLINE
+                ):
+                    self.pos += 1
+                continue  # Continue to the next iteration of the while loop to find the next key-value pair.
+            msg = f"Unexpected token in nested object: {token.type} value: {token.value!r} at pos: {self.pos}"
+            raise DecodingError(msg)
 
         return result
 
@@ -606,19 +639,21 @@ class ToonDecoder:
             self.pos += 1
 
         # Parse list items
-        while len(values) < header["length"] and self.pos < len(self.tokens):
+        while self.pos < len(self.tokens):
             token = self.tokens[self.pos]
 
             if token.type == TokenType.EOF:
                 break
 
-            # Skip indents/dedents/newlines
+            # If a DEDENT is encountered, it signifies the end of the list block
+            if token.type == TokenType.DEDENT:
+                self.pos += 1  # Consume the DEDENT
+                break
+
+            # Skip indents/newlines
             if token.type in (TokenType.INDENT, TokenType.NEWLINE):
                 self.pos += 1
                 continue
-
-            if token.type == TokenType.DEDENT:
-                break
 
             # List item marker: -
             if token.type == TokenType.DASH:
@@ -628,10 +663,11 @@ class ToonDecoder:
                 item_value = self._parse_value(depth + 1)
                 values.append(item_value)
             else:
-                self.pos += 1
+                msg = f"Unexpected token in list array: {token.type} value: {token.value!r} at pos: {self.pos}"
+                raise DecodingError(msg)
 
         # Validate length in strict mode
-        if self.options.strict and len(values) != header["length"]:
+        if self.options.strict and header["length"] != -1 and len(values) != header["length"]:
             msg = f"Array length mismatch: declared {header['length']}, got {len(values)}"
             raise ValidationError(msg)
 

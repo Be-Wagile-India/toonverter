@@ -64,13 +64,15 @@ def pandas_to_toon_stream(
         raise ConversionError(msg) from e
 
 
-def pandas_to_toon(df: "pd.DataFrame", options: EncodeOptions | None = None, **kwargs: Any) -> str:
+def pandas_to_toon(
+    df: "pd.DataFrame | pd.Series", options: EncodeOptions | None = None, **kwargs: Any
+) -> str:
     """Convert pandas DataFrame to TOON format.
 
     This uses the optimized tabular encoding for maximum efficiency.
 
     Args:
-        df: DataFrame to convert
+        df: DataFrame or Series to convert
         options: Encoding options (defaults to tabular preset)
         **kwargs: Additional pandas export options:
             - orient: format for to_dict (default: "records")
@@ -113,7 +115,7 @@ def pandas_to_toon(df: "pd.DataFrame", options: EncodeOptions | None = None, **k
         raise ConversionError(msg) from e
 
 
-def toon_to_pandas(toon_str: str, as_series: bool = False) -> "pd.DataFrame | pd.Series":
+def toon_to_pandas(toon_str: str, as_series: bool = False) -> Any:
     """Convert TOON format to pandas DataFrame.
 
     Args:
@@ -121,7 +123,7 @@ def toon_to_pandas(toon_str: str, as_series: bool = False) -> "pd.DataFrame | pd
         as_series: Return as Series if possible (default: False)
 
     Returns:
-        pandas DataFrame or Series
+        pandas DataFrame or Series (or scalar if single value and as_series is True)
 
     Raises:
         ImportError: If pandas is not installed
