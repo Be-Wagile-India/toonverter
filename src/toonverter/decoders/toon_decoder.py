@@ -534,23 +534,65 @@ class ToonDecoder:
             List of values
         """
         values: list[Any] = []
-        header["delimiter"]
 
-        while self.pos < len(self.tokens):
+        delimiter_char = ""
+        if header["delimiter"] == Delimiter.COMMA:
+            delimiter_char = ","
+        elif header["delimiter"] == Delimiter.TAB:
+            delimiter_char = "\t"
+        elif header["delimiter"] == Delimiter.PIPE:
+            delimiter_char = "|"
+
+        # Find the content of the current line after the array header (and its colon)
+        # We need to collect all subsequent tokens until a NEWLINE or EOF
+        inline_tokens_content: list[str] = []
+        start_pos_content = self.pos  # Keep track of where content starts
+
+        while self.pos < len(self.tokens) and self.tokens[self.pos].type not in (
+            TokenType.NEWLINE,
+            TokenType.EOF,
+        ):
             token = self.tokens[self.pos]
-
-            if token.type in (TokenType.NEWLINE, TokenType.EOF):
-                break
-
-            # Skip delimiter tokens
-            if token.type == TokenType.COMMA:
-                self.pos += 1
-                continue
-
-            # Parse value
-            value = self._token_to_value(token)
-            values.append(value)
+            if token.type == TokenType.COMMA and delimiter_char == ",":
+                # Only append comma if it's the actual delimiter and we want to preserve it for splitting
+                # Otherwise, it might be part of an IDENTIFIER.
+                pass  # We will split by delimiter_char later, so don't add comma to content
+            elif isinstance(token.value, str) or token.value is None:
+                inline_tokens_content.append(str(token.value if token.value is not None else ""))
+            else:
+                inline_tokens_content.append(str(token.value))
             self.pos += 1
+
+        full_value_string = "".join(inline_tokens_content)
+
+        # If there's content, split it by the determined delimiter
+        if full_value_string.strip():
+            # Ensure proper handling of empty strings if delimiter is at start/end or repeated
+            split_items = full_value_string.split(delimiter_char)
+
+            for item_str in split_items:
+                # Trim whitespace from each item
+                stripped_item_str = item_str.strip()
+                if stripped_item_str == "":
+                    # Allow empty strings as values if they result from splitting, treat as None or empty string
+                    values.append(
+                        None
+                    )  # Or should it be ""? TOON spec likely implies empty string or null.
+                # For now, append None as it's a common interpretation of empty.
+                else:
+                    # Create a temporary token to pass to _token_to_value for proper type inference
+                    # Assuming it's an IDENTIFIER if not a specific primitive
+                    # This is a bit of a hack as the original token might have been QUOTED_STRING.
+                    # For simplicity, we treat them as IDENTIFIER and let _token_to_value re-infer.
+                    temp_token = Token(
+                        type=TokenType.IDENTIFIER,  # Use IDENTIFIER, then _token_to_value will infer.
+                        value=stripped_item_str,
+                        line=self.tokens[start_pos_content].line
+                        if self.tokens
+                        else 0,  # Handle empty tokens list
+                        column=self.tokens[start_pos_content].column if self.tokens else 0,
+                    )
+                    values.append(self._token_to_value(temp_token))
 
         # Validate length in strict mode
         if self.options.strict and len(values) != header["length"]:
