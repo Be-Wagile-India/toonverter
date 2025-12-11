@@ -30,7 +30,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
           # Use maturin develop for faster/correct in-place build for testing
-          maturin develop --extras all
+          maturin develop --extras all --python $(which python)
 
       - name: Lint with ruff
         run: |
