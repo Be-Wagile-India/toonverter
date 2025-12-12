@@ -1,12 +1,36 @@
 """Configuration settings for Toonverter."""
 
 import os
+import sys
 import warnings
 from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from toonverter.utils._toml_tools import tomllib
+
+# Conditional import for tomllib/tomli
+_tomllib: ModuleType | None = None
+
+if sys.version_info >= (3, 11):
+    try:
+        import tomllib as _actual_tomllib
+
+        _tomllib = _actual_tomllib
+    except ImportError:
+        warnings.warn(
+            "The 'tomllib' library (built-in for Python 3.11+) could not be imported.",
+            stacklevel=2,
+        )
+else:
+    try:
+        import tomli as _actual_tomllib
+
+        _tomllib = _actual_tomllib
+    except ImportError:
+        warnings.warn(
+            "The 'tomli' library is not installed. TOML configuration will not be loaded.",
+            stacklevel=2,
+        )
 
 
 # Try to import the Rust-accelerated core
@@ -31,12 +55,12 @@ def _load_toml_config() -> dict[str, Any]:
         if not cfg_path.exists():
             return config
 
-    if tomllib is None:
+    if _tomllib is None:
         return config
 
     try:
         with cfg_path.open("rb") as f:
-            data = tomllib.load(f)
+            data = _tomllib.load(f)
 
             # Check for [tool.toonverter.core] in pyproject.toml
             if cfg_path.name == "pyproject.toml":
