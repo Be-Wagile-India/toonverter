@@ -1,22 +1,13 @@
 """Configuration settings for Toonverter."""
 
 import os
-import sys
 import warnings
 from pathlib import Path
 from types import ModuleType
 from typing import Any
 
 
-# Handle TOML parser import (tomllib for Python 3.11+, tomli backport otherwise)
-tomllib: ModuleType | None
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    try:
-        import tomli as tomllib
-    except ImportError:
-        tomllib = None
+from toonverter.utils._toml_tools import tomllib
 
 # Try to import the Rust-accelerated core
 _toonverter_core: ModuleType | None
