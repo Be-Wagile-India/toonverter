@@ -2,6 +2,7 @@ import sys
 import warnings
 from types import ModuleType
 
+
 # Handle TOML parser import (tomllib for Python 3.11+, tomli backport otherwise)
 tomllib: ModuleType | None
 

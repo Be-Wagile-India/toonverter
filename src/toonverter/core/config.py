@@ -6,8 +6,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-
 from toonverter.utils._toml_tools import tomllib
+
 
 # Try to import the Rust-accelerated core
 _toonverter_core: ModuleType | None
