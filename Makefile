@@ -9,9 +9,16 @@ PIP := $(PYTHON) -m pip
 PYTEST := $(PYTHON) -m pytest
 RUFF := $(PYTHON) -m ruff
 MYPY := $(PYTHON) -m mypy
+CARGO := cargo
 BUMP := bump2version
 SRC_DIR := src/toonverter
 TEST_DIR := tests
+
+# Python environment discovery for Rust builds
+PYTHON_VERSION_MAJOR_MINOR := $(shell $(PYTHON) -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+PYTHON_LIBDIR := $(shell $(PYTHON) -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")
+PYTHON_LIBNAME := python$(PYTHON_VERSION_MAJOR_MINOR)
+RUST_COMMON_FLAGS := PYTHON_SYS_STATIC=0 PYO3_PYTHON=$(PYTHON) RUSTFLAGS="-L$(PYTHON_LIBDIR) -l$(PYTHON_LIBNAME)"
 
 help: ## Show this help message
 	@echo "Available targets:"
@@ -23,6 +30,7 @@ install: ## Install package in production mode
 install-dev: ## Install package with development dependencies
 	$(PIP) install -e ".[all]"
 	$(PIP) install -r requirements-dev.txt
+	maturin develop
 	pre-commit install
 
 clean: ## Remove build artifacts and cache files
@@ -35,12 +43,16 @@ clean: ## Remove build artifacts and cache files
 	rm -rf htmlcov/
 	rm -rf .coverage
 	rm -rf coverage.xml
+	rm -rf rust/target
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete
 	find . -type f -name "*.pyo" -delete
 
-test: ## Run all tests with coverage
+test: ## Run all Python tests
 	$(PYTEST) -v
+
+test-rust: ## Run all Rust tests (sequentially)
+	$(RUST_COMMON_FLAGS) $(CARGO) test --manifest-path rust/Cargo.toml -- --test-threads=1
 
 test-cov: ## Run tests with detailed coverage report
 	$(PYTEST) -v --cov=$(SRC_DIR) --cov-report=html --cov-report=term-missing
@@ -54,14 +66,16 @@ test-unit: ## Run unit tests only
 test-integration: ## Run integration tests only
 	$(PYTEST) -v -m integration
 
-lint: ## Run ruff linter
+lint: ## Run ruff linter and cargo clippy
 	$(RUFF) check $(SRC_DIR) $(TEST_DIR)
+	$(RUST_COMMON_FLAGS) $(CARGO) clippy --manifest-path rust/Cargo.toml -- -D warnings
 
 lint-fix: ## Run ruff linter with auto-fix
 	$(RUFF) check --fix $(SRC_DIR) $(TEST_DIR)
 
-format: ## Format code with ruff
+format: ## Format code with ruff and cargo fmt
 	$(RUFF) format $(SRC_DIR) $(TEST_DIR)
+	$(RUST_COMMON_FLAGS) $(CARGO) fmt --manifest-path rust/Cargo.toml
 
 format-check: ## Check code formatting without changes
 	$(RUFF) format --check $(SRC_DIR) $(TEST_DIR)
@@ -72,7 +86,7 @@ type-check: ## Run mypy type checker
 pre-commit: ## Run all pre-commit hooks
 	pre-commit run --all-files
 
-quality: lint type-check test ## Run all quality checks (lint, type-check, test)
+quality: lint type-check test test-rust ## Run all quality checks (lint, type-check, test)
 
 build: clean ## Build distribution packages
 	$(PYTHON) -m build

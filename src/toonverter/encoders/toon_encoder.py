@@ -4,9 +4,11 @@ This is the primary encoder that orchestrates all encoding logic
 according to the official TOON specification from github.com/toon-format/spec
 """
 
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from typing import Any
 
-from toonverter.core.config import USE_RUST_ENCODER, rust_core
+from toonverter.core.config import PARALLELISM_THRESHOLD, USE_RUST_ENCODER, rust_core
 from toonverter.core.exceptions import EncodingError, ValidationError
 from toonverter.core.spec import ArrayForm, Delimiter, RootForm, ToonEncodeOptions, ToonValue
 from toonverter.core.types import EncodeOptions
@@ -44,6 +46,12 @@ class ToonEncoder:
             options: Encoding options (uses defaults if None)
         """
         self.options = options or ToonEncodeOptions()
+
+        self._parallelism_threshold = (
+            self.options.parallelism_threshold
+            if self.options.parallelism_threshold is not None
+            else PARALLELISM_THRESHOLD
+        )
 
         # Initialize sub-encoders
         self.str_enc = StringEncoder(self.options.delimiter)
@@ -171,6 +179,36 @@ class ToonEncoder:
         lines = self.array_enc.encode_root_array_list(arr, self)
         return "\n".join(lines)
 
+    def _encode_single_item(self, item_tuple: tuple[str, Any], depth: int) -> list[str]:
+        key, value = item_tuple
+        indent = self.indent_mgr.indent(depth)
+
+        # Key folding logic
+        # For parallelism, key_folder.should_fold_key needs context of the single item for now
+        # Re-evaluating the `obj` parameter in should_fold_key for this context.
+        # For a single item, `obj` should be {key: value} if context matters.
+        if self.key_folder.should_fold_key(key, value, {key: value}):
+            can_fold, key_chain = self.key_folder.can_fold_chain({key: value})
+            if can_fold:
+                folded_key = self.key_folder.fold_key_chain(key_chain)
+                final_value = self.key_folder.get_folded_value({key: value}, key_chain)
+                value_str = self._encode_value(final_value)
+                return [f"{indent}{folded_key}: {value_str}"]
+
+        # Regular key-value encoding
+        if isinstance(value, dict):
+            # Nested object
+            return [f"{indent}{key}:", *self.encode_object(value, depth + 1)]
+        if isinstance(value, list):
+            # Array - detect form and encode
+            if not value:
+                return [f"{indent}{key}[0]:"]
+            return self._encode_array(key, value, depth)
+
+        # Primitive value
+        value_str = self._encode_value(value)
+        return [f"{indent}{key}: {value_str}"]
+
     def encode_object(self, obj: dict[str, Any], depth: int) -> list[str]:
         """Encode object with indentation.
 
@@ -190,40 +228,20 @@ class ToonEncoder:
             return []
 
         lines: list[str] = []
-        indent = self.indent_mgr.indent(depth)
 
-        # Process each key-value pair
-        for key, value in obj.items():
-            # Check if this key can be folded
-            if self.key_folder.should_fold_key(key, value, obj):
-                can_fold, key_chain = self.key_folder.can_fold_chain({key: value})
-                if can_fold:
-                    folded_key = self.key_folder.fold_key_chain(key_chain)
-                    final_value = self.key_folder.get_folded_value({key: value}, key_chain)
-                    # Encode as single line
-                    value_str = self._encode_value(final_value)
-                    lines.append(f"{indent}{folded_key}: {value_str}")
-                    continue
-
-            # Regular key-value encoding
-            if isinstance(value, dict):
-                # Nested object
-                lines.append(f"{indent}{key}:")
-                nested_lines = self.encode_object(value, depth + 1)
-                lines.extend(nested_lines)
-
-            elif isinstance(value, list):
-                # Array - detect form and encode
-                if not value:
-                    lines.append(f"{indent}{key}[0]:")
-                else:
-                    array_lines = self._encode_array(key, value, depth)
-                    lines.extend(array_lines)
-
-            else:
-                # Primitive value
-                value_str = self._encode_value(value)
-                lines.append(f"{indent}{key}: {value_str}")
+        if len(obj) > self._parallelism_threshold:
+            # Parallel processing
+            with ThreadPoolExecutor() as executor:
+                # Use partial to pass `self` and `depth` to _encode_single_item
+                _encode_item_partial = partial(self._encode_single_item, depth=depth)
+                # executor.map expects a function and an iterable of items
+                # obj.items() yields (key, value) tuples, which _encode_single_item expects
+                for encoded_lines in executor.map(_encode_item_partial, obj.items()):
+                    lines.extend(encoded_lines)
+        else:
+            # Sequential processing
+            for item_tuple in obj.items():
+                lines.extend(self._encode_single_item(item_tuple, depth))
 
         return lines
 

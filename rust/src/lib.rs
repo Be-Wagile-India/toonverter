@@ -1,8 +1,8 @@
+use indexmap::IndexMap;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyString};
+use pyo3::types::{PyAny, PyDict, PyList, PyString};
 use rayon::prelude::*;
-use indexmap::IndexMap;
 
 // For buffered token stream
 use std::collections::VecDeque;
@@ -20,13 +20,13 @@ enum TokenType {
     Float(f64),
     Boolean(bool),
     Null,
-    Colon,        // :
-    Comma,        // ,
-    Dash,         // -
-    ArrayStart,   // [
-    ArrayEnd,     // ]
-    BraceStart,   // {
-    BraceEnd,     // }
+    Colon,      // :
+    Comma,      // ,
+    Dash,       // -
+    ArrayStart, // [
+    ArrayEnd,   // ]
+    BraceStart, // {
+    BraceEnd,   // }
     Identifier(String),
 }
 
@@ -40,7 +40,7 @@ struct Token {
 
 // --- Intermediate Representation for Parallel Encoding ---
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq, Clone)]
 enum ToonValue {
     Null,
     Boolean(bool),
@@ -55,7 +55,13 @@ impl ToonValue {
     fn encode(&self, indent_level: usize, indent_size: usize) -> String {
         match self {
             ToonValue::Null => "null".to_string(),
-            ToonValue::Boolean(b) => if *b { "true".to_string() } else { "false".to_string() },
+            ToonValue::Boolean(b) => {
+                if *b {
+                    "true".to_string()
+                } else {
+                    "false".to_string()
+                }
+            }
             ToonValue::Integer(i) => i.to_string(),
             ToonValue::Float(f) => {
                 if f.is_nan() || f.is_infinite() {
@@ -65,29 +71,32 @@ impl ToonValue {
                 } else {
                     f.to_string()
                 }
-            },
+            }
             ToonValue::String(s) => {
                 let is_reserved = matches!(s.as_str(), "true" | "false" | "null");
                 let is_number = s.parse::<f64>().is_ok();
-                let has_special_chars = s.chars().any(|c| matches!(c, ':' | ' ' | '\n' | '[' | ']' | '{' | '}' | ',')) || s.is_empty();
-                
+                let has_special_chars = s
+                    .chars()
+                    .any(|c| matches!(c, ':' | ' ' | '\n' | '[' | ']' | '{' | '}' | ','))
+                    || s.is_empty();
+
                 if is_reserved || is_number || has_special_chars {
                     format!("{:?}", s)
                 } else {
                     s.clone()
                 }
-            },
+            }
             ToonValue::Dict(map) => {
                 if map.is_empty() {
                     return "{}".to_string();
                 }
                 let mut lines = Vec::new();
                 lines.push("".to_string()); // Start with newline
-                
+
                 for (k, v) in map {
                     let v_str = v.encode(indent_level + 1, indent_size);
                     let next_indent = " ".repeat((indent_level + 1) * indent_size);
-                    
+
                     if v_str.starts_with('\n') {
                         lines.push(format!("{}{}:{}", next_indent, k, v_str));
                     } else {
@@ -95,10 +104,10 @@ impl ToonValue {
                     }
                 }
                 lines.join("\n")
-            },
+            }
             ToonValue::List(list) => {
                 let len = list.len();
-                
+
                 // Detect Tabular
                 let mut is_tabular = true;
                 let mut keys: Option<Vec<String>> = None;
@@ -106,11 +115,15 @@ impl ToonValue {
 
                 for item in list {
                     match item {
-                        ToonValue::Dict(_) => {},
-                        _ => { is_tabular = false; }
+                        ToonValue::Dict(_) => {}
+                        _ => {
+                            is_tabular = false;
+                        }
                     }
                     match item {
-                        ToonValue::Dict(_) | ToonValue::List(_) => { all_primitive = false; },
+                        ToonValue::Dict(_) | ToonValue::List(_) => {
+                            all_primitive = false;
+                        }
                         _ => {}
                     }
                 }
@@ -121,17 +134,23 @@ impl ToonValue {
                         if let ToonValue::Dict(d) = item {
                             for v in d.values() {
                                 match v {
-                                    ToonValue::Dict(_) | ToonValue::List(_) => { is_tabular = false; break; },
+                                    ToonValue::Dict(_) | ToonValue::List(_) => {
+                                        is_tabular = false;
+                                        break;
+                                    }
                                     _ => {}
                                 }
                             }
-                            if !is_tabular { break; }
+                            if !is_tabular {
+                                break;
+                            }
 
                             let mut current_keys: Vec<String> = d.keys().cloned().collect();
                             current_keys.sort();
                             if let Some(ref prev_keys) = keys {
                                 if prev_keys != &current_keys {
-                                    is_tabular = false; break;
+                                    is_tabular = false;
+                                    break;
                                 }
                             } else {
                                 keys = Some(current_keys);
@@ -146,27 +165,30 @@ impl ToonValue {
                     // Tabular Encoding
                     if let ToonValue::Dict(first_dict) = &list[0] {
                         let fields: Vec<String> = first_dict.keys().cloned().collect();
-                        
+
                         // header like: [3]{a,b,c}:
                         let header = format!("[{}]{{{}}}:", len, fields.join(","));
                         let row_indent = " ".repeat((indent_level + 1) * indent_size);
 
                         // Parallelize row processing
-                        let rows: Vec<String> = list.par_iter().map(|item| {
-                            if let ToonValue::Dict(d) = item {
-                                let mut row_vals = Vec::new();
-                                for f in &fields {
-                                    if let Some(v) = d.get(f) {
-                                        row_vals.push(v.encode(0, 0));
-                                    } else {
-                                        row_vals.push("null".to_string());
+                        let rows: Vec<String> = list
+                            .par_iter()
+                            .map(|item| {
+                                if let ToonValue::Dict(d) = item {
+                                    let mut row_vals = Vec::new();
+                                    for f in &fields {
+                                        if let Some(v) = d.get(f) {
+                                            row_vals.push(v.encode(0, 0));
+                                        } else {
+                                            row_vals.push("null".to_string());
+                                        }
                                     }
+                                    format!("{}{}", row_indent, row_vals.join(","))
+                                } else {
+                                    String::new() // Should not happen
                                 }
-                                format!("{}{}", row_indent, row_vals.join(","))
-                            } else {
-                                String::new() // Should not happen
-                            }
-                        }).collect();
+                            })
+                            .collect();
 
                         let mut result = Vec::new();
                         result.push(header);
@@ -177,33 +199,36 @@ impl ToonValue {
 
                 if all_primitive {
                     // Parallelize primitive formatting
-                    let parts: Vec<String> = list.par_iter().map(|item| {
-                        item.encode(0, 0)
-                    }).collect();
-                    
+                    let parts: Vec<String> =
+                        list.par_iter().map(|item| item.encode(0, 0)).collect();
+
                     let values = parts.join(",");
                     if values.is_empty() {
-                        return format!("[{}]:", len);
+                        format!("[{}]:", len)
+                    } else {
+                        format!("[{}]: {}", len, values)
                     }
-                    return format!("[{}]: {}", len, values);
                 } else {
                     // Regular list
                     let item_indent = " ".repeat((indent_level + 1) * indent_size);
-                    
+
                     // Parallelize item encoding
-                    let encoded_items: Vec<String> = list.par_iter().map(|item| {
-                        let val_str = item.encode(indent_level + 2, indent_size);
-                        if val_str.starts_with('\n') {
-                             format!("{}  -\n{}", item_indent, val_str)
-                        } else {
-                             format!("{}  - {}", item_indent, val_str)
-                        }
-                    }).collect();
+                    let encoded_items: Vec<String> = list
+                        .par_iter()
+                        .map(|item| {
+                            let val_str = item.encode(indent_level + 2, indent_size);
+                            if val_str.starts_with('\n') {
+                                format!("{}  -\n{}", item_indent, val_str)
+                            } else {
+                                format!("{}  - {}", item_indent, val_str)
+                            }
+                        })
+                        .collect();
 
                     let mut list_lines = Vec::new();
                     list_lines.push(format!("[{}]:", len));
                     list_lines.extend(encoded_items);
-                    return list_lines.join("\n");
+                    list_lines.join("\n")
                 }
             }
         }
@@ -237,22 +262,20 @@ fn to_toon_value(obj: &Bound<'_, PyAny>) -> PyResult<ToonValue> {
             vec.push(to_toon_value(&item)?);
         }
         Ok(ToonValue::List(vec))
+    } else if let Ok(py_str) = obj.downcast::<PyString>() {
+        // Only accept *actual* Python string objects here.
+        Ok(ToonValue::String(py_str.to_str()?.to_string()))
     } else {
-        if let Ok(s) = obj.str() {
-             Ok(ToonValue::String(s.to_string()))
-        } else {
-             Err(PyValueError::new_err("Unsupported type for TOON encoding"))
-        }
+        Err(PyValueError::new_err("Unsupported type for TOON encoding"))
     }
 }
-
 
 // --- Lexer ---
 
 struct ToonLexer<'a> {
     lines: std::str::Lines<'a>,
     current_line_chars: std::iter::Peekable<std::str::Chars<'a>>,
-    current_line_str: &'a str, 
+    current_line_str: &'a str,
     current_line_idx: usize,
     current_column: usize,
     current_indent_level: usize,
@@ -265,7 +288,7 @@ impl<'a> ToonLexer<'a> {
     fn new(text: &'a str, indent_size: usize) -> Self {
         let mut lines = text.lines();
         let first_line = lines.next().unwrap_or("");
-        
+
         ToonLexer {
             lines,
             current_line_chars: first_line.chars().peekable(),
@@ -287,17 +310,15 @@ impl<'a> ToonLexer<'a> {
         if let Some(c) = self.current_line_chars.next() {
             self.current_column += 1;
             Some(c)
+        } else if let Some(next_line) = self.lines.next() {
+            self.current_line_idx += 1;
+            self.current_column = 0;
+            self.current_line_str = next_line;
+            self.current_line_chars = next_line.chars().peekable();
+            Some('\n')
         } else {
-            if let Some(next_line) = self.lines.next() {
-                self.current_line_idx += 1;
-                self.current_column = 0;
-                self.current_line_str = next_line;
-                self.current_line_chars = next_line.chars().peekable();
-                Some('\n')
-            } else {
-                self.eof_reached = true;
-                None
-            }
+            self.eof_reached = true;
+            None
         }
     }
 
@@ -317,7 +338,9 @@ impl<'a> ToonLexer<'a> {
             if c == ' ' {
                 spaces += 1;
             } else if c == '\t' {
-                return Err(PyValueError::new_err("Tabs are not allowed for indentation"));
+                return Err(PyValueError::new_err(
+                    "Tabs are not allowed for indentation",
+                ));
             } else {
                 break;
             }
@@ -341,7 +364,12 @@ impl<'a> ToonLexer<'a> {
                     'n' => s.push('\n'),
                     'r' => s.push('\r'),
                     't' => s.push('\t'),
-                    other => return Err(PyValueError::new_err(format!("Invalid escape character: {}", other))),
+                    other => {
+                        return Err(PyValueError::new_err(format!(
+                            "Invalid escape character: {}",
+                            other
+                        )))
+                    }
                 }
                 escaped = false;
             } else if c == '\\' {
@@ -359,7 +387,16 @@ impl<'a> ToonLexer<'a> {
         s.push(first_char);
 
         while let Some(&c) = self.peek_char() {
-            if c == ':' || c == ',' || c == '[' || c == ']' || c == '{' || c == '}' || c == ' ' || c == '\t' || c == '\n' {
+            if c == ':'
+                || c == ','
+                || c == '['
+                || c == ']'
+                || c == '{'
+                || c == '}'
+                || c == ' '
+                || c == '\t'
+                || c == '\n'
+            {
                 break;
             }
             s.push(self.next_char().unwrap());
@@ -410,7 +447,7 @@ impl<'a> ToonLexer<'a> {
         if self.current_column == 0 {
             let trimmed = self.current_line_str.trim_start();
             if trimmed.is_empty() {
-                self.next_char(); 
+                self.next_char();
                 return self.next_token();
             }
 
@@ -450,8 +487,8 @@ impl<'a> ToonLexer<'a> {
             }
             self.next_char().unwrap()
         } else {
-             match self.next_char() {
-                 Some(c) => {
+            match self.next_char() {
+                Some(c) => {
                     if c == '\n' {
                         return Ok(Some(Token {
                             token_type: TokenType::Newline,
@@ -461,16 +498,16 @@ impl<'a> ToonLexer<'a> {
                         }));
                     }
                     c
-                 },
-                 None => {
-                     self.eof_reached = true;
-                     return self.next_token();
-                 }
-             }
+                }
+                None => {
+                    self.eof_reached = true;
+                    return self.next_token();
+                }
+            }
         };
 
         let start_col = self.current_column;
-        
+
         let token_type = match c {
             ':' => TokenType::Colon,
             ',' => TokenType::Comma,
@@ -488,7 +525,7 @@ impl<'a> ToonLexer<'a> {
                 } else {
                     TokenType::Dash
                 }
-            },
+            }
             '"' => self.scan_string(start_col)?,
             _ => self.scan_identifier_or_number(c),
         };
@@ -509,7 +546,6 @@ impl<'a> Iterator for ToonLexer<'a> {
         self.next_token().transpose()
     }
 }
-
 
 // --- Parser ---
 
@@ -536,7 +572,9 @@ impl<'py, 'a> ToonParser<'py, 'a> {
                 if self.buffer.is_empty() {
                     self.buffer.push_back(Token {
                         token_type: TokenType::Eof,
-                        line: 0, column: 0, indent_level: 0
+                        line: 0,
+                        column: 0,
+                        indent_level: 0,
                     });
                 }
                 break; // EOF
@@ -547,14 +585,18 @@ impl<'py, 'a> ToonParser<'py, 'a> {
 
     fn current(&mut self) -> PyResult<&Token> {
         self.fill_buffer(1)?;
-        self.buffer.front().ok_or_else(|| PyValueError::new_err("Unexpected end of token stream"))
+        self.buffer
+            .front()
+            .ok_or_else(|| PyValueError::new_err("Unexpected end of token stream"))
     }
 
     fn advance(&mut self) -> PyResult<Token> {
         self.fill_buffer(1)?;
-        self.buffer.pop_front().ok_or_else(|| PyValueError::new_err("Unexpected end of token stream"))
+        self.buffer
+            .pop_front()
+            .ok_or_else(|| PyValueError::new_err("Unexpected end of token stream"))
     }
-    
+
     fn peek_next(&mut self) -> PyResult<Option<&Token>> {
         self.fill_buffer(2)?;
         Ok(self.buffer.get(1))
@@ -562,104 +604,115 @@ impl<'py, 'a> ToonParser<'py, 'a> {
 
     fn parse_value(&mut self) -> PyResult<PyObject> {
         let token = self.current()?.clone();
-        
+
         match token.token_type {
             TokenType::String(ref s) => {
                 self.advance()?;
                 Ok(PyString::new_bound(self.py, s).into_py(self.py))
-            },
+            }
             TokenType::Integer(i) => {
                 self.advance()?;
                 Ok(i.into_py(self.py))
-            },
+            }
             TokenType::Float(f) => {
                 self.advance()?;
                 Ok(f.into_py(self.py))
-            },
+            }
             TokenType::Boolean(b) => {
                 self.advance()?;
                 Ok(b.into_py(self.py))
-            },
+            }
             TokenType::Null => {
                 self.advance()?;
                 Ok(self.py.None())
-            },
+            }
             TokenType::Identifier(ref s) => {
                 self.advance()?;
                 Ok(PyString::new_bound(self.py, s).into_py(self.py))
-            },
+            }
             TokenType::ArrayStart => self.parse_array_header_and_content(),
             TokenType::BraceStart => self.parse_inline_object(),
             TokenType::Indent => {
                 self.advance()?; // Consume the Indent token
                 self.parse_object_indented()
-            },
-            TokenType::Dash => {
-                self.parse_list_content()
-            },
-            _ => Err(PyValueError::new_err(format!("Unexpected token in value: {:?}", token.token_type))),
+            }
+            TokenType::Dash => self.parse_list_content(),
+            _ => Err(PyValueError::new_err(format!(
+                "Unexpected token in value: {:?}",
+                token.token_type
+            ))),
         }
     }
 
     fn parse_array_header_and_content(&mut self) -> PyResult<PyObject> {
         self.advance()?; // skip [
-        
+
         // Parse length
         let len_token = self.current()?.clone();
         let length = match len_token.token_type {
             TokenType::Integer(i) => i as usize,
             _ => return Err(PyValueError::new_err("Expected integer for array length")),
         };
-        self.advance()?;
+        self.advance()?; // consumed length
 
         // optional delimiter skipped if any (not used currently)
         if self.current()?.token_type == TokenType::Identifier(String::from("|")) {
             self.advance()?;
         }
-        
+
         if self.current()?.token_type != TokenType::ArrayEnd {
-             return Err(PyValueError::new_err("Expected ] after array length"));
+            return Err(PyValueError::new_err("Expected ] after array length"));
         }
         self.advance()?; // skip ]
 
         // Capture potential fields {fields} or inline header
         let mut fields: Option<Vec<String>> = None;
         if self.current()?.token_type == TokenType::BraceStart {
-             self.advance()?; // skip {
-             let mut captured_fields = Vec::new();
-             loop {
-                 let token = self.current()?.clone();
-                 match token.token_type {
-                     TokenType::BraceEnd => {
-                         self.advance()?;
-                         break;
-                     },
-                     TokenType::Identifier(ref s) | TokenType::String(ref s) => {
-                         captured_fields.push(s.clone());
-                         self.advance()?;
-                     },
-                     TokenType::Comma => {
-                         self.advance()?;
-                     },
-                     _ => return Err(PyValueError::new_err("Expected field name or '}'")),
-                 }
-             }
-             fields = Some(captured_fields);
+            self.advance()?; // skip {
+            let mut captured_fields = Vec::new();
+            loop {
+                let token = self.current()?.clone();
+                match token.token_type {
+                    TokenType::BraceEnd => {
+                        self.advance()?;
+                        break;
+                    }
+                    TokenType::Identifier(ref s) | TokenType::String(ref s) => {
+                        captured_fields.push(s.clone());
+                        self.advance()?;
+                    }
+                    TokenType::Comma => {
+                        self.advance()?;
+                    }
+                    _ => return Err(PyValueError::new_err("Expected field name or '}'")),
+                }
+            }
+            fields = Some(captured_fields);
         } else {
             // compact header before colon: field1,field2 :
-            if matches!(self.current()?.token_type, TokenType::Identifier(_) | TokenType::String(_)) {
+            if matches!(
+                self.current()?.token_type,
+                TokenType::Identifier(_) | TokenType::String(_)
+            ) {
                 let mut captured_fields = Vec::new();
-                while self.current()?.token_type != TokenType::Colon && self.current()?.token_type != TokenType::Newline && self.current()?.token_type != TokenType::Eof {
+                while self.current()?.token_type != TokenType::Colon
+                    && self.current()?.token_type != TokenType::Newline
+                    && self.current()?.token_type != TokenType::Eof
+                {
                     let token = self.current()?.clone();
                     match token.token_type {
                         TokenType::Identifier(s) | TokenType::String(s) => {
                             captured_fields.push(s);
                             self.advance()?;
-                        },
+                        }
                         TokenType::Comma => {
                             self.advance()?;
-                        },
-                        _ => return Err(PyValueError::new_err("Expected field name, ',' or ':' for compact tabular header")),
+                        }
+                        _ => {
+                            return Err(PyValueError::new_err(
+                                "Expected field name, ',' or ':' for compact tabular header",
+                            ))
+                        }
                     }
                 }
                 if !captured_fields.is_empty() {
@@ -670,7 +723,7 @@ impl<'py, 'a> ToonParser<'py, 'a> {
 
         // Expect :
         if self.current()?.token_type != TokenType::Colon {
-             return Err(PyValueError::new_err("Expected : after array header"));
+            return Err(PyValueError::new_err("Expected : after array header"));
         }
         self.advance()?; // skip :
 
@@ -690,7 +743,7 @@ impl<'py, 'a> ToonParser<'py, 'a> {
                 if self.current()?.token_type == TokenType::Comma {
                     self.advance()?;
                 }
-                
+
                 let val = self.parse_value()?;
                 list.append(val)?;
             }
@@ -700,7 +753,7 @@ impl<'py, 'a> ToonParser<'py, 'a> {
 
     fn parse_tabular_content(&mut self, length: usize, fields: Vec<String>) -> PyResult<PyObject> {
         let list = PyList::empty_bound(self.py);
-        
+
         // Consume Indent if present
         if self.current()?.token_type == TokenType::Indent {
             self.advance()?;
@@ -711,10 +764,10 @@ impl<'py, 'a> ToonParser<'py, 'a> {
             while self.current()?.token_type == TokenType::Newline {
                 self.advance()?;
             }
-            
+
             // Check for end of block (Dedent)
             if self.current()?.token_type == TokenType::Dedent {
-                break; 
+                break;
             }
 
             let row_dict = PyDict::new_bound(self.py);
@@ -723,27 +776,27 @@ impl<'py, 'a> ToonParser<'py, 'a> {
                 if self.current()?.token_type == TokenType::Comma {
                     self.advance()?;
                 }
-                
+
                 let val = self.parse_value()?;
                 row_dict.set_item(field, val)?;
             }
             list.append(row_dict)?;
         }
-        
+
         // Consume Dedent if present
         if self.current()?.token_type == TokenType::Dedent {
-             self.advance()?;
+            self.advance()?;
         }
-        
+
         Ok(list.into_py(self.py))
     }
 
     fn parse_list_content(&mut self) -> PyResult<PyObject> {
         let list = PyList::empty_bound(self.py);
-        
+
         // Capture indent level
         let mut list_indent_level = self.current()?.indent_level;
-        
+
         // Consume Indent if present
         if self.current()?.token_type == TokenType::Indent {
             list_indent_level = self.current()?.indent_level;
@@ -752,7 +805,9 @@ impl<'py, 'a> ToonParser<'py, 'a> {
 
         loop {
             // Skip newlines and indents (to handle extra indentation levels)
-            while self.current()?.token_type == TokenType::Newline || self.current()?.token_type == TokenType::Indent {
+            while self.current()?.token_type == TokenType::Newline
+                || self.current()?.token_type == TokenType::Indent
+            {
                 self.advance()?;
             }
 
@@ -760,21 +815,26 @@ impl<'py, 'a> ToonParser<'py, 'a> {
             match token.token_type {
                 TokenType::Dash => {
                     self.advance()?; // consume Dash
-                    // Skip newlines after Dash
+                                     // Skip newlines after Dash
                     while self.current()?.token_type == TokenType::Newline {
                         self.advance()?;
                     }
                     let val = self.parse_value()?;
                     list.append(val)?;
-                },
+                }
                 TokenType::Dedent => {
                     if token.indent_level < list_indent_level {
                         break;
                     }
                     self.advance()?;
-                },
+                }
                 TokenType::Eof => break,
-                _ => return Err(PyValueError::new_err(format!("Expected '-' or end of list, got {:?}", token.token_type))),
+                _ => {
+                    return Err(PyValueError::new_err(format!(
+                        "Expected '-' or end of list, got {:?}",
+                        token.token_type
+                    )))
+                }
             }
         }
         Ok(list.into_py(self.py))
@@ -793,15 +853,20 @@ impl<'py, 'a> ToonParser<'py, 'a> {
             match token.token_type {
                 TokenType::Identifier(_) | TokenType::String(_) => {
                     self.parse_kv_pair(&dict)?;
-                },
+                }
                 TokenType::Dedent => {
                     if token.indent_level < start_indent_level {
                         break;
                     }
                     self.advance()?; // Consume dedent that closes this block
-                },
+                }
                 TokenType::Eof => break,
-                _ => return Err(PyValueError::new_err(format!("Expected key, Dedent or EOF, got {:?}", token.token_type))),
+                _ => {
+                    return Err(PyValueError::new_err(format!(
+                        "Expected key, Dedent or EOF, got {:?}",
+                        token.token_type
+                    )))
+                }
             }
         }
         Ok(dict.into_py(self.py))
@@ -810,7 +875,7 @@ impl<'py, 'a> ToonParser<'py, 'a> {
     fn parse_inline_object(&mut self) -> PyResult<PyObject> {
         self.advance()?; // skip {
         let dict = PyDict::new_bound(self.py);
-        
+
         loop {
             while self.current()?.token_type == TokenType::Newline {
                 self.advance()?;
@@ -821,14 +886,19 @@ impl<'py, 'a> ToonParser<'py, 'a> {
                 TokenType::BraceEnd => {
                     self.advance()?;
                     break;
-                },
+                }
                 TokenType::Comma => {
                     self.advance()?;
-                },
+                }
                 TokenType::Identifier(_) | TokenType::String(_) => {
                     self.parse_kv_pair(&dict)?;
-                },
-                _ => return Err(PyValueError::new_err(format!("Expected key, ',' or '}}', got {:?}", token.token_type))),
+                }
+                _ => {
+                    return Err(PyValueError::new_err(format!(
+                        "Expected key, ',' or '}}', got {:?}",
+                        token.token_type
+                    )))
+                }
             }
         }
         Ok(dict.into_py(self.py))
@@ -840,14 +910,14 @@ impl<'py, 'a> ToonParser<'py, 'a> {
                 let obj = PyString::new_bound(self.py, &s);
                 self.advance()?;
                 obj
-            },
+            }
             _ => return Err(PyValueError::new_err("Expected key")),
         };
-        
+
         if self.current()?.token_type == TokenType::ArrayStart {
             let val = self.parse_array_header_and_content()?;
             dict.set_item(key_obj, val)?;
-            
+
             while self.current()?.token_type == TokenType::Newline {
                 self.advance()?;
             }
@@ -872,12 +942,21 @@ impl<'py, 'a> ToonParser<'py, 'a> {
 // --- Encoder (Legacy Sequential kept for reference) ---
 
 #[allow(dead_code)]
-fn encode_value(_py: Python, obj: &Bound<'_, PyAny>, indent_level: usize, indent_size: usize) -> PyResult<String> {
+fn encode_value(
+    _py: Python,
+    obj: &Bound<'_, PyAny>,
+    indent_level: usize,
+    indent_size: usize,
+) -> PyResult<String> {
     // Legacy encoder left as optional fallback. Kept but marked unused to silence warning.
     if obj.is_none() {
         return Ok("null".to_string());
     } else if let Ok(b) = obj.extract::<bool>() {
-        return Ok(if b { "true".to_string() } else { "false".to_string() });
+        return Ok(if b {
+            "true".to_string()
+        } else {
+            "false".to_string()
+        });
     } else if let Ok(i) = obj.extract::<i64>() {
         return Ok(i.to_string());
     } else if let Ok(f) = obj.extract::<f64>() {
@@ -891,8 +970,11 @@ fn encode_value(_py: Python, obj: &Bound<'_, PyAny>, indent_level: usize, indent
     } else if let Ok(s) = obj.extract::<String>() {
         let is_reserved = matches!(s.as_str(), "true" | "false" | "null");
         let is_number = s.parse::<f64>().is_ok();
-        let has_special_chars = s.chars().any(|c| matches!(c, ':' | ' ' | '\n' | '[' | ']' | '{' | '}' | ',')) || s.is_empty();
-        
+        let has_special_chars = s
+            .chars()
+            .any(|c| matches!(c, ':' | ' ' | '\n' | '[' | ']' | '{' | '}' | ','))
+            || s.is_empty();
+
         if is_reserved || is_number || has_special_chars {
             return Ok(format!("{:?}", s));
         } else {
@@ -900,7 +982,7 @@ fn encode_value(_py: Python, obj: &Bound<'_, PyAny>, indent_level: usize, indent
         }
     } else if let Ok(dict) = obj.downcast::<PyDict>() {
         if dict.is_empty() {
-             return Ok("{}".to_string());
+            return Ok("{}".to_string());
         }
         let mut lines = Vec::new();
         lines.push("".to_string()); // Start with newline
@@ -908,7 +990,7 @@ fn encode_value(_py: Python, obj: &Bound<'_, PyAny>, indent_level: usize, indent
             let k_str = k.extract::<String>()?;
             let v_str = encode_value(_py, &v, indent_level + 1, indent_size)?;
             let next_indent = " ".repeat((indent_level + 1) * indent_size);
-            
+
             if v_str.starts_with('\n') {
                 lines.push(format!("{}{}:{}", next_indent, k_str, v_str));
             } else {
@@ -916,81 +998,91 @@ fn encode_value(_py: Python, obj: &Bound<'_, PyAny>, indent_level: usize, indent
             }
         }
         return Ok(lines.join("\n"));
-
     } else if let Ok(list) = obj.downcast::<PyList>() {
         let len = list.len();
-        
+
         let mut is_tabular = true;
         let mut keys: Option<Vec<String>> = None;
         let mut all_primitive = true;
 
         for item in list {
             if item.downcast::<PyDict>().is_err() {
-                is_tabular = false; 
+                is_tabular = false;
             }
             if item.downcast::<PyDict>().is_ok() || item.downcast::<PyList>().is_ok() {
                 all_primitive = false;
             }
         }
-        
+
         if is_tabular && !list.is_empty() {
-             for item in list {
-                 if let Ok(d) = item.downcast::<PyDict>() {
-                     for v in d.values() {
-                         if v.downcast::<PyDict>().is_ok() || v.downcast::<PyList>().is_ok() {
-                             is_tabular = false; break;
-                         }
-                     }
-                     if !is_tabular { break; }
-                     
-                     let mut current_keys: Vec<String> = Vec::new();
-                     for k in d.keys() {
-                         if let Ok(s) = k.extract::<String>() {
-                             current_keys.push(s);
-                         } else {
-                             is_tabular = false; break;
-                         }
-                     }
-                     current_keys.sort();
-                     
-                     if let Some(ref prev_keys) = keys {
-                         if prev_keys != &current_keys {
-                             is_tabular = false; break;
-                         }
-                     } else {
-                         keys = Some(current_keys);
-                     }
-                 }
-             }
+            for item in list {
+                if let Ok(d) = item.downcast::<PyDict>() {
+                    for v in d.values() {
+                        if v.downcast::<PyDict>().is_ok() || v.downcast::<PyList>().is_ok() {
+                            is_tabular = false;
+                            break;
+                        }
+                    }
+                    if !is_tabular {
+                        break;
+                    }
+
+                    let mut current_keys: Vec<String> = Vec::new();
+                    for k in d.keys() {
+                        if let Ok(s) = k.extract::<String>() {
+                            current_keys.push(s);
+                        } else {
+                            is_tabular = false;
+                            break;
+                        }
+                    }
+                    current_keys.sort();
+
+                    if let Some(ref prev_keys) = keys {
+                        if prev_keys != &current_keys {
+                            is_tabular = false;
+                            break;
+                        }
+                    } else {
+                        keys = Some(current_keys);
+                    }
+                }
+            }
         } else {
             is_tabular = false;
         }
 
         if is_tabular && !list.is_empty() {
-             let first_item = list.get_item(0)?;
-             let first_dict = first_item.downcast::<PyDict>()?;
-             let fields: Vec<String> = first_dict.keys().iter().map(|k| k.extract::<String>().unwrap()).collect();
-             
-             let mut lines = Vec::new();
-             lines.push(format!("[{}]{{{}}}:", len, fields.join(",")));
-             let row_indent = " ".repeat((indent_level + 1) * indent_size);
-             
-             for item in list {
-                 let d = item.downcast::<PyDict>()?;
-                 let mut row_vals = Vec::new();
-                 for f in &fields {
-                     let v = d.get_item(f)?.ok_or_else(|| PyValueError::new_err("Missing key"))?;
-                     row_vals.push(encode_value(_py, &v, 0, 0)?); 
-                 }
-                 lines.push(format!("{}{}", row_indent, row_vals.join(",")));
-             }
-             return Ok(lines.join("\n"));
+            let first_item = list.get_item(0)?;
+            let first_dict = first_item.downcast::<PyDict>()?;
+            let fields: Vec<String> = first_dict
+                .keys()
+                .iter()
+                .map(|k| k.extract::<String>().unwrap())
+                .collect();
+
+            let mut lines = Vec::new();
+            lines.push(format!("[{}]{{{}}}:", len, fields.join(",")));
+            let row_indent = " ".repeat((indent_level + 1) * indent_size);
+
+            for item in list {
+                let d = item.downcast::<PyDict>()?;
+                let mut row_vals = Vec::new();
+                for f in &fields {
+                    let v = d
+                        .get_item(f)?
+                        .ok_or_else(|| PyValueError::new_err("Missing key"))?;
+                    row_vals.push(encode_value(_py, &v, 0, 0)?);
+                }
+                lines.push(format!("{}{}", row_indent, row_vals.join(",")));
+            }
+            return Ok(lines.join("\n"));
         }
 
         if all_primitive {
             let mut parts = Vec::new();
             for item in list {
-                parts.push(encode_value(_py, &item, 0, 0)?); 
+                parts.push(encode_value(_py, &item, 0, 0)?);
             }
             let values = parts.join(",");
             if values.is_empty() {
@@ -1001,14 +1093,14 @@ fn encode_value(_py: Python, obj: &Bound<'_, PyAny>, indent_level: usize, indent
             let mut list_lines = Vec::new();
             list_lines.push(format!("[{}]:", len));
             let item_indent = " ".repeat((indent_level + 1) * indent_size);
-            
+
             for item in list {
                 let val_str = encode_value(_py, &item, indent_level + 2, indent_size)?;
                 if val_str.starts_with('\n') {
-                     list_lines.push(format!("{}  -", item_indent));
-                     list_lines.push(val_str); 
+                    list_lines.push(format!("{}  -", item_indent));
+                    list_lines.push(val_str);
                 } else {
-                     list_lines.push(format!("{}  - {}", item_indent, val_str));
+                    list_lines.push(format!("{}  - {}", item_indent, val_str));
                 }
             }
             return Ok(list_lines.join("\n"));
@@ -1026,7 +1118,7 @@ fn decode_toon(py: Python, text: &str) -> PyResult<PyObject> {
 
     let lexer = ToonLexer::new(text, 2);
     let mut parser = ToonParser::new(py, lexer);
-    
+
     let t = parser.current()?.token_type.clone();
     let result = match t {
         TokenType::ArrayStart => parser.parse_array_header_and_content(),
@@ -1045,14 +1137,21 @@ fn decode_toon(py: Python, text: &str) -> PyResult<PyObject> {
             } else {
                 parser.parse_value()
             }
-        },
+        }
         TokenType::Indent => parser.parse_object_indented(),
-        TokenType::Integer(_) | TokenType::Float(_) | TokenType::Boolean(_) | TokenType::Null => parser.parse_value(),
-        _ => Err(PyValueError::new_err(format!("Unexpected root token: {:?}", t)))
-    } ?;
-    
+        TokenType::Integer(_) | TokenType::Float(_) | TokenType::Boolean(_) | TokenType::Null => {
+            parser.parse_value()
+        }
+        _ => Err(PyValueError::new_err(format!(
+            "Unexpected root token: {:?}",
+            t
+        ))),
+    }?;
+
     // Consume trailing Dedents/Newlines
-    while parser.current()?.token_type == TokenType::Newline || parser.current()?.token_type == TokenType::Dedent {
+    while parser.current()?.token_type == TokenType::Newline
+        || parser.current()?.token_type == TokenType::Dedent
+    {
         parser.advance()?;
     }
 
@@ -1060,8 +1159,7 @@ fn decode_toon(py: Python, text: &str) -> PyResult<PyObject> {
         let current_token = parser.current()?.clone(); // Clone to fix E0499
         return Err(PyValueError::new_err(format!(
             "Extra tokens found after root element at line {} column {}",
-            current_token.line,
-            current_token.column
+            current_token.line, current_token.column
         )));
     }
 
@@ -1071,26 +1169,26 @@ fn decode_toon(py: Python, text: &str) -> PyResult<PyObject> {
 #[pyfunction]
 fn encode_toon(_py: Python, obj: Bound<'_, PyAny>) -> PyResult<String> {
     let ir = to_toon_value(&obj)?;
-    
+
     // Special handling for Root Object (Dict) to avoid double indentation
     if let ToonValue::Dict(map) = &ir {
-         if map.is_empty() {
-             return Ok("".to_string());
-         }
-         let mut lines = Vec::new();
-         for (k, v) in map {
-             // Pass 0 indent level. Content keys will be at level 1 (2 spaces).
-             let v_str = v.encode(0, 2);
-             
-             if v_str.starts_with('\n') {
-                 lines.push(format!("{}:{}", k, v_str));
-             } else {
-                 lines.push(format!("{}: {}", k, v_str));
-             }
-         }
-         return Ok(lines.join("\n"));
+        if map.is_empty() {
+            return Ok("".to_string());
+        }
+        let mut lines = Vec::new();
+        for (k, v) in map {
+            // Pass 0 indent level. Content keys will be at level 1 (2 spaces).
+            let v_str = v.encode(0, 2);
+
+            if v_str.starts_with('\n') {
+                lines.push(format!("{}:{}", k, v_str));
+            } else {
+                lines.push(format!("{}: {}", k, v_str));
+            }
+        }
+        return Ok(lines.join("\n"));
     }
-    
+
     // For non-dict root
     let s = ir.encode(0, 2);
     Ok(s.trim_start_matches('\n').to_string())
@@ -1101,4 +1199,203 @@ fn _toonverter_core(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(decode_toon, m)?)?;
     m.add_function(wrap_pyfunction!(encode_toon, m)?)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_toon_value_encode_null() {
+        let tv = ToonValue::Null;
+        assert_eq!(tv.encode(0, 2), "null");
+    }
+
+    #[test]
+    fn test_toon_value_encode_boolean() {
+        let tv_true = ToonValue::Boolean(true);
+        let tv_false = ToonValue::Boolean(false);
+        assert_eq!(tv_true.encode(0, 2), "true");
+        assert_eq!(tv_false.encode(0, 2), "false");
+    }
+
+    #[test]
+    fn test_toon_value_encode_integer() {
+        let tv = ToonValue::Integer(123);
+        assert_eq!(tv.encode(0, 2), "123");
+    }
+
+    #[test]
+    fn test_toon_value_encode_float() {
+        let tv = ToonValue::Float(123.45);
+        assert_eq!(tv.encode(0, 2), "123.45");
+    }
+
+    #[test]
+    fn test_toon_value_encode_float_nan() {
+        let tv = ToonValue::Float(f64::NAN);
+        assert_eq!(tv.encode(0, 2), "null");
+    }
+
+    #[test]
+    fn test_toon_value_encode_float_infinity() {
+        let tv_pos = ToonValue::Float(f64::INFINITY);
+        let tv_neg = ToonValue::Float(f64::NEG_INFINITY);
+        assert_eq!(tv_pos.encode(0, 2), "null");
+        assert_eq!(tv_neg.encode(0, 2), "null");
+    }
+
+    #[test]
+    fn test_toon_value_encode_float_negative_zero() {
+        let tv = ToonValue::Float(-0.0);
+        assert_eq!(tv.encode(0, 2), "0");
+    }
+
+    #[test]
+    fn test_toon_value_encode_string_simple() {
+        let tv = ToonValue::String("hello".to_string());
+        assert_eq!(tv.encode(0, 2), "hello");
+    }
+
+    #[test]
+    fn test_toon_value_encode_string_needs_quoting_space() {
+        let tv = ToonValue::String("hello world".to_string());
+        assert_eq!(tv.encode(0, 2), "\"hello world\"");
+    }
+
+    #[test]
+    fn test_toon_value_encode_string_needs_quoting_reserved() {
+        let tv = ToonValue::String("true".to_string());
+        assert_eq!(tv.encode(0, 2), "\"true\"");
+    }
+
+    #[test]
+    fn test_toon_value_encode_string_needs_quoting_number() {
+        let tv = ToonValue::String("123".to_string());
+        assert_eq!(tv.encode(0, 2), "\"123\"");
+    }
+
+    #[test]
+    fn test_toon_value_encode_dict_empty() {
+        let tv = ToonValue::Dict(IndexMap::new());
+        assert_eq!(tv.encode(0, 2), "{}");
+    }
+
+    #[test]
+    fn test_toon_value_encode_dict_simple() {
+        let mut map = IndexMap::new();
+        map.insert("name".to_string(), ToonValue::String("Alice".to_string()));
+        map.insert("age".to_string(), ToonValue::Integer(30));
+        let tv = ToonValue::Dict(map);
+        assert_eq!(tv.encode(0, 2), "\n  name: Alice\n  age: 30");
+    }
+
+    #[test]
+    fn test_toon_value_encode_list_empty() {
+        let tv = ToonValue::List(vec![]);
+        assert_eq!(tv.encode(0, 2), "[0]:");
+    }
+
+    #[test]
+    fn test_toon_value_encode_list_primitives() {
+        let tv = ToonValue::List(vec![
+            ToonValue::Integer(1),
+            ToonValue::String("two".to_string()),
+            ToonValue::Boolean(true),
+        ]);
+        assert_eq!(tv.encode(0, 2), "[3]: 1,two,true");
+    }
+
+    #[test]
+    fn test_to_toon_value_null() {
+        Python::with_gil(|py| {
+            let py_obj = py.None();
+            let tv = to_toon_value(&py_obj.into_bound(py)).unwrap();
+            assert_eq!(tv, ToonValue::Null);
+        });
+    }
+
+    #[test]
+    fn test_to_toon_value_boolean() {
+        Python::with_gil(|py| {
+            let py_true = true.into_py(py);
+            let py_false = false.into_py(py);
+            assert_eq!(
+                to_toon_value(&py_true.into_bound(py)).unwrap(),
+                ToonValue::Boolean(true)
+            );
+            assert_eq!(
+                to_toon_value(&py_false.into_bound(py)).unwrap(),
+                ToonValue::Boolean(false)
+            );
+        });
+    }
+
+    #[test]
+    fn test_to_toon_value_integer() {
+        Python::with_gil(|py| {
+            let py_obj: PyObject = 123.into_py(py);
+            let tv = to_toon_value(&py_obj.into_bound(py)).unwrap();
+            assert_eq!(tv, ToonValue::Integer(123));
+        });
+    }
+
+    #[test]
+    fn test_to_toon_value_float() {
+        Python::with_gil(|py| {
+            let py_obj: PyObject = 123.45.into_py(py);
+            let tv = to_toon_value(&py_obj.into_bound(py)).unwrap();
+            assert_eq!(tv, ToonValue::Float(123.45));
+        });
+    }
+
+    #[test]
+    fn test_to_toon_value_string() {
+        Python::with_gil(|py| {
+            let py_obj = PyString::new_bound(py, "hello");
+            let tv = to_toon_value(&py_obj.into_any()).unwrap();
+            assert_eq!(tv, ToonValue::String("hello".to_string()));
+        });
+    }
+
+    #[test]
+    fn test_to_toon_value_dict() {
+        Python::with_gil(|py| {
+            let dict = PyDict::new_bound(py);
+            dict.set_item("name", PyString::new_bound(py, "Alice"))
+                .unwrap();
+            dict.set_item("age", 30.into_py(py)).unwrap();
+            let tv = to_toon_value(&dict.into_any()).unwrap();
+
+            let mut expected_map = IndexMap::new();
+            expected_map.insert("name".to_string(), ToonValue::String("Alice".to_string()));
+            expected_map.insert("age".to_string(), ToonValue::Integer(30));
+            assert_eq!(tv, ToonValue::Dict(expected_map));
+        });
+    }
+
+    #[test]
+    fn test_to_toon_value_list() {
+        Python::with_gil(|py| {
+            let list = PyList::new_bound(py, &[] as &[PyObject]);
+            list.append(1.into_py(py)).unwrap();
+            list.append(PyString::new_bound(py, "two")).unwrap();
+            let tv = to_toon_value(&list.into_any()).unwrap();
+
+            let expected_list = vec![ToonValue::Integer(1), ToonValue::String("two".to_string())];
+            assert_eq!(tv, ToonValue::List(expected_list));
+        });
+    }
+
+    #[test]
+    fn test_to_toon_value_unsupported_type() {
+        Python::with_gil(|py| {
+            let py_obj: PyObject = py.eval_bound("object()", None, None).unwrap().into_py(py);
+            let py_obj_bound = py_obj.into_bound(py);
+            let err = to_toon_value(&py_obj_bound).unwrap_err();
+            assert!(err
+                .to_string()
+                .contains("Unsupported type for TOON encoding"));
+        });
+    }
 }

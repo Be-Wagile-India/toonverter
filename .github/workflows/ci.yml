@@ -42,8 +42,7 @@ jobs:
 
       - name: Type check with mypy
         run: |
-          # Only check core modules (skip integrations with optional deps)
-          mypy src/toonverter/core src/toonverter/encoders src/toonverter/decoders src/toonverter/analysis src/toonverter/utils || true
+          mypy src/toonverter
 
       - name: Test with pytest
         run: |

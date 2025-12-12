@@ -8,6 +8,25 @@ For the full detailed changelog, see the `CHANGELOG.md <https://github.com/Be-Wa
 Latest Releases
 ---------------
 
+Version 1.0.3 (2025-12-12)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Added**
+
+*   Rust-accelerated encoding and decoding for enhanced performance.
+*   Configurable parallelism for Python encoders, allowing thresholds for parallel processing of large collections.
+*   Truly streaming output for Python encoders, supporting `io.TextIOBase` objects to reduce memory usage for large outputs.
+*   Initial implementation of `PyToonBuffer` (Rust pyclass) to explore zero-copy Python types (though currently disabled).
+
+**Changed**
+
+*   Updated documentation to reflect Rust integration.
+
+**Fixed**
+
+*   Minor linting and type-checking issues in Python codebase.
+
+
 Version 1.0.2 (2025-01-17)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 

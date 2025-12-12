@@ -297,6 +297,7 @@ name = "toonverter-core"
 version = "0.1.0"
 dependencies = [
  "indexmap",
+ "once_cell",
  "pyo3",
  "rayon",
 ]

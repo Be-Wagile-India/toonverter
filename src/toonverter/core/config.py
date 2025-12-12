@@ -63,6 +63,33 @@ def _load_toml_config() -> dict[str, Any]:
 _file_config = _load_toml_config()
 
 
+def _get_int_setting(key: str, env_key: str, default: int) -> int:
+    """Get integer value from source (Env > File > Default)."""
+    # 1. Environment Variable
+    env_val = os.environ.get(env_key)
+    if env_val is not None:
+        try:
+            return int(env_val)
+        except ValueError:
+            warnings.warn(
+                f"Invalid integer value for environment variable {env_key}. Using default.",
+                stacklevel=2,
+            )
+
+    # 2. Config File
+    if key in _file_config:
+        file_val = _file_config[key]
+        if isinstance(file_val, int):
+            return file_val
+        warnings.warn(
+            f"Invalid integer value for '{key}' in config file. Using default.",
+            stacklevel=2,
+        )
+
+    # 3. Default
+    return default
+
+
 def _get_setting(key: str, env_key: str, default: bool) -> bool:
     """Get boolean value from source (Env > File > Default)."""
     # 1. Environment Variable
@@ -89,6 +116,11 @@ USE_RUST_DECODER = _get_setting("use_rust_decoder", "TOON_USE_RUST_DECODER", Tru
 
 # Encoder: Defaults to True as it is stable
 USE_RUST_ENCODER = _get_setting("use_rust_encoder", "TOON_USE_RUST_ENCODER", True)
+
+# Parallelism Threshold: Default to 1000 items
+PARALLELISM_THRESHOLD = _get_int_setting(
+    "parallelism_threshold", "TOON_PARALLELISM_THRESHOLD", 1000
+)
 
 # Validation logic
 if USE_RUST_DECODER and not _RUST_AVAILABLE:

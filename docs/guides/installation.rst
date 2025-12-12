@@ -20,6 +20,31 @@ This includes:
 * Token analysis with tiktoken
 * Basic Python API
 
+Rust Acceleration
+-----------------
+
+TOON Converter provides an optional Rust extension for significant performance improvements in
+encoding and decoding. This extension is **enabled by default** if installed.
+
+To take advantage of Rust acceleration:
+
+1.  **Install Rust Toolchain**: If you don't have Rust installed, use `rustup`:
+
+    .. code-block:: bash
+
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+2.  **Install `toonverter` with Rust features**:
+
+    .. code-block:: bash
+
+        pip install toonverter[rust]
+
+    This command will attempt to compile and link the Rust extension.
+
+For more details on controlling Rust acceleration (e.g., disabling it), refer to the
+:doc:`configuration` guide.
+
 Individual Framework Integrations
 ----------------------------------
 
@@ -134,6 +159,9 @@ Install in Editable Mode
 
 .. code-block:: bash
 
+   # Build and install the Rust extension (if contributing to Rust)
+   maturin develop
+
    # Install with all features
    pip install -e ".[all]"
 
@@ -220,11 +248,13 @@ Development Dependencies
 
 For contributors:
 
-* **pytest** >= 7.4.0
-* **mypy** >= 1.7.0
-* **ruff** >= 0.1.0
-* **sphinx** >= 7.2.0
-* **pre-commit** >= 3.5.0
+* `rustup` - Rust toolchain installer
+* `maturin` - Rust-Python binding tool
+* ``pytest`` >= 7.4.0
+* ``mypy`` >= 1.7.0
+* ``ruff`` >= 0.1.0
+* ``sphinx`` >= 7.2.0
+* ``pre-commit`` >= 3.5.0
 
 Platform Support
 ----------------

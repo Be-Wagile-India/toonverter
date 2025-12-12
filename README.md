@@ -11,8 +11,8 @@
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](http://mypy-lang.org/)
 [![TOON Spec v2.0](https://img.shields.io/badge/TOON%20Spec-v2.0%20✓-success.svg)](https://github.com/toon-format/spec)
-[![Tests](https://img.shields.io/badge/tests-563%20passing-success.svg)](tests/)
-[![Coverage](https://img.shields.io/badge/coverage-81.03%25-brightgreen.svg)](htmlcov/index.html)
+[![Tests](https://img.shields.io/badge/tests-968%20passing-success.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-86.26%25-brightgreen.svg)](htmlcov/index.html)
 
 **Token-Optimized Object Notation (TOON) v2.0** - The most comprehensive Python library for TOON format, featuring **100% spec compliance**, 10 framework integrations, and production-ready tools for reducing LLM token usage by 30-60%.
 
@@ -22,7 +22,7 @@
 
 | Benefit                | Impact | Example |
 |------------------------|--------|---------|
-| ** Faster Processing** | Smaller payloads = faster responses | 200ms → 80ms average latency |
+| ** Faster Processing** | Smaller payloads = faster responses (up to 5x faster with Rust) | 200ms → 80ms average latency |
 | ** Better Context**    | More data in same token limit | Fit 10 docs instead of 6 in context |
 | ** Works Everywhere**  | 10 framework integrations | LangChain, Pandas, FastAPI, SQLAlchemy, MCP |
 | ** Easy to Use**       | 2 lines of code to get started | `import toonverter as toon; toon.encode(data)` |
@@ -35,6 +35,7 @@
 ## 🚀 Key Features
 
 ### Core Capabilities
+- **Rust-Accelerated Core**: Optional Rust extension for native-speed encoding/decoding.
 - **100% TOON v2.0 Spec Compliant**: All 26 specification tests passing
 - **30-60% Token Savings**: Verified with benchmarks on real-world data
 - **Multi-Format Support**: JSON, YAML, TOML, CSV, XML ↔ TOON
@@ -59,6 +60,18 @@
 
 
 ## Installation
+
+### Rust Acceleration (Optional)
+
+`toonverter` includes an optional Rust extension for significant performance boosts in encoding and decoding. It is **enabled by default** if detected.
+
+To install with Rust acceleration:
+
+```bash
+pip install toonverter[rust]
+```
+
+This will attempt to compile and link the Rust extension. Ensure you have a Rust toolchain (e.g., `rustup`) installed.
 
 ### Basic Installation
 
@@ -117,6 +130,8 @@ pip install toonverter[all]  # All integrations + CLI
 ```bash
 git clone https://github.com/yourusername/toonverter.git
 cd toonverter
+# Install the Rust extension (if desired)
+maturin develop
 pip install -e ".[all]"
 make install-dev  # Install dev dependencies
 ```
@@ -236,7 +251,7 @@ result = diff(old_ver, new_ver)
 print(f"Found {len(result.changes)} changes")
 ```
 
-#### Smart Compression
+### Smart Compression
 Apply Smart Dictionary Compression (SDC) for maximum efficiency.
 
 ```python
@@ -249,7 +264,21 @@ compressed = compress(large_data)
 original = decompress(compressed)
 ```
 
-#### Context Optimization
+#### Rust Acceleration Configuration
+The Rust encoder and decoder are enabled by default if the Rust extension is installed. You can control their behavior using environment variables or `toonverter.toml`:
+
+- **Environment Variables**:
+  - `TOON_USE_RUST_ENCODER=false` to disable Rust encoder.
+  - `TOON_USE_RUST_DECODER=false` to disable Rust decoder. (Enable with caution if specific issues are encountered with indented list parsing.)
+
+- **`toonverter.toml` or `pyproject.toml`**:
+  ```toml
+  [core]
+  use_rust_encoder = true  # Enabled by default
+  use_rust_decoder = true  # Enabled by default
+  ```
+
+### Context Optimization
 Intelligently prune, truncate, or round data to fit within a strict token budget.
 
 ```python
