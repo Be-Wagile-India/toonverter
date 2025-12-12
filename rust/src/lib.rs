@@ -1204,6 +1204,12 @@ fn _toonverter_core(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use once_cell::sync::Lazy;
+
+    // Ensure Python interpreter is prepared before tests run (since auto-initialize is disabled).
+    static INITIALIZED: Lazy<()> = Lazy::new(|| {
+        pyo3::prepare_freethreaded_python();
+    });
 
     #[test]
     fn test_toon_value_encode_null() {
@@ -1308,6 +1314,7 @@ mod tests {
 
     #[test]
     fn test_to_toon_value_null() {
+        let _ = &*INITIALIZED;
         Python::with_gil(|py| {
             let py_obj = py.None();
             let tv = to_toon_value(&py_obj.into_bound(py)).unwrap();
@@ -1317,6 +1324,7 @@ mod tests {
 
     #[test]
     fn test_to_toon_value_boolean() {
+        let _ = &*INITIALIZED;
         Python::with_gil(|py| {
             let py_true = true.into_py(py);
             let py_false = false.into_py(py);
@@ -1333,6 +1341,7 @@ mod tests {
 
     #[test]
     fn test_to_toon_value_integer() {
+        let _ = &*INITIALIZED;
         Python::with_gil(|py| {
             let py_obj: PyObject = 123.into_py(py);
             let tv = to_toon_value(&py_obj.into_bound(py)).unwrap();
@@ -1342,6 +1351,7 @@ mod tests {
 
     #[test]
     fn test_to_toon_value_float() {
+        let _ = &*INITIALIZED;
         Python::with_gil(|py| {
             let py_obj: PyObject = 123.45.into_py(py);
             let tv = to_toon_value(&py_obj.into_bound(py)).unwrap();
@@ -1351,6 +1361,7 @@ mod tests {
 
     #[test]
     fn test_to_toon_value_string() {
+        let _ = &*INITIALIZED;
         Python::with_gil(|py| {
             let py_obj = PyString::new_bound(py, "hello");
             let tv = to_toon_value(&py_obj.into_any()).unwrap();
@@ -1360,6 +1371,7 @@ mod tests {
 
     #[test]
     fn test_to_toon_value_dict() {
+        let _ = &*INITIALIZED;
         Python::with_gil(|py| {
             let dict = PyDict::new_bound(py);
             dict.set_item("name", PyString::new_bound(py, "Alice"))
@@ -1376,6 +1388,7 @@ mod tests {
 
     #[test]
     fn test_to_toon_value_list() {
+        let _ = &*INITIALIZED;
         Python::with_gil(|py| {
             let list = PyList::new_bound(py, &[] as &[PyObject]);
             list.append(1.into_py(py)).unwrap();
@@ -1389,6 +1402,7 @@ mod tests {
 
     #[test]
     fn test_to_toon_value_unsupported_type() {
+        let _ = &*INITIALIZED;
         Python::with_gil(|py| {
             let py_obj: PyObject = py.eval_bound("object()", None, None).unwrap().into_py(py);
             let py_obj_bound = py_obj.into_bound(py);
