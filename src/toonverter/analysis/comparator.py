@@ -59,8 +59,12 @@ class FormatComparator:
             analyses.append(analysis)
 
         # Find best and worst formats
-        best_format = min(analyses, key=lambda a: a.token_count).format
-        worst_format = max(analyses, key=lambda a: a.token_count).format
+        if not analyses:
+            best_format = ""
+            worst_format = ""
+        else:
+            best_format = min(analyses, key=lambda a: a.token_count).format
+            worst_format = max(analyses, key=lambda a: a.token_count).format
 
         # Generate recommendations
         recommendations = self._generate_recommendations(analyses)
@@ -88,7 +92,10 @@ class FormatComparator:
         best = min(analyses, key=lambda a: a.token_count)
         worst = max(analyses, key=lambda a: a.token_count)
 
-        savings = ((worst.token_count - best.token_count) / worst.token_count) * 100
+        if worst.token_count == 0:
+            savings = 0.0
+        else:
+            savings = ((worst.token_count - best.token_count) / worst.token_count) * 100
 
         recommendations.append(
             f"Use '{best.format}' format for optimal token efficiency ({best.token_count} tokens)"
@@ -107,7 +114,7 @@ class FormatComparator:
         # Check for tabular data opportunity
         json_analysis = next((a for a in analyses if a.format == "json"), None)
         if json_analysis and toon_analysis:
-            if toon_analysis.token_count < json_analysis.token_count * 0.7:
+            if toon_analysis.token_count <= json_analysis.token_count * 0.7:
                 recommendations.append(
                     "This data appears to be tabular - TOON format is highly efficient"
                 )

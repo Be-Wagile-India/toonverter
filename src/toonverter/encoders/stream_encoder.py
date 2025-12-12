@@ -4,6 +4,7 @@ This encoder provides memory-efficient streaming encoding for large datasets,
 avoiding recursion limits and memory overhead of building full strings.
 """
 
+import io
 from collections import deque
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -93,7 +94,8 @@ class ToonStreamEncoder:
                     return
 
                 # Default to LIST form for streaming root arrays
-                yield f"[{len(data)}]:"
+                yield f"[{len(data)}]:\n"
+                first_yield = False
 
                 stack.append(
                     EncoderContext(
@@ -105,7 +107,8 @@ class ToonStreamEncoder:
                     yield "[0]:"
                     return
 
-                yield f"[{data.length}]:"
+                yield f"[{data.length}]:\n"
+                first_yield = False
 
                 stack.append(
                     EncoderContext(
@@ -148,14 +151,14 @@ class ToonStreamEncoder:
                                 )
 
                         elif isinstance(value, list):
+                            yield f"{prefix}{indent}{key}:"
+                            first_yield = False
+
                             if not value:
-                                yield f"{prefix}{indent}{key}[0]:"
-                                first_yield = False
+                                yield f"\n{self.indent_mgr.indent(ctx.depth + 1)}[0]:"
                             else:
                                 # Start array header
-                                yield f"{prefix}{indent}{key}[{len(value)}]:"
-                                first_yield = False
-
+                                yield f"\n{self.indent_mgr.indent(ctx.depth + 1)}[{len(value)}]:\n"
                                 stack.append(
                                     EncoderContext(
                                         type=ContextType.LIST,
@@ -164,13 +167,13 @@ class ToonStreamEncoder:
                                     )
                                 )
                         elif isinstance(value, StreamList):
-                            if value.length == 0:
-                                yield f"{prefix}{indent}{key}[0]:"
-                                first_yield = False
-                            else:
-                                yield f"{prefix}{indent}{key}[{value.length}]:"
-                                first_yield = False
+                            yield f"{prefix}{indent}{key}:"
+                            first_yield = False
 
+                            if value.length == 0:
+                                yield f"\n{self.indent_mgr.indent(ctx.depth + 1)}[0]:"
+                            else:
+                                yield f"\n{self.indent_mgr.indent(ctx.depth + 1)}[{value.length}]:\n"
                                 stack.append(
                                     EncoderContext(
                                         type=ContextType.LIST,
@@ -267,3 +270,25 @@ class ToonStreamEncoder:
             return self.str_enc.encode(val)
         msg = f"Unsupported type: {type(val)}"
         raise EncodingError(msg)
+
+    def stream_encode(self, data: ToonValue | StreamList, output_stream: io.TextIOBase) -> None:
+        """Encode data to TOON format and write directly to a text stream.
+
+        This method avoids building the entire output string in memory, making it suitable
+        for extremely large outputs.
+
+        Args:
+            data: Data to encode (dict, list, primitive, or StreamList).
+            output_stream: A `io.TextIOBase` object to which the encoded TOON string
+                           will be written.
+        Raises:
+            EncodingError: If streaming encoding fails.
+        """
+        try:
+            for chunk in self.iterencode(data):
+                output_stream.write(chunk)
+        except EncodingError:
+            raise
+        except Exception as e:
+            msg = f"Failed to write streamed TOON output: {e}"
+            raise EncodingError(msg) from e

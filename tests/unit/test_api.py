@@ -44,7 +44,7 @@ class TestOOPAPI:
     def test_decoder_class(self):
         """Test Decoder class."""
         decoder = toon.Decoder(format="toon")
-        result = decoder.decode("{name:Alice}")
+        result = decoder.decode("name: Alice")
         assert result["name"] == "Alice"
 
     def test_analyzer_class(self, sample_dict):

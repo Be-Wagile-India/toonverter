@@ -63,3 +63,44 @@ class TestSmartCompressor:
         # Should not define symbols for "short"
         assert "short" not in compressed["$symbols"].values()
         assert compressed["$payload"] == data
+
+    def test_decompress_non_toon_sdc_v1_schema_missing_symbols(self):
+        # Covers line 50: if "$symbols" not in compressed_data or "$payload" not in compressed_data:
+        compressor = SmartCompressor()
+        # Missing $symbols, should return data as-is if schema is not "toon-sdc-v1"
+        compressed_data = {"$schema": "not-toon-sdc-v1", "$payload": {"key": "value"}}
+        restored = compressor.decompress(compressed_data)
+        assert restored == compressed_data
+
+    def test_decompress_non_toon_sdc_v1_schema_missing_payload(self):
+        # Covers line 50: if "$symbols" not in compressed_data or "$payload" not in compressed_data:
+        compressor = SmartCompressor()
+        # Missing $payload, should return data as-is if schema is not "toon-sdc-v1"
+        compressed_data = {"$schema": "not-toon-sdc-v1", "$symbols": {"@0": "test"}}
+        restored = compressor.decompress(compressed_data)
+        assert restored == compressed_data
+
+    def test_decompress_non_toon_sdc_v1_schema_missing_both(self):
+        # Covers line 50: if "$symbols" not in compressed_data or "$payload" not in compressed_data:
+        compressor = SmartCompressor()
+        # Missing both, should return data as-is if schema is not "toon-sdc-v1"
+        compressed_data = {"$schema": "not-toon-sdc-v1"}
+        restored = compressor.decompress(compressed_data)
+        assert restored == compressed_data
+
+    def test_decompress_non_toon_sdc_v1_schema_with_symbols_and_payload(self):
+        # Covers the branch 49->52: schema != "toon-sdc-v1" but symbols and payload exist
+        compressor = SmartCompressor()
+        compressed_data = {
+            "$schema": "some-other-schema",
+            "$symbols": {"@0": "some_value"},
+            "$payload": "@0",
+        }
+        # In this case, the method should proceed to attempt decompression,
+        # so the result should be the resolved payload, not the original compressed_data.
+        # This will actually attempt to decompress the "@0" symbol.
+        expected_decompressed = compressor._resolve(
+            compressed_data["$payload"], compressed_data["$symbols"]
+        )
+        restored = compressor.decompress(compressed_data)
+        assert restored == expected_decompressed

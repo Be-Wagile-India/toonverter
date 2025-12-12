@@ -20,6 +20,7 @@ Basic Options
        sort_keys=False,        # Sort object keys alphabetically
        indent_size=2,          # Spaces per indentation level
        use_type_annotations=False,  # Add type annotations
+       parallelism_threshold=1000, # Minimum size for parallel encoding
    )
 
    result = encoder.encode(data)
@@ -152,10 +153,48 @@ Set default options for the facade API:
        compact=False,
        delimiter=',',
        indent_size=2,
+       parallelism_threshold=2000, # Use parallelism for collections > 2000 items
+       use_rust_encoder=True,    # Explicitly enable Rust encoder
+       use_rust_decoder=True,   # Explicitly enable Rust decoder
    )
 
    # Use configured defaults
    encoded = toon.encode(data)
+
+Rust Acceleration Configuration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The optional `Rust core` provides significant performance boosts. It's enabled by default if the
+extension is successfully installed.
+
+You can control its behavior:
+
+- **Environment Variables**:
+  - ``TOON_USE_RUST_ENCODER=false``: Disable the Rust encoder.
+  - ``TOON_USE_RUST_DECODER=false``: Disable the Rust decoder. (Note: Enable with caution if specific issues are encountered with indented list parsing.)
+
+- **``toonverter.toml`` or ``pyproject.toml``**:
+  .. code-block:: toml
+
+     [core]
+     use_rust_encoder = true  # Enabled by default
+     use_rust_decoder = true  # Enabled by default
+
+Parallelism Threshold
+^^^^^^^^^^^^^^^^^^^^^
+
+For Python-based encoding, you can configure the threshold at which parallel processing is
+used for large collections (dictionaries and lists). Below this size, sequential processing
+is used to avoid parallelism overhead.
+
+- **Environment Variables**:
+  - ``TOON_PARALLELISM_THRESHOLD=1000``: Set the minimum collection size for parallel processing.
+
+- **``toonverter.toml`` or ``pyproject.toml``**:
+  .. code-block:: toml
+
+     [core]
+     parallelism_threshold = 1000  # Default: 1000 items
 
 Environment Variables
 ---------------------
@@ -167,6 +206,12 @@ Configure via environment variables:
    export TOONVERTER_STRICT=true
    export TOONVERTER_DELIMITER=tab
    export TOONVERTER_INDENT_SIZE=4
+
+.. code-block:: bash
+
+   export TOON_USE_RUST_ENCODER=true
+   export TOON_USE_RUST_DECODER=true # Enable with caution if specific issues are encountered with indented list parsing.
+   export TOON_PARALLELISM_THRESHOLD=500
 
 .. code-block:: python
 

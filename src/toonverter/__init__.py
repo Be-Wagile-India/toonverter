@@ -444,7 +444,29 @@ __all__ = [
     "decompress",
     # Redis
     "RedisToonWrapper",
+    # Rust Batch API
+    "convert_json_batch",
+    "convert_toon_batch",
+    "convert_json_directory",
 ]
+
+
+# Attempt to import Rust extension features
+try:
+    from ._toonverter_core import (
+        convert_json_batch,
+        convert_json_directory,
+        convert_toon_batch,
+    )
+except ImportError:
+    # Rust extension not built or available
+    def _rust_missing(*args: Any, **kwargs: Any) -> Any:
+        msg = "Rust extension (_toonverter_core) is not available."
+        raise NotImplementedError(msg)
+
+    convert_json_batch = _rust_missing  # type: ignore
+    convert_toon_batch = _rust_missing  # type: ignore
+    convert_json_directory = _rust_missing  # type: ignore
 
 
 def infer_schema(data: Any) -> "SchemaField":

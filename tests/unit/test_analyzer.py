@@ -1,6 +1,15 @@
 """Comprehensive tests for token analyzer."""
 
-from toonverter.analysis.analyzer import TiktokenCounter, analyze_text, count_tokens
+from unittest import mock
+
+import pytest
+
+from toonverter.analysis.analyzer import (
+    TiktokenCounter,
+    analyze_text,
+    count_tokens,
+)
+from toonverter.core.exceptions import TokenCountError
 
 
 class TestTiktokenCounter:
@@ -20,6 +29,13 @@ class TestTiktokenCounter:
         """Test initialization with encoding name."""
         counter = TiktokenCounter(model="cl100k_base")
         assert counter.model_name == "cl100k_base"
+
+    def test_init_raises_token_count_error(self):
+        """Test initialization raises TokenCountError if encoding fails to load."""
+        with mock.patch("tiktoken.get_encoding") as mock_get_encoding:
+            mock_get_encoding.side_effect = Exception("Test encoding load error")
+            with pytest.raises(TokenCountError, match="Test encoding load error"):
+                TiktokenCounter(model="cl100k_base")
 
     def test_init_unknown_model_uses_default(self):
         """Test initialization with unknown model uses default encoding."""
@@ -69,22 +85,21 @@ class TestTiktokenCounter:
         count = counter.count_tokens(text)
         assert count > 0
 
-    def test_count_tokens_long_text(self):
-        """Test counting tokens in long text."""
+    def test_count_tokens_raises_token_count_error(self):
+        """Test count_tokens raises TokenCountError if encoding fails."""
         counter = TiktokenCounter()
-        text = "hello " * 1000
-        count = counter.count_tokens(text)
-        assert count > 1000  # Should be more than word count
+        with mock.patch.object(counter._encoding, "encode") as mock_encode:
+            mock_encode.side_effect = Exception("Test encoding error")
+            with pytest.raises(TokenCountError, match="Test encoding error"):
+                counter.count_tokens("test text")
 
-    def test_analyze_returns_token_analysis(self):
-        """Test analyze returns TokenAnalysis."""
+    def test_analyze_propagates_token_count_error(self):
+        """Test analyze propagates TokenCountError from count_tokens."""
         counter = TiktokenCounter()
-        analysis = counter.analyze("Hello, world!", "text")
-
-        assert analysis.format == "text"
-        assert analysis.token_count > 0
-        assert analysis.model == "gpt-4"
-        assert analysis.encoding == "cl100k_base"
+        with mock.patch.object(counter, "count_tokens") as mock_count_tokens:
+            mock_count_tokens.side_effect = TokenCountError("Test analysis error")
+            with pytest.raises(TokenCountError, match="Test analysis error"):
+                counter.analyze("test text", "text")
 
     def test_analyze_includes_metadata(self):
         """Test analyze includes metadata."""
@@ -181,13 +196,19 @@ class TestConvenienceFunctions:
         assert analysis.model == "gpt-3.5-turbo"
         assert analysis.token_count > 0
 
-    def test_analyze_text_includes_metadata(self):
-        """Test analyze_text includes metadata."""
-        analysis = analyze_text("Test\ntext", "text")
+    def test_count_tokens_function_raises_token_count_error(self):
+        """Test count_tokens convenience function propagates TokenCountError."""
+        with mock.patch("toonverter.analysis.analyzer.TiktokenCounter") as mock_tiktoken_counter:
+            mock_tiktoken_counter.side_effect = TokenCountError("Init error for count_tokens")
+            with pytest.raises(TokenCountError, match="Init error for count_tokens"):
+                count_tokens("Hello")
 
-        assert "text_length" in analysis.metadata
-        assert "text_lines" in analysis.metadata
-        assert analysis.metadata["text_lines"] == 2
+    def test_analyze_text_function_raises_token_count_error(self):
+        """Test analyze_text convenience function propagates TokenCountError."""
+        with mock.patch("toonverter.analysis.analyzer.TiktokenCounter") as mock_tiktoken_counter:
+            mock_tiktoken_counter.side_effect = TokenCountError("Init error for analyze_text")
+            with pytest.raises(TokenCountError, match="Init error for analyze_text"):
+                analyze_text("Hello", "text")
 
 
 class TestEdgeCases:

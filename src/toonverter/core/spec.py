@@ -134,6 +134,7 @@ class ToonEncodeOptions:
     strict: bool = True
     token_budget: int | None = None
     optimization_policy: OptimizationPolicy | None = None
+    parallelism_threshold: int | None = None
 
     def __post_init__(self) -> None:
         """Validate options."""
