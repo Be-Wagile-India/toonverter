@@ -1,0 +1,87 @@
+use indexmap::IndexMap;
+use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
+use pyo3::types::{PyDict, PyList, PyString};
+
+use crate::ir::ToonValue;
+
+pub fn to_toon_value(obj: &Bound<'_, PyAny>) -> PyResult<ToonValue> {
+    if obj.is_none() {
+        Ok(ToonValue::Null)
+    } else if let Ok(b) = obj.extract::<bool>() {
+        Ok(ToonValue::Boolean(b))
+    } else if let Ok(i) = obj.extract::<i64>() {
+        Ok(ToonValue::Integer(i))
+    } else if let Ok(f) = obj.extract::<f64>() {
+        Ok(ToonValue::Float(f))
+    } else if let Ok(s) = obj.extract::<String>() {
+        Ok(ToonValue::String(s))
+    } else if let Ok(dict) = obj.downcast::<PyDict>() {
+        let mut map = IndexMap::new();
+        for (k, v) in dict {
+            let k_str = k.extract::<String>()?;
+            let v_val = to_toon_value(&v)?;
+            map.insert(k_str, v_val);
+        }
+        Ok(ToonValue::Dict(map))
+    } else if let Ok(list) = obj.downcast::<PyList>() {
+        let mut vec = Vec::with_capacity(list.len());
+        for item in list {
+            vec.push(to_toon_value(&item)?);
+        }
+        Ok(ToonValue::List(vec))
+    } else if let Ok(py_str) = obj.downcast::<PyString>() {
+        Ok(ToonValue::String(py_str.to_str()?.to_string()))
+    } else {
+        Err(PyValueError::new_err("Unsupported type for TOON encoding"))
+    }
+}
+
+pub fn to_py_object(py: Python, val: &ToonValue) -> PyResult<PyObject> {
+    match val {
+        ToonValue::Null => Ok(py.None()),
+        ToonValue::Boolean(b) => Ok(b.into_py(py)),
+        ToonValue::Integer(i) => Ok(i.into_py(py)),
+        ToonValue::Float(f) => Ok(f.into_py(py)),
+        ToonValue::String(s) => Ok(PyString::new_bound(py, s).into_py(py)),
+        ToonValue::List(list) => {
+            let py_list = PyList::empty_bound(py);
+            for item in list {
+                py_list.append(to_py_object(py, item)?)?;
+            }
+            Ok(py_list.into_py(py))
+        }
+        ToonValue::Dict(map) => {
+            let py_dict = PyDict::new_bound(py);
+            for (k, v) in map {
+                py_dict.set_item(k, to_py_object(py, v)?)?;
+            }
+            Ok(py_dict.into_py(py))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use once_cell::sync::Lazy;
+
+    static INITIALIZED: Lazy<()> = Lazy::new(|| {
+        pyo3::prepare_freethreaded_python();
+    });
+
+    #[test]
+    fn test_conversion_roundtrip() {
+        let _ = &*INITIALIZED;
+        Python::with_gil(|py| {
+            // Dict
+            let mut map = IndexMap::new();
+            map.insert("a".to_string(), ToonValue::Integer(1));
+            let tv = ToonValue::Dict(map);
+
+            let py_obj = to_py_object(py, &tv).unwrap();
+            let back = to_toon_value(py_obj.bind(py)).unwrap();
+            assert_eq!(tv, back);
+        });
+    }
+}

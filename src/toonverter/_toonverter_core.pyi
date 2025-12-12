@@ -5,3 +5,19 @@
 from typing import Any
 
 def decode_toon(text: str) -> Any: ...
+def encode_toon(obj: Any) -> str: ...
+
+# Returns list of (path, content_or_error, is_error)
+def convert_json_batch(
+    paths: list[str], output_dir: str | None = None
+) -> list[tuple[str, str, bool]]: ...
+
+# Returns list of (path, content_or_error, is_error)
+def convert_toon_batch(
+    paths: list[str], output_dir: str | None = None
+) -> list[tuple[str, str, bool]]: ...
+
+# Returns list of (path, content_or_error, is_error)
+def convert_json_directory(
+    dir_path: str, recursive: bool = False, output_dir: str | None = None
+) -> list[tuple[str, str, bool]]: ...

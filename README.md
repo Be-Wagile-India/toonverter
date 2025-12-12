@@ -11,8 +11,8 @@
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](http://mypy-lang.org/)
 [![TOON Spec v2.0](https://img.shields.io/badge/TOON%20Spec-v2.0%20✓-success.svg)](https://github.com/toon-format/spec)
-[![Tests](https://img.shields.io/badge/tests-968%20passing-success.svg)](tests/)
-[![Coverage](https://img.shields.io/badge/coverage-86.26%25-brightgreen.svg)](htmlcov/index.html)
+[![Tests](https://img.shields.io/badge/tests-976%20passing-success.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-86.11%25-brightgreen.svg)](htmlcov/index.html)
 
 **Token-Optimized Object Notation (TOON) v2.0** - The most comprehensive Python library for TOON format, featuring **100% spec compliance**, 10 framework integrations, and production-ready tools for reducing LLM token usage by 30-60%.
 
@@ -643,6 +643,37 @@ Only 5 escape sequences are allowed:
 For full specification details, see [TOON v2.0 Spec](https://github.com/toon-format/spec).
 
 ## Advanced Features
+
+### High-Performance Batch Processing
+
+Use the Rust-accelerated batch API to process millions of files in parallel with constant memory usage. This is 7-50x faster than standard loops.
+
+```python
+import toonverter as toon
+
+# 1. Memory Mode (Returns dict of results)
+# Best for small-to-medium batches (<500MB)
+results = toon.convert_json_batch(
+    ["data/file1.json", "data/file2.json"]
+)
+# results = [('data/file1.json', 'name: Alice', False), ...]
+
+# 2. Disk Streaming Mode (Writes files directly)
+# Best for massive datasets (Terabytes) - Constant Memory
+# Writes .toon files to 'output_dir'
+results = toon.convert_json_batch(
+    ["data/large1.json", "data/large2.json"],
+    output_dir="./output"
+)
+
+# 3. Directory Auto-Scan
+# Recursively finds and converts all .json files
+results = toon.convert_json_directory(
+    "./data_folder",
+    recursive=True,
+    output_dir="./output"
+)
+```
 
 ### Custom Format Adapters
 

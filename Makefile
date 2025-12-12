@@ -52,7 +52,13 @@ test: ## Run all Python tests
 	$(PYTEST) -v
 
 test-rust: ## Run all Rust tests (sequentially)
-	$(RUST_COMMON_FLAGS) $(CARGO) test --manifest-path rust/Cargo.toml -- --test-threads=1
+	$(RUST_COMMON_FLAGS) $(CARGO) test --manifest-path rust/Cargo.toml --no-default-features -- --test-threads=1
+
+install-rust-cov: ## Install cargo-tarpaulin for Rust test coverage
+	$(CARGO) install cargo-tarpaulin
+
+test-rust-cov: ## Run Rust tests with coverage report (requires cargo-tarpaulin)
+	$(RUST_COMMON_FLAGS) $(CARGO) tarpaulin --manifest-path rust/Cargo.toml --no-default-features --out Html --output-dir coverage-rust
 
 test-cov: ## Run tests with detailed coverage report
 	$(PYTEST) -v --cov=$(SRC_DIR) --cov-report=html --cov-report=term-missing
