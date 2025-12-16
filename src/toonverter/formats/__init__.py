@@ -7,6 +7,7 @@ the Strategy pattern.
 from .base import BaseFormatAdapter
 from .csv_format import CsvFormatAdapter
 from .json_format import JsonFormatAdapter
+from .jsonl_format import JsonlFormatAdapter
 from .toml_format import TomlFormatAdapter
 from .toon_format import ToonFormatAdapter
 from .xml_format import XmlFormatAdapter
@@ -17,6 +18,7 @@ __all__ = [
     "BaseFormatAdapter",
     "CsvFormatAdapter",
     "JsonFormatAdapter",
+    "JsonlFormatAdapter",
     "TomlFormatAdapter",
     "ToonFormatAdapter",
     "XmlFormatAdapter",
@@ -39,6 +41,12 @@ def register_default_formats() -> None:
 
     # Always available formats
     register_if_not_exists("json", JsonFormatAdapter())
+
+    # JSONL/NDJSON
+    jsonl_adapter = JsonlFormatAdapter()
+    register_if_not_exists("jsonl", jsonl_adapter)
+    register_if_not_exists("ndjson", jsonl_adapter)
+
     register_if_not_exists("toon", ToonFormatAdapter())
     register_if_not_exists("csv", CsvFormatAdapter())
     register_if_not_exists("xml", XmlFormatAdapter())

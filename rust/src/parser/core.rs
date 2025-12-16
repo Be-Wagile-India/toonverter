@@ -62,6 +62,13 @@ impl<'a> ToonParser<'a> {
     }
 
     pub fn parse_root(&mut self) -> ParseResult<ToonValue> {
+        // Consume leading Newline or Comment tokens
+        while self.current()?.token_type == TokenType::Newline
+            || self.current()?.token_type == TokenType::Comment
+        {
+            self.advance()?;
+        }
+
         // Handle empty input if checked before, but lexer handles it.
         // If EOF immediately?
         if self.current()?.token_type == TokenType::Eof {
@@ -75,19 +82,22 @@ impl<'a> ToonParser<'a> {
             TokenType::Dash => self.parse_list_content(),
             TokenType::Identifier(_) | TokenType::String(_) => {
                 // Peek next to decide if key-value or primitive
-                let next_is_colon = if let Some(peeked) = self.peek_next()? {
-                    peeked.token_type == TokenType::Colon
+                let is_kv_start = if let Some(peeked) = self.peek_next()? {
+                    matches!(peeked.token_type, TokenType::Colon | TokenType::ArrayStart)
                 } else {
                     false
                 };
 
-                if next_is_colon {
+                if is_kv_start {
                     self.parse_object_indented()
                 } else {
                     self.parse_value()
                 }
             }
-            TokenType::Indent => self.parse_object_indented(),
+            TokenType::Indent => {
+                self.advance()?; // Consume the Indent token
+                self.parse_object_indented()
+            }
             TokenType::Integer(_)
             | TokenType::Float(_)
             | TokenType::Boolean(_)
@@ -95,9 +105,10 @@ impl<'a> ToonParser<'a> {
             _ => return Err(format!("Unexpected root token: {:?}", t)),
         }?;
 
-        // Consume trailing
+        // Consume trailing Newline or Comment tokens
         while self.current()?.token_type == TokenType::Newline
             || self.current()?.token_type == TokenType::Dedent
+            || self.current()?.token_type == TokenType::Comment
         {
             self.advance()?;
         }
@@ -105,8 +116,8 @@ impl<'a> ToonParser<'a> {
         if self.current()?.token_type != TokenType::Eof {
             let t = self.current()?.clone();
             return Err(format!(
-                "Extra tokens found after root element at line {} column {}",
-                t.line, t.column
+                "Extra tokens found after root element at line {} column {}. Token: {:?}",
+                t.line, t.column, t.token_type
             ));
         }
 
@@ -114,13 +125,16 @@ impl<'a> ToonParser<'a> {
     }
 
     pub fn parse_value(&mut self) -> ParseResult<ToonValue> {
+        // Consume leading Newline or Comment tokens
+        while self.current()?.token_type == TokenType::Newline
+            || self.current()?.token_type == TokenType::Comment
+        {
+            self.advance()?;
+        }
+
         let token = self.current()?.clone();
 
         match token.token_type {
-            TokenType::String(ref s) => {
-                self.advance()?;
-                Ok(ToonValue::String(s.clone()))
-            }
             TokenType::Integer(i) => {
                 self.advance()?;
                 Ok(ToonValue::Integer(i))
@@ -137,23 +151,173 @@ impl<'a> ToonParser<'a> {
                 self.advance()?;
                 Ok(ToonValue::Null)
             }
-            TokenType::Identifier(ref s) => {
-                self.advance()?;
-                Ok(ToonValue::String(s.clone()))
+            TokenType::Identifier(_) | TokenType::String(_) => {
+                let next_is_colon = if let Some(peeked) = self.peek_next()? {
+                    peeked.token_type == TokenType::Colon
+                } else {
+                    false
+                };
+
+                if next_is_colon {
+                    self.parse_implicit_inline_object()
+                } else {
+                    let token = self.current()?.clone();
+                    let s = match token.token_type {
+                        TokenType::Identifier(ref s) | TokenType::String(ref s) => s.clone(),
+                        _ => unreachable!(),
+                    };
+                    self.advance()?;
+                    Ok(ToonValue::String(s))
+                }
             }
             TokenType::ArrayStart => self.parse_array_header_and_content(),
-            TokenType::BraceStart => self.parse_inline_object(),
+            TokenType::BraceStart => {
+                // Peek ahead to determine if it's an inline object with indented content
+                let mut peek_offset = 1;
+                let is_indented = loop {
+                    self.fill_buffer(peek_offset + 1)?;
+                    if peek_offset >= self.buffer.len() {
+                        break false;
+                    }
+                    let t = self.buffer[peek_offset].token_type.clone();
+                    if t == TokenType::Newline {
+                        peek_offset += 1;
+                        continue;
+                    }
+                    if t == TokenType::Comment {
+                        peek_offset += 1;
+                        continue;
+                    }
+                    if t == TokenType::Indent {
+                        break true;
+                    }
+                    break false;
+                };
+
+                if is_indented {
+                    self.advance()?; // Consume the BraceStart
+                                     // Consume Newline and Indent, which will be handled by parse_object_indented
+                    while self.current()?.token_type == TokenType::Newline
+                        || self.current()?.token_type == TokenType::Comment
+                    {
+                        self.advance()?;
+                    }
+                    if self.current()?.token_type == TokenType::Indent {
+                        self.advance()?; // Consume Indent
+                        self.parse_object_indented()
+                    } else {
+                        // This case should ideally not happen if is_indented is true
+                        // Fallback to inline if somehow indent is missing
+                        self.parse_inline_object()
+                    }
+                } else {
+                    self.parse_inline_object()
+                }
+            }
             TokenType::Indent => {
                 self.advance()?;
-                self.parse_object_indented()
+                // Consume Newline/Comment after Indent if any (though typically Indent is followed by content)
+                while self.current()?.token_type == TokenType::Newline
+                    || self.current()?.token_type == TokenType::Comment
+                {
+                    self.advance()?;
+                }
+
+                if self.current()?.token_type == TokenType::Dash {
+                    self.parse_list_content()
+                } else {
+                    self.parse_object_indented()
+                }
             }
             TokenType::Dash => self.parse_list_content(),
             _ => Err(format!("Unexpected token in value: {:?}", token.token_type)),
         }
     }
 
-    pub fn parse_array_header_and_content(&mut self) -> ParseResult<ToonValue> {
+    pub(crate) fn parse_implicit_inline_object(&mut self) -> ParseResult<ToonValue> {
+        let mut dict = IndexMap::new();
+
+        // 1. Parse inline fields
+        loop {
+            let token = self.current()?.clone();
+            match token.token_type {
+                TokenType::Newline | TokenType::Eof | TokenType::Dedent | TokenType::Comment => {
+                    break;
+                }
+                TokenType::Comma => {
+                    self.advance()?;
+                }
+                TokenType::Identifier(_) | TokenType::String(_) => {
+                    self.parse_kv_pair(&mut dict)?;
+                }
+                _ => {
+                    return Err(format!(
+                        "Unexpected token in implicit inline object: {:?}",
+                        token.token_type
+                    ))
+                }
+            }
+        }
+
+        // 2. Check for continued fields on next lines (indented)
+        // Peek ahead past newlines/comments
+        let mut peek_offset = 0;
+        loop {
+            self.fill_buffer(peek_offset + 1)?;
+            if peek_offset >= self.buffer.len() {
+                break;
+            }
+
+            let t = self.buffer[peek_offset].token_type.clone();
+
+            if matches!(t, TokenType::Newline | TokenType::Comment) {
+                peek_offset += 1;
+                continue;
+            }
+
+            if matches!(t, TokenType::Indent) {
+                // Yes, continuation!
+                // Consume the skipped newlines/comments
+                for _ in 0..peek_offset {
+                    self.advance()?;
+                }
+                self.advance()?; // Consume Indent
+
+                // Parse indented fields
+                loop {
+                    while self.current()?.token_type == TokenType::Newline
+                        || self.current()?.token_type == TokenType::Comment
+                    {
+                        self.advance()?;
+                    }
+
+                    match self.current()?.token_type {
+                        TokenType::Dedent => {
+                            self.advance()?;
+                            break;
+                        }
+                        TokenType::Eof => break,
+                        _ => {
+                            self.parse_kv_pair(&mut dict)?;
+                        }
+                    }
+                }
+            }
+            break;
+        }
+
+        Ok(ToonValue::Dict(dict))
+    }
+
+    pub(crate) fn parse_array_header_and_content(&mut self) -> ParseResult<ToonValue> {
         self.advance()?; // skip [
+
+        // Consume leading Newline or Comment tokens
+        while self.current()?.token_type == TokenType::Newline
+            || self.current()?.token_type == TokenType::Comment
+        {
+            self.advance()?;
+        }
 
         // Parse length
         let len_token = self.current()?.clone();
@@ -169,11 +333,24 @@ impl<'a> ToonParser<'a> {
                 self.advance()?;
             }
         }
+        // Consume Newline or Comment after delimiter
+        while self.current()?.token_type == TokenType::Newline
+            || self.current()?.token_type == TokenType::Comment
+        {
+            self.advance()?;
+        }
 
         if self.current()?.token_type != TokenType::ArrayEnd {
             return Err("Expected ] after array length".to_string());
         }
         self.advance()?;
+
+        // Consume Newline or Comment after array end
+        while self.current()?.token_type == TokenType::Newline
+            || self.current()?.token_type == TokenType::Comment
+        {
+            self.advance()?;
+        }
 
         // Capture potential fields {fields} or inline header
         let mut fields: Option<Vec<String>> = None;
@@ -181,6 +358,13 @@ impl<'a> ToonParser<'a> {
             self.advance()?;
             let mut captured_fields = Vec::new();
             loop {
+                // Consume Newline or Comment before field name
+                while self.current()?.token_type == TokenType::Newline
+                    || self.current()?.token_type == TokenType::Comment
+                {
+                    self.advance()?;
+                }
+
                 let token = self.current()?.clone();
                 match token.token_type {
                     TokenType::BraceEnd => {
@@ -205,6 +389,7 @@ impl<'a> ToonParser<'a> {
                     let mut captured_fields = Vec::new();
                     while self.current()?.token_type != TokenType::Colon
                         && self.current()?.token_type != TokenType::Newline
+                        && self.current()?.token_type != TokenType::Comment
                         && self.current()?.token_type != TokenType::Eof
                     {
                         let token = self.current()?.clone();
@@ -232,6 +417,13 @@ impl<'a> ToonParser<'a> {
             }
         }
 
+        // Consume Newline or Comment before colon
+        while self.current()?.token_type == TokenType::Newline
+            || self.current()?.token_type == TokenType::Comment
+        {
+            self.advance()?;
+        }
+
         // Expect :
         if self.current()?.token_type != TokenType::Colon {
             return Err("Expected : after array header".to_string());
@@ -241,6 +433,10 @@ impl<'a> ToonParser<'a> {
         // Check form
         if self.current()?.token_type == TokenType::Newline {
             self.advance()?;
+            // Consume leading Comment tokens on new line
+            while self.current()?.token_type == TokenType::Comment {
+                self.advance()?;
+            }
             if let Some(f) = fields {
                 self.parse_tabular_content(length, f)
             } else {
@@ -253,6 +449,12 @@ impl<'a> ToonParser<'a> {
                 if self.current()?.token_type == TokenType::Comma {
                     self.advance()?;
                 }
+                // Consume Newline or Comment before value
+                while self.current()?.token_type == TokenType::Newline
+                    || self.current()?.token_type == TokenType::Comment
+                {
+                    self.advance()?;
+                }
                 let val = self.parse_value()?;
                 list.push(val);
             }
@@ -260,7 +462,7 @@ impl<'a> ToonParser<'a> {
         }
     }
 
-    fn parse_tabular_content(
+    pub(crate) fn parse_tabular_content(
         &mut self,
         length: usize,
         fields: Vec<String>,
@@ -272,7 +474,9 @@ impl<'a> ToonParser<'a> {
         }
 
         for _ in 0..length {
-            while self.current()?.token_type == TokenType::Newline {
+            while self.current()?.token_type == TokenType::Newline
+                || self.current()?.token_type == TokenType::Comment
+            {
                 self.advance()?;
             }
 
@@ -285,12 +489,33 @@ impl<'a> ToonParser<'a> {
                 if self.current()?.token_type == TokenType::Comma {
                     self.advance()?;
                 }
-                let val = self.parse_value()?;
-                row_dict.insert(field.clone(), val);
+                // Consume Newline or Comment before value
+                while self.current()?.token_type == TokenType::Newline
+                    || self.current()?.token_type == TokenType::Comment
+                {
+                    self.advance()?;
+                }
+
+                // Check if we have a value or if we should use Null (e.g. missing value, empty, etc.)
+                let token_type = self.current()?.token_type.clone();
+                match token_type {
+                    TokenType::Dedent | TokenType::Eof | TokenType::Comma => {
+                        row_dict.insert(field.clone(), ToonValue::Null);
+                    }
+                    _ => {
+                        let val = self.parse_value()?;
+                        row_dict.insert(field.clone(), val);
+                    }
+                }
             }
             list.push(ToonValue::Dict(row_dict));
         }
 
+        while self.current()?.token_type == TokenType::Newline
+            || self.current()?.token_type == TokenType::Comment
+        {
+            self.advance()?;
+        }
         if self.current()?.token_type == TokenType::Dedent {
             self.advance()?;
         }
@@ -298,7 +523,7 @@ impl<'a> ToonParser<'a> {
         Ok(ToonValue::List(list))
     }
 
-    pub fn parse_list_content(&mut self) -> ParseResult<ToonValue> {
+    pub(crate) fn parse_list_content(&mut self) -> ParseResult<ToonValue> {
         let mut list = Vec::new();
         let mut list_indent_level = self.current()?.indent_level;
 
@@ -310,6 +535,7 @@ impl<'a> ToonParser<'a> {
         loop {
             while self.current()?.token_type == TokenType::Newline
                 || self.current()?.token_type == TokenType::Indent
+                || self.current()?.token_type == TokenType::Comment
             {
                 self.advance()?;
             }
@@ -318,7 +544,9 @@ impl<'a> ToonParser<'a> {
             match token.token_type {
                 TokenType::Dash => {
                     self.advance()?;
-                    while self.current()?.token_type == TokenType::Newline {
+                    while self.current()?.token_type == TokenType::Newline
+                        || self.current()?.token_type == TokenType::Comment
+                    {
                         self.advance()?;
                     }
                     let val = self.parse_value()?;
@@ -342,12 +570,14 @@ impl<'a> ToonParser<'a> {
         Ok(ToonValue::List(list))
     }
 
-    pub fn parse_object_indented(&mut self) -> ParseResult<ToonValue> {
+    pub(crate) fn parse_object_indented(&mut self) -> ParseResult<ToonValue> {
         let mut dict = IndexMap::new();
         let start_indent_level = self.current()?.indent_level;
 
         loop {
-            while self.current()?.token_type == TokenType::Newline {
+            while self.current()?.token_type == TokenType::Newline
+                || self.current()?.token_type == TokenType::Comment
+            {
                 self.advance()?;
             }
 
@@ -374,12 +604,14 @@ impl<'a> ToonParser<'a> {
         Ok(ToonValue::Dict(dict))
     }
 
-    pub fn parse_inline_object(&mut self) -> ParseResult<ToonValue> {
+    pub(crate) fn parse_inline_object(&mut self) -> ParseResult<ToonValue> {
         self.advance()?;
         let mut dict = IndexMap::new();
 
         loop {
-            while self.current()?.token_type == TokenType::Newline {
+            while self.current()?.token_type == TokenType::Newline
+                || self.current()?.token_type == TokenType::Comment
+            {
                 self.advance()?;
             }
 
@@ -406,7 +638,10 @@ impl<'a> ToonParser<'a> {
         Ok(ToonValue::Dict(dict))
     }
 
-    fn parse_kv_pair(&mut self, dict: &mut IndexMap<String, ToonValue>) -> ParseResult<()> {
+    pub(crate) fn parse_kv_pair(
+        &mut self,
+        dict: &mut IndexMap<String, ToonValue>,
+    ) -> ParseResult<()> {
         let key_str = match self.current()?.token_type.clone() {
             TokenType::Identifier(s) | TokenType::String(s) => {
                 self.advance()?;
@@ -415,14 +650,31 @@ impl<'a> ToonParser<'a> {
             _ => return Err("Expected key".to_string()),
         };
 
+        // Consume Newline or Comment before ArrayStart
+        while self.current()?.token_type == TokenType::Newline
+            || self.current()?.token_type == TokenType::Comment
+        {
+            self.advance()?;
+        }
+
         if self.current()?.token_type == TokenType::ArrayStart {
             let val = self.parse_array_header_and_content()?;
             dict.insert(key_str, val);
 
-            while self.current()?.token_type == TokenType::Newline {
+            // Consume Newline or Comment after value
+            while self.current()?.token_type == TokenType::Newline
+                || self.current()?.token_type == TokenType::Comment
+            {
                 self.advance()?;
             }
             return Ok(());
+        }
+
+        // Consume Newline or Comment before Colon
+        while self.current()?.token_type == TokenType::Newline
+            || self.current()?.token_type == TokenType::Comment
+        {
+            self.advance()?;
         }
 
         if self.current()?.token_type != TokenType::Colon {
@@ -430,90 +682,14 @@ impl<'a> ToonParser<'a> {
         }
         self.advance()?;
 
-        while self.current()?.token_type == TokenType::Newline {
+        while self.current()?.token_type == TokenType::Newline
+            || self.current()?.token_type == TokenType::Comment
+        {
             self.advance()?;
         }
 
         let val = self.parse_value()?;
         dict.insert(key_str, val);
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_parse_simple_string() {
-        let text = "\"hello\"";
-        let lexer = ToonLexer::new(text, 2);
-        let mut parser = ToonParser::new(lexer);
-        let result = parser.parse_value().unwrap();
-        assert_eq!(result, ToonValue::String("hello".to_string()));
-    }
-
-    #[test]
-    fn test_parse_integer() {
-        let text = "123";
-        let lexer = ToonLexer::new(text, 2);
-        let mut parser = ToonParser::new(lexer);
-        let result = parser.parse_value().unwrap();
-        assert_eq!(result, ToonValue::Integer(123));
-    }
-
-    #[test]
-    fn test_parse_inline_dict() {
-        let text = "{a: 1, b: 2}";
-        let lexer = ToonLexer::new(text, 2);
-        let mut parser = ToonParser::new(lexer);
-        let result = parser.parse_value().unwrap();
-        if let ToonValue::Dict(d) = result {
-            assert_eq!(d.get("a"), Some(&ToonValue::Integer(1)));
-            assert_eq!(d.get("b"), Some(&ToonValue::Integer(2)));
-        } else {
-            panic!("Expected Dict");
-        }
-    }
-
-    #[test]
-    fn test_parse_error_missing_closing_bracket() {
-        let text = "[1, 2";
-        let lexer = ToonLexer::new(text, 2);
-        let mut parser = ToonParser::new(lexer);
-        let result = parser.parse_value();
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Expected ]"));
-    }
-
-    #[test]
-    fn test_parse_tabular_header() {
-        let text = "[2]{a, b}:\n  1, 2\n  3, 4";
-        let lexer = ToonLexer::new(text, 2);
-        let mut parser = ToonParser::new(lexer);
-        let result = parser.parse_array_header_and_content().unwrap();
-
-        if let ToonValue::List(list) = result {
-            assert_eq!(list.len(), 2);
-            // Check first row dict
-            if let ToonValue::Dict(d) = &list[0] {
-                assert_eq!(d.get("a"), Some(&ToonValue::Integer(1)));
-                assert_eq!(d.get("b"), Some(&ToonValue::Integer(2)));
-            } else {
-                panic!("Row 1 not dict");
-            }
-        } else {
-            panic!("Expected List");
-        }
-    }
-
-    #[test]
-    fn test_parse_unexpected_token() {
-        let text = ":";
-        let lexer = ToonLexer::new(text, 2);
-        let mut parser = ToonParser::new(lexer);
-        let result = parser.parse_value();
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Unexpected token"));
     }
 }

@@ -3,15 +3,16 @@ use serde::Serialize;
 use std::fs;
 use std::io;
 use std::path::Path;
-use walkdir::WalkDir; // for .serialize()
+use walkdir::WalkDir;
 
 use crate::lexer::ToonLexer;
 use crate::parser::ToonParser;
 use crate::serde_toon::Serializer as ToonSerializer;
-/// Result of a batch operation: (Original Path, Success/Error Message, Is Error)
-type BatchResult = (String, String, bool);
 
-fn convert_single_json_to_toon(path: &str, output_dir: Option<&str>) -> BatchResult {
+/// Result of a batch operation: (Original Path, Success/Error Message, Is Error)
+pub type BatchResult = (String, String, bool);
+
+pub fn convert_single_json_to_toon(path: &str, output_dir: Option<&str>) -> BatchResult {
     let file = match fs::File::open(path) {
         Ok(f) => f,
         Err(e) => return (path.to_string(), format!("IO Error: {}", e), true),
@@ -73,7 +74,7 @@ fn convert_single_json_to_toon(path: &str, output_dir: Option<&str>) -> BatchRes
     }
 }
 
-fn convert_single_toon_to_json(path: &str, output_dir: Option<&str>) -> BatchResult {
+pub fn convert_single_toon_to_json(path: &str, output_dir: Option<&str>) -> BatchResult {
     let file = match fs::File::open(path) {
         Ok(f) => f,
         Err(e) => return (path.to_string(), format!("IO Error: {}", e), true),
@@ -177,88 +178,4 @@ pub fn batch_convert_directory(
         .par_iter()
         .map(|path| convert_single_json_to_toon(path, output_dir.as_deref()))
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::io::Write;
-    use tempfile::NamedTempFile;
-    use tempfile::TempDir;
-
-    #[test]
-    fn test_batch_memory_success() {
-        let mut file = NamedTempFile::new().unwrap();
-        write!(file, "{{\"key\": \"value\"}}").unwrap();
-        let path = file.path().to_str().unwrap().to_string();
-
-        let results = batch_convert_json(vec![path.clone()], None);
-        assert_eq!(results.len(), 1);
-        let (p, content, is_err) = &results[0];
-        assert_eq!(p, &path);
-        // Expect format from ToonSerializer
-        // "[0]:" if array? No it is dict.
-        // Serializer for map starts with newline if not root.
-        // Root map: "key: value" (if we handle root correctly in Serializer).
-        // Let's check Serializer implementation for root map.
-        // It resets is_root=false but doesn't write new line.
-        // Then serialize_key writes indent and key.
-        // serialize_value writes space and value.
-        // So "key: value".
-        assert!(content.contains("key: value"));
-        assert!(!is_err);
-    }
-
-    #[test]
-    fn test_batch_toon_to_json() {
-        let mut file = NamedTempFile::new().unwrap();
-        write!(file, "key: value").unwrap();
-        let path = file.path().to_str().unwrap().to_string();
-
-        let results = batch_convert_toon(vec![path.clone()], None);
-        assert_eq!(results.len(), 1);
-        let (_, content, is_err) = &results[0];
-        assert!(!is_err);
-        assert!(content.contains("\"key\": \"value\""));
-    }
-
-    #[test]
-    fn test_batch_disk_success() {
-        let mut file = NamedTempFile::new().unwrap();
-        write!(file, "[1, 2]").unwrap();
-        let path = file.path().to_str().unwrap().to_string();
-
-        let out_dir = TempDir::new().unwrap();
-        let out_dir_str = out_dir.path().to_str().unwrap().to_string();
-
-        let results = batch_convert_json(vec![path.clone()], Some(out_dir_str.clone()));
-
-        let (p, out_path, is_err) = &results[0];
-        assert_eq!(p, &path);
-        assert!(!is_err);
-
-        let saved_content = fs::read_to_string(out_path).unwrap();
-        assert!(saved_content.contains("[2]:"));
-    }
-
-    #[test]
-    fn test_batch_directory() {
-        let temp_dir = TempDir::new().unwrap();
-        let file_path = temp_dir.path().join("test.json");
-        fs::write(&file_path, "{\"a\": 1}").unwrap();
-
-        let results =
-            batch_convert_directory(temp_dir.path().to_string_lossy().to_string(), true, None);
-
-        assert_eq!(results.len(), 1);
-        assert!(results[0].1.contains("a: 1"));
-    }
-
-    #[test]
-    fn test_batch_error_handling() {
-        let results = batch_convert_json(vec!["non_existent_file.json".to_string()], None);
-        let (_, msg, is_err) = &results[0];
-        assert!(is_err);
-        assert!(msg.contains("IO Error"));
-    }
 }

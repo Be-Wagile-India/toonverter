@@ -18,12 +18,80 @@ def cli() -> None:
 @click.option("--from", "from_format", required=True, help="Source format")
 @click.option("--to", "to_format", required=True, help="Target format")
 @click.option("--compact", is_flag=True, help="Use compact encoding")
-def convert(source: str, target: str, from_format: str, to_format: str, compact: bool) -> None:
+@click.option("--stream", is_flag=True, help="Use streaming (low memory) processing")
+def convert(
+    source: str, target: str, from_format: str, to_format: str, compact: bool, stream: bool
+) -> None:
     """Convert data between formats."""
     import toonverter as toon
 
     try:
-        result = toon.convert(source, target, from_format, to_format, compact=compact)
+        # Check if streaming is requested or implicitly suitable
+        is_streamable_source = from_format in ("json", "jsonl", "ndjson")
+        is_streamable_target = to_format in ("json", "jsonl", "ndjson")
+
+        if stream and not (is_streamable_source and is_streamable_target):
+            click.echo(
+                "Warning: Streaming requested but formats may not fully support it. Attempting...",
+                err=True,
+            )
+
+        if stream or (is_streamable_source and is_streamable_target):
+            # Use streaming path
+            try:
+                try:
+                    from rich.progress import Progress, SpinnerColumn, TextColumn
+
+                    with Progress(
+                        SpinnerColumn(),
+                        TextColumn("[progress.description]{task.description}"),
+                        transient=True,
+                    ) as progress:
+                        task = progress.add_task(
+                            description=f"Streaming {source} → {target}", total=None
+                        )
+
+                        def update_progress(n: int) -> None:
+                            progress.update(
+                                task,
+                                advance=n,
+                                description=f"Streaming {source} → {target} ({progress.tasks[0].completed} items)",
+                            )
+
+                        toon.convert_stream(
+                            source,
+                            target,
+                            from_format,
+                            to_format,
+                            compact=compact,
+                            progress_callback=update_progress,
+                        )
+                except ImportError:
+                    # Fallback if rich is not available
+                    toon.convert_stream(source, target, from_format, to_format, compact=compact)
+
+                click.echo(f"✓ Converted {source} → {target} (streamed)")
+                return
+            except NotImplementedError:
+                # Fallback if stream not implemented for some combo
+                if stream:
+                    raise
+                # else continue to normal convert
+
+        # Standard conversion
+        try:
+            from rich.progress import Progress, SpinnerColumn, TextColumn
+
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                transient=True,
+            ) as progress:
+                progress.add_task(description=f"Converting {source} → {target}", total=None)
+                result = toon.convert(source, target, from_format, to_format, compact=compact)
+        except ImportError:
+            result = toon.convert(source, target, from_format, to_format, compact=compact)
+
         if result.success:
             click.echo(f"✓ Converted {source} → {target}")
             if result.source_tokens and result.target_tokens:
@@ -139,17 +207,70 @@ def infer(input_file: str, output: str | None) -> None:
     import json
 
     import toonverter as toon
-    from toonverter.schema import SchemaInferrer
+    from toonverter.schema import SchemaField, SchemaInferrer
 
     try:
-        # Load data
-        ext = Path(input_file).suffix[1:]
-        data = toon.load(input_file, format=ext if ext else "json")
-
         # Infer schema
         inferrer = SchemaInferrer()
-        # TODO: Support streaming inference for large files
-        schema = inferrer.infer(data)
+
+        # Streaming path for JSON/JSONL (memory efficient)
+        ext = Path(input_file).suffix.lower()
+
+        # Try to stream if format supports it (json, jsonl, ndjson)
+        # We can just try load_stream and if it fails (not supported), fall back
+        is_streamable = ext in (".json", ".jsonl", ".ndjson")
+
+        if is_streamable:
+            stream = toon.load_stream(input_file)
+
+            try:
+                from rich.progress import Progress, SpinnerColumn, TextColumn
+
+                # Wrap stream with progress tracking
+                def tracking_stream():
+                    with Progress(
+                        SpinnerColumn(),
+                        TextColumn("[progress.description]{task.description}"),
+                        transient=True,
+                    ) as progress:
+                        task = progress.add_task(
+                            description=f"Inferring schema from {input_file}", total=None
+                        )
+                        for item in stream:
+                            yield item
+                            progress.update(
+                                task,
+                                advance=1,
+                                description=f"Inferring schema from {input_file} ({progress.tasks[0].completed} items)",
+                            )
+
+                item_schema = inferrer.infer_from_stream(tracking_stream())
+            except ImportError:
+                item_schema = inferrer.infer_from_stream(stream)
+
+            # Wrap in array to match file structure (List of Items) if it was a stream of items
+            # But wait, if it's a JSON object (not array), load_stream isn't appropriate?
+            # load_stream currently handles JSON Arrays and JSONL.
+            # If the input is a single huge JSON object, load_stream might fail or yield nothing if it expects array.
+            # Assuming standard "list of records" use case for streaming.
+            schema = SchemaField(type="array", items=item_schema)
+        else:
+            # Standard load for other formats
+            try:
+                from rich.progress import Progress, SpinnerColumn, TextColumn
+
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    transient=True,
+                ) as progress:
+                    progress.add_task(description=f"Inferring schema from {input_file}", total=None)
+                    data = toon.load(input_file, format=ext[1:] if ext else "json")
+                    schema = inferrer.infer(data)
+            except ImportError:
+                data = toon.load(input_file, format=ext[1:] if ext else "json")
+                schema = inferrer.infer(data)
+
         schema_dict = schema.to_dict()
 
         if output:

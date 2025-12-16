@@ -5,7 +5,7 @@ edition = "2021"
 
 [lib]
 name = "_toonverter_core"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 pyo3 = { version = "0.21.0", features = ["macros"] }
@@ -19,6 +19,11 @@ memmap2 = "0.9"
 [dev-dependencies]
 once_cell = "1.18.0"
 tempfile = "3.8"
+criterion = "0.5"
+
+[[bench]]
+name = "toon_benchmark"
+harness = false
 
 [features]
 default = ["extension-module"]

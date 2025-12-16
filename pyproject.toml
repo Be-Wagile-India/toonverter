@@ -64,12 +64,19 @@ dependencies = [
     "tomli-w>=1.0.0",  # TOML writing support for all Python versions
     # CLI support (required for console script entry point)
     "click>=8.1.0",
-    "rich>=13.0.0",
-    "scikit-learn>=1.0.0",
 ]
 
 [project.optional-dependencies]
-# Individual framework integrations
+# Analysis and Deduplication
+analysis = [
+    "scikit-learn>=1.0.0",
+    "sentence-transformers>=2.2.2",
+]
+
+# CLI support
+cli = [
+    "rich>=13.0.0",
+]
 pandas = ["pandas>=2.0.0"]
 pydantic = ["pydantic>=2.0.0"]
 langchain = ["langchain>=0.1.0"]
@@ -137,10 +144,6 @@ integrations = [
     "redis>=5.0.0",
 ]
 
-# CLI support (click and rich are now required dependencies)
-# This extra is kept for backwards compatibility but is now empty
-cli = []
-
 # Development dependencies
 dev = [
     "pytest>=7.4.0",
@@ -172,7 +175,7 @@ benchmark = [
 
 # All optional dependencies (including dev tools)
 all = [
-    "toonverter[integrations,cli,dev,docs,benchmark]",
+    "toonverter[integrations,cli,dev,docs,benchmark,analysis]",
 ]
 
 [project.urls]

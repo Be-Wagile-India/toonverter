@@ -132,25 +132,38 @@ USE_RUST_DECODER = _get_setting("use_rust_decoder", "TOON_USE_RUST_DECODER", Tru
 # Encoder: Defaults to True as it is stable
 USE_RUST_ENCODER = _get_setting("use_rust_encoder", "TOON_USE_RUST_ENCODER", True)
 
+# Strict Rust Build: Defaults to False. If True, will raise an ImportError if Rust is enabled but not available.
+STRICT_RUST_BUILD = _get_setting("strict_rust_build", "TOON_STRICT_RUST_BUILD", False)
+
 # Parallelism Threshold: Default to 1000 items
 PARALLELISM_THRESHOLD = _get_int_setting(
     "parallelism_threshold", "TOON_PARALLELISM_THRESHOLD", 1000
 )
 
 # Validation logic
-if USE_RUST_DECODER and not _RUST_AVAILABLE:
-    warnings.warn(
-        "TOON_USE_RUST_DECODER is set, but the Rust extension is not available. Falling back to Python.",
-        stacklevel=2,
-    )
-    USE_RUST_DECODER = False
+if not _RUST_AVAILABLE:
+    msg = "Rust extension is not available."
+    if STRICT_RUST_BUILD:
+        if USE_RUST_DECODER:
+            error_msg = f"{msg} TOON_USE_RUST_DECODER is set, but the Rust extension is not available and TOON_STRICT_RUST_BUILD is True."
+            raise ImportError(error_msg)
+        if USE_RUST_ENCODER:
+            error_msg = f"{msg} TOON_USE_RUST_ENCODER is set, but the Rust extension is not available and TOON_STRICT_RUST_BUILD is True."
+            raise ImportError(error_msg)
+    else:
+        if USE_RUST_DECODER:
+            warnings.warn(
+                "TOON_USE_RUST_DECODER is set, but the Rust extension is not available. Falling back to Python.",
+                stacklevel=2,
+            )
+            USE_RUST_DECODER = False
 
-if USE_RUST_ENCODER and not _RUST_AVAILABLE:
-    warnings.warn(
-        "TOON_USE_RUST_ENCODER is set, but the Rust extension is not available. Falling back to Python.",
-        stacklevel=2,
-    )
-    USE_RUST_ENCODER = False
+        if USE_RUST_ENCODER:
+            warnings.warn(
+                "TOON_USE_RUST_ENCODER is set, but the Rust extension is not available. Falling back to Python.",
+                stacklevel=2,
+            )
+            USE_RUST_ENCODER = False
 
 # Expose the core module if needed by other components
 # Type as Any to avoid attribute errors since it's a native extension

@@ -48,6 +48,18 @@ jobs:
         run: |
           pytest -m "not slow" tests/unit tests/performance --cov=toonverter --cov-report=xml --cov-report=term-missing --cov-context=test
 
+      - name: Run Rust tests
+        run: |
+          cargo test --manifest-path rust/Cargo.toml --no-default-features -- --test-threads=1
+
+      - name: Install cargo-tarpaulin
+        run: |
+          cargo install cargo-tarpaulin
+
+      - name: Run Rust coverage
+        run: |
+          cargo tarpaulin --manifest-path rust/Cargo.toml --no-default-features --workspace --fail-under 80
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:

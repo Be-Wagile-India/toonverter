@@ -9,9 +9,6 @@ import logging
 from collections.abc import Callable, Generator, Iterable  # noqa: TC003
 from typing import Any, Literal, TypeVar
 
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity  # type: ignore
-
 from toonverter.core.registry import get_registry
 from toonverter.core.spec import ToonEncodeOptions
 from toonverter.core.types import DeduplicationResult, DuplicateItem
@@ -273,8 +270,7 @@ class SemanticDeduplicator:
                                   If None, a default extraction logic is used.
             spec: The TOON specification to use.
         """
-
-        self.model = SentenceTransformer(model_name)
+        self.model_name = model_name
         self.threshold = threshold
         self.language_key = language_key
         self.embedding_batch_size = embedding_batch_size
@@ -282,6 +278,20 @@ class SemanticDeduplicator:
         self.spec = spec if spec is not None else ToonEncodeOptions()  # Default to an instance
         self.registry = get_registry()  # To get access to format adapters if needed
         self._embedding_cache: dict[str, Any] = {}  # Cache for embeddings
+        self._model: Any = None
+
+    @property
+    def model(self) -> Any:
+        """Lazy load the model."""
+        if self._model is None:
+            try:
+                from sentence_transformers import SentenceTransformer  # noqa: PLC0415
+
+                self._model = SentenceTransformer(self.model_name)
+            except ImportError as e:
+                msg = "sentence-transformers is required for SemanticDeduplicator"
+                raise ImportError(msg) from e
+        return self._model
 
     def optimize(self, data: _T) -> _T:
         """
@@ -322,6 +332,13 @@ class SemanticDeduplicator:
         Deduplicates a list of items in place based on semantic similarity.
         """
         if not items or len(items) < 2:
+            return
+
+        # Ensure dependencies are available before proceeding
+        try:
+            from sklearn.metrics.pairwise import cosine_similarity  # noqa: PLC0415
+        except ImportError:
+            logger.warning("scikit-learn is required for SemanticDeduplicator. Skipping.")
             return
 
         texts = []

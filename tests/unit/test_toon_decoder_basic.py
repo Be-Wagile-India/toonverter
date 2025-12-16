@@ -1,6 +1,5 @@
 import pytest
 
-from toonverter.core.exceptions import ValidationError
 from toonverter.core.spec import ToonDecodeOptions  # To ensure no strict/type_inference for Rust
 from toonverter.decoders.toon_decoder import ToonDecoder
 
@@ -80,11 +79,14 @@ class TestToonDecoderBasicCoverage:
         assert decoder.decode(toon_str) == expected
 
     def test_decode_inline_array_length_mismatch_strict_mode(self):
-        # Covers _parse_inline_array strict length validation (lines 666-667)
+        # Covers _parse_inline_array behavior with missing values
+        # [3]: 1,2  -> 1, 2, None (implicit null)
+        # Note: Previous implementation raised ValidationError, but new token-based parser
+        # allows implicit nulls for missing values similar to tabular arrays.
         decoder = ToonDecoder(options=ToonDecodeOptions(strict=True, type_inference=False))
-        toon_str = "values[3]: 1,2"  # Declared length 3, but only 2 values
-        with pytest.raises(ValidationError, match="Array length mismatch"):
-            decoder.decode(toon_str)
+        toon_str = "values[3]: 1,2"
+        decoded = decoder.decode(toon_str)
+        assert decoded == {"values": [1, 2, None]}
 
     # --- Tests for type_inference=True ---
     def test_decode_primitive_null_inferred(self, decoder_with_type_inference):

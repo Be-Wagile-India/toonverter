@@ -18,7 +18,7 @@ The underlying decoding logic is largely implemented in pure Python. However, fo
 an optional `Rust backend` is utilized by the `toonverter.decoders` module.
 The Python `Decoder` class transparently leverages this Rust implementation if the Rust extension is installed and enabled.
 
-**Note**: The Rust decoder currently remains disabled by default due to known issues with indented list parsing in some edge cases. Enable with caution.
+**Note**: The Rust decoder is now enabled by default, as previous issues with indented list parsing have been resolved. The system will gracefully fall back to the Python decoder if the Rust extension fails to load.
 
 For configuration options related to enabling/disabling the Rust decoder, refer to the
 :doc:`../guides/configuration` guide.

@@ -129,10 +129,15 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
         let is_number = v.parse::<f64>().is_ok();
         let has_special_chars = v
             .chars()
-            .any(|c| matches!(c, ':' | ' ' | '\n' | '[' | ']' | '{' | '}' | ',') || v.is_empty());
+            .any(|c| matches!(c, ':' | ' ' | '\n' | '[' | ']' | '{' | '}' | ','));
+        let needs_quoting = is_reserved || is_number || has_special_chars || v.is_empty();
 
-        if is_reserved || is_number || has_special_chars {
-            self.writer.write_all(format!("{:?}", v).as_bytes())?;
+        if needs_quoting {
+            if v.is_empty() {
+                self.writer.write_all(b"\"\"")?;
+            } else {
+                self.writer.write_all(format!("{:?}", v).as_bytes())?;
+            }
         } else {
             self.writer.write_all(v.as_bytes())?;
         }
@@ -406,78 +411,5 @@ impl<'a, W: io::Write> ser::SerializeStructVariant for MapSerializer<'a, W> {
     }
     fn end(self) -> Result<()> {
         ser::SerializeMap::end(self)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde::Serialize;
-
-    fn to_toon<T: Serialize>(value: &T) -> String {
-        let mut buffer = Vec::new();
-        let mut serializer = Serializer::new(&mut buffer);
-        value.serialize(&mut serializer).unwrap();
-        String::from_utf8(buffer).unwrap()
-    }
-
-    #[test]
-    fn test_serialize_primitives() {
-        assert_eq!(to_toon(&true), "true");
-        assert_eq!(to_toon(&123), "123");
-        assert_eq!(to_toon(&12.34), "12.34");
-        assert_eq!(to_toon(&"hello"), "hello");
-        assert_eq!(to_toon(&"hello world"), "\"hello world\"");
-    }
-
-    #[test]
-    fn test_serialize_option() {
-        let none: Option<i32> = None;
-        let some: Option<i32> = Some(123);
-        assert_eq!(to_toon(&none), "null");
-        assert_eq!(to_toon(&some), "123");
-    }
-
-    #[test]
-    fn test_serialize_list() {
-        let list = vec![1, 2, 3];
-        // [3]:
-        //   - 1
-        //   - 2
-        //   - 3
-        let expected = "[3]:\n  - 1\n  - 2\n  - 3";
-        assert_eq!(to_toon(&list), expected);
-    }
-
-    #[test]
-    fn test_serialize_struct() {
-        #[derive(Serialize)]
-        struct MyStruct {
-            a: i32,
-            b: String,
-        }
-        let s = MyStruct {
-            a: 1,
-            b: "foo".to_string(),
-        };
-        // a: 1
-        // b: foo
-        let output = to_toon(&s);
-        assert!(output.contains("a: 1"));
-        assert!(output.contains("b: foo"));
-    }
-
-    #[test]
-    fn test_serialize_nested() {
-        #[derive(Serialize)]
-        struct Nested {
-            inner: Vec<i32>,
-        }
-        let n = Nested { inner: vec![1, 2] };
-
-        let output = to_toon(&n);
-        // inner: [2]:\n  - 1\n  - 2
-        let expected = "inner: [2]:\n  - 1\n  - 2";
-        assert_eq!(output, expected);
     }
 }

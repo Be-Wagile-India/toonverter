@@ -7,13 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned
-- Additional framework integrations
-- Performance optimizations
-- Enhanced CLI features
-
-## [## [Unreleased]] - 2025-01-17
-
 ### Added
 - GitHub Pages documentation deployment workflow
 - AUTHORS.md file with contributor information
@@ -24,17 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated documentation URLs to GitHub Pages
 - Improved README with logo and better formatting
 - Enhanced Sphinx documentation configuration
+- **Python Decoder now supports brace-enclosed inline objects (`{key: value, ...}`) within tabular and list arrays, aligning with Rust encoder output.**
+- **Python Decoder's inline array parsing improved to correctly handle implicit nulls in strict mode.**
 
 ### Fixed
 - PyPI package links now correctly point to Be-Wagile-India repository
 - Documentation build configuration optimized
 - Missing documentation files added
-
-## [## [Unreleased]] - 2025-01-17
-
-### Fixed
-- Package metadata and repository links
-- Documentation configuration
+- Python Decoder: Resolved bug where mixed-nesting of arrays and objects in tabular data caused `DecodingError` due to lack of brace-enclosed object parsing.
+- Python Decoder: Corrected assertion for inline array length mismatch test in strict mode.
 
 ## [1.0.0] - 2025-01-17
 

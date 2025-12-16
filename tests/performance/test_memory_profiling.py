@@ -127,7 +127,6 @@ class TestMemoryPerformance:
         )
 
     @pytest.mark.slow
-    @pytest.mark.skipif(USE_RUST_DECODER, reason="Requires Python decoder to be enabled")
     def test_decode_large_file_memory_usage_python_decoder_baseline(self, tmp_path):
         """
         Tests the memory usage when decoding a large TOON file using the pure Python decoder.

@@ -153,10 +153,12 @@ class ToonDecodeOptions:
     Attributes:
         strict: Enable strict validation of lengths and fields (default: True)
         type_inference: Automatically infer types from strings (default: True)
+        indent_size: Number of spaces per indentation level (default: 2)
     """
 
     strict: bool = True
     type_inference: bool = True
+    indent_size: int = DEFAULT_INDENT_SIZE
 
 
 @dataclass

@@ -65,6 +65,7 @@ pub fn to_py_object(py: Python, val: &ToonValue) -> PyResult<PyObject> {
 mod tests {
     use super::*;
     use once_cell::sync::Lazy;
+    use pyo3::types::PyModule;
 
     static INITIALIZED: Lazy<()> = Lazy::new(|| {
         pyo3::prepare_freethreaded_python();
@@ -82,6 +83,96 @@ mod tests {
             let py_obj = to_py_object(py, &tv).unwrap();
             let back = to_toon_value(py_obj.bind(py)).unwrap();
             assert_eq!(tv, back);
+        });
+    }
+
+    #[test]
+    fn test_conversion_primitives() {
+        let _ = &*INITIALIZED;
+        Python::with_gil(|py| {
+            // Null
+            let tv = ToonValue::Null;
+            let py_obj = to_py_object(py, &tv).unwrap();
+            let back = to_toon_value(py_obj.bind(py)).unwrap();
+            assert_eq!(tv, back);
+
+            // Boolean
+            let tv = ToonValue::Boolean(true);
+            let py_obj = to_py_object(py, &tv).unwrap();
+            let back = to_toon_value(py_obj.bind(py)).unwrap();
+            assert_eq!(tv, back);
+
+            // Float
+            let tv = ToonValue::Float(1.23);
+            let py_obj = to_py_object(py, &tv).unwrap();
+            let back = to_toon_value(py_obj.bind(py)).unwrap();
+            assert_eq!(tv, back);
+
+            // String
+            let tv = ToonValue::String("hello".to_string());
+            let py_obj = to_py_object(py, &tv).unwrap();
+            let back = to_toon_value(py_obj.bind(py)).unwrap();
+            assert_eq!(tv, back);
+        });
+    }
+
+    #[test]
+    fn test_conversion_list() {
+        let _ = &*INITIALIZED;
+        Python::with_gil(|py| {
+            let mut list = Vec::new();
+            list.push(ToonValue::Integer(1));
+            list.push(ToonValue::String("a".to_string()));
+            let tv = ToonValue::List(list);
+
+            let py_obj = to_py_object(py, &tv).unwrap();
+            let back = to_toon_value(py_obj.bind(py)).unwrap();
+            assert_eq!(tv, back);
+        });
+    }
+
+    #[test]
+    fn test_conversion_error() {
+        let _ = &*INITIALIZED;
+        Python::with_gil(|py| {
+            // Create a Python object that is not supported (e.g., a set)
+            let set = py.eval_bound("{1, 2}", None, None).unwrap();
+            let result = to_toon_value(&set);
+            assert!(result.is_err());
+            assert!(result.unwrap_err().to_string().contains("Unsupported type"));
+        });
+    }
+
+    #[test]
+    fn test_conversion_unsupported_python_tuple() {
+        let _ = &*INITIALIZED;
+        Python::with_gil(|py| {
+            let tuple_obj = py.eval_bound("(1, 2, 3)", None, None).unwrap();
+            let result = to_toon_value(&tuple_obj);
+            assert!(result.is_err());
+            assert!(result
+                .unwrap_err()
+                .to_string()
+                .contains("Unsupported type for TOON encoding"));
+        });
+    }
+
+    #[test]
+    fn test_conversion_unsupported_python_object() {
+        let _ = &*INITIALIZED;
+        Python::with_gil(|py| {
+            // Define a simple custom Python class
+            let code = "class MyCustomObject: pass";
+            let module = PyModule::from_code_bound(py, code, "my_module.py", "my_module").unwrap();
+            let obj_type = module.getattr("MyCustomObject").unwrap();
+            let custom_obj = obj_type.call0().unwrap(); // Instantiate MyCustomObject
+
+            let result = to_toon_value(&custom_obj);
+            assert!(result.is_err());
+            assert!(result
+                .unwrap_err()
+                .to_string()
+                .contains("Unsupported type for TOON encoding"));
         });
     }
 }

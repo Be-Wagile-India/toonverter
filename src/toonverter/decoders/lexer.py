@@ -29,6 +29,7 @@ class TokenType(Enum):
     COLON = "colon"  # :
     COMMA = "comma"  # ,
     DASH = "dash"  # - (list item marker)
+    COMMENT = "comment"  # # (comment marker)
 
     # Array markers
     ARRAY_START = "array_start"  # [
@@ -88,45 +89,47 @@ class ToonLexer:
             self.current_line = line_num
             self.current_column = 0
 
-            # Skip empty lines
-            if not line.strip():
-                continue
+            stripped_line = line.strip()
 
-            # Handle indentation
-            indent = detect_indentation(line)
-            indent_level = indent // self.indent_size
+            # Skip empty lines and comment-only lines for indentation state changes
+            is_content_line = bool(stripped_line) and not stripped_line.startswith("#")
 
-            # Emit indent/dedent tokens
-            if indent_level > self.current_indent:
-                # Indent
-                for _ in range(indent_level - self.current_indent):
-                    tokens.append(
-                        Token(
-                            type=TokenType.INDENT,
-                            value=None,
-                            line=line_num,
-                            column=0,
-                            indent_level=indent_level,
+            if is_content_line:
+                # Handle indentation for content lines
+                indent = detect_indentation(line)
+                indent_level = indent // self.indent_size
+
+                # Emit indent/dedent tokens
+                if indent_level > self.current_indent:
+                    for _ in range(indent_level - self.current_indent):
+                        tokens.append(
+                            Token(
+                                type=TokenType.INDENT,
+                                value=None,
+                                line=line_num,
+                                column=0,
+                                indent_level=indent_level,
+                            )
                         )
-                    )
-                self.current_indent = indent_level
-
-            elif indent_level < self.current_indent:
-                # Dedent
-                for _ in range(self.current_indent - indent_level):
-                    tokens.append(
-                        Token(
-                            type=TokenType.DEDENT,
-                            value=None,
-                            line=line_num,
-                            column=0,
-                            indent_level=indent_level,
+                    self.current_indent = indent_level
+                elif indent_level < self.current_indent:
+                    for _ in range(self.current_indent - indent_level):
+                        tokens.append(
+                            Token(
+                                type=TokenType.DEDENT,
+                                value=None,
+                                line=line_num,
+                                column=0,
+                                indent_level=indent_level,
+                            )
                         )
-                    )
-                self.current_indent = indent_level
+                    self.current_indent = indent_level
+            # else: comment-only or empty lines do not change current_indent.
+            # Their tokens will inherit current_indent.
 
-            # Tokenize line content
-            line_tokens = self._tokenize_line(line.strip(), line_num, indent_level)
+            # Tokenize line content. Use line.lstrip() to preserve inline comments' original column.
+            # The indent_level for the token should be self.current_indent, representing logical depth.
+            line_tokens = self._tokenize_line(line.lstrip(), line_num, self.current_indent)
             tokens.extend(line_tokens)
 
             # Add newline token
@@ -136,7 +139,7 @@ class ToonLexer:
                     value=None,
                     line=line_num,
                     column=len(line),
-                    indent_level=indent_level,
+                    indent_level=self.current_indent,
                 )
             )
 
@@ -231,6 +234,20 @@ class ToonLexer:
                     )
                     i += 2  # Skip dash and space
                     continue
+
+            # Comment
+            if char == "#":
+                tokens.append(
+                    Token(
+                        type=TokenType.COMMENT,
+                        value=line[i:],  # Value is the entire comment string
+                        line=line_num,
+                        column=i,
+                        indent_level=indent_level,
+                    )
+                )
+                i = len(line)  # Consume rest of the line
+                continue
 
             # Array/brace markers
             if char == "[":

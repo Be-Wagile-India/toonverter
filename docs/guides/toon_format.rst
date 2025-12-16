@@ -72,24 +72,23 @@ For primitive values on a single line:
 2. Tabular Array
 ^^^^^^^^^^^^^^^^
 
-For uniform objects with primitive values:
+For uniform objects where values can be primitives, inline arrays, or brace-enclosed inline objects:
 
 .. code-block:: yaml
 
-   users[3]{name,age,city}:
-     Alice,30,NYC
-     Bob,25,LA
-     Charlie,35,SF
+   users[2]{name,roles,metadata}:
+     Alice,[2]: admin,user,{active:true,created:"2024-01-01"}
+     Bob,[1]: user,{active:false,created:"2024-01-02"}
 
 **Requirements**:
 - All elements must be objects
 - All objects must have the same keys
-- All values must be primitives (no nested objects/arrays)
+- Values can be primitives, inline arrays, or brace-enclosed inline objects. Nested objects or list arrays are not directly supported as values (they must be inline).
 
 **Benefits**:
 - Highest compression ratio (40-60% savings)
-- CSV-like efficiency
-- Perfect for DataFrame-like data
+- CSV-like efficiency with richer data types
+- Perfect for DataFrame-like data with nested attributes
 
 3. List Array
 ^^^^^^^^^^^^^
@@ -112,7 +111,14 @@ For complex or mixed structures:
 - Supports nested objects and arrays
 - Each item starts with ``-`` marker
 
-**Inline Objects**:
+**Inline Objects (Brace-enclosed)**:
+Objects can be expressed inline using braces `{key: value, ...}`. This is particularly useful as a value within tabular arrays or other inline contexts.
+
+.. code-block:: yaml
+
+   metadata: {created: "2024-01-01", active: true}
+
+**Inline Objects (Hyphen-prefixed)**:
 First field on dash line, remaining fields indented:
 
 .. code-block:: yaml

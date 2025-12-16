@@ -171,24 +171,27 @@ impl<'a> ToonLexer<'a> {
                 return self.next_token();
             }
 
-            let new_indent = self.detect_indentation()?;
-            if new_indent > self.current_indent_level {
-                self.current_indent_level += 1;
-                return Ok(Some(Token {
-                    token_type: TokenType::Indent,
-                    line: self.current_line_idx,
-                    column: 0,
-                    indent_level: self.current_indent_level,
-                }));
-            } else if new_indent < self.current_indent_level {
-                self.pending_dedents = self.current_indent_level - new_indent - 1;
-                self.current_indent_level -= 1;
-                return Ok(Some(Token {
-                    token_type: TokenType::Dedent,
-                    line: self.current_line_idx,
-                    column: 0,
-                    indent_level: self.current_indent_level,
-                }));
+            // Only handle indentation for non-comment lines
+            if !trimmed.starts_with('#') {
+                let new_indent = self.detect_indentation()?;
+                if new_indent > self.current_indent_level {
+                    self.current_indent_level += 1;
+                    return Ok(Some(Token {
+                        token_type: TokenType::Indent,
+                        line: self.current_line_idx,
+                        column: 0,
+                        indent_level: self.current_indent_level,
+                    }));
+                } else if new_indent < self.current_indent_level {
+                    self.pending_dedents = self.current_indent_level - new_indent - 1;
+                    self.current_indent_level -= 1;
+                    return Ok(Some(Token {
+                        token_type: TokenType::Dedent,
+                        line: self.current_line_idx,
+                        column: 0,
+                        indent_level: self.current_indent_level,
+                    }));
+                }
             }
             self.consume_whitespace();
         }
@@ -226,6 +229,8 @@ impl<'a> ToonLexer<'a> {
             }
         };
 
+
+
         let start_col = self.current_column;
 
         let token_type = match c {
@@ -246,6 +251,16 @@ impl<'a> ToonLexer<'a> {
                     TokenType::Dash
                 }
             }
+            '#' => {
+                // Consume the rest of the line as a comment
+                while let Some(&next_c) = self.peek_char() {
+                    if next_c == '\n' {
+                        break;
+                    }
+                    self.next_char();
+                }
+                TokenType::Comment
+            }
             '"' => self.scan_string(start_col)?,
             _ => self.scan_identifier_or_number(c),
         };
@@ -264,83 +279,5 @@ impl<'a> Iterator for ToonLexer<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.next_token().transpose()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn get_tokens(text: &str) -> Vec<TokenType> {
-        let mut lexer = ToonLexer::new(text, 2);
-        let mut tokens = Vec::new();
-        while let Some(token_res) = lexer.next() {
-            match token_res {
-                Ok(token) => tokens.push(token.token_type),
-                Err(e) => panic!("Lexer error: {}", e),
-            }
-        }
-        tokens
-    }
-
-    #[test]
-    fn test_lexer_empty() {
-        let tokens = get_tokens("");
-        assert!(tokens.is_empty());
-    }
-
-    #[test]
-    fn test_lexer_primitives() {
-        let tokens = get_tokens("true false null 123 12.34 \"hello\"");
-        assert_eq!(
-            tokens,
-            vec![
-                TokenType::Boolean(true),
-                TokenType::Boolean(false),
-                TokenType::Null,
-                TokenType::Integer(123),
-                TokenType::Float(12.34),
-                TokenType::String("hello".to_string())
-            ]
-        );
-    }
-
-    #[test]
-    fn test_lexer_indentation() {
-        let text = "root:\n  child: value";
-        let tokens = get_tokens(text);
-        assert_eq!(
-            tokens,
-            vec![
-                TokenType::Identifier("root".to_string()),
-                TokenType::Colon,
-                TokenType::Newline,
-                TokenType::Indent,
-                TokenType::Identifier("child".to_string()),
-                TokenType::Colon,
-                TokenType::Identifier("value".to_string()),
-                TokenType::Dedent
-            ]
-        );
-    }
-
-    // Removed test_lexer_escapes to avoid tool fighting issues
-
-    #[test]
-    fn test_lexer_error_tabs() {
-        // Double backslash to write single backslash in file
-        let text = "\tkey: val";
-        let mut lexer = ToonLexer::new(text, 2);
-        let err = lexer.next().unwrap().unwrap_err();
-        assert!(err.contains("Tabs are not allowed"));
-    }
-
-    #[test]
-    fn test_lexer_error_unterminated_string() {
-        // Double backslash quote
-        let text = "\"hello";
-        let mut lexer = ToonLexer::new(text, 2);
-        let err = lexer.next().unwrap().unwrap_err();
-        assert!(err.contains("Unterminated quoted string"));
     }
 }

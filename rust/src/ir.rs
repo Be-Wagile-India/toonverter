@@ -121,4 +121,56 @@ mod tests {
             panic!("Expected Dict");
         }
     }
+
+    #[test]
+
+    fn test_json_conversion_large_number() {
+        // Create a number too large for i64, by parsing from JSON
+
+        let large_number_str_json = r#"{"num": 1234567890123456789012345678901234567890}"#;
+
+        let json_val_wrapper: JsonValue = serde_json::from_str(large_number_str_json).unwrap();
+
+        let json_val = json_val_wrapper.get("num").unwrap().clone();
+
+        let toon_val = ToonValue::from(json_val);
+
+        // Assert that it's a Float and has the expected approximate value
+
+        if let ToonValue::Float(f) = toon_val {
+            // Compare with a small epsilon due to potential floating point inaccuracies
+
+            // The expected value is 1.2345678901234567e39 based on prior test output.
+
+            let expected_f = 1.2345678901234567e39;
+
+            let epsilon = 1.0e20; // A sufficiently large epsilon for this scale
+
+            assert!(
+                (f - expected_f).abs() < epsilon,
+                "Expected float close to {}, got {}",
+                expected_f,
+                f
+            );
+        } else {
+            panic!("Expected Float, got {:?}", toon_val);
+        }
+    }
+
+    #[test]
+    fn test_serialize_ir() {
+        let mut map = IndexMap::new();
+        map.insert("key".to_string(), ToonValue::String("val".to_string()));
+        let dict = ToonValue::Dict(map);
+        let list = ToonValue::List(vec![
+            ToonValue::Integer(1),
+            ToonValue::Float(2.5),
+            ToonValue::Boolean(true),
+            ToonValue::Null,
+            dict,
+        ]);
+
+        let json_str = serde_json::to_string(&list).unwrap();
+        assert_eq!(json_str, "[1,2.5,true,null,{\"key\":\"val\"}]");
+    }
 }

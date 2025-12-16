@@ -88,16 +88,18 @@ class ToonEncoder:
                 data = optimizer.optimize(data)
 
             # Try Rust encoder if available and options allow
-            # Rust encoder currently supports default options (indent=2, comma delimiter)
+            # Rust encoder now supports custom indent and delimiter
             if (
                 USE_RUST_ENCODER
-                and self.options.indent_size == 2
-                and self.options.delimiter == Delimiter.COMMA
                 and self.options.key_folding == "none"
                 and self.options.optimization_policy is None
             ):
                 try:
-                    return rust_core.encode_toon(data)
+                    return rust_core.encode_toon(
+                        data,
+                        indent_size=self.options.indent_size,
+                        delimiter=self.options.delimiter.value,
+                    )
                 except ValueError as e:
                     # Fallback on error or raise?
                     # Since we want to rely on Rust if enabled, let's verify if it covers all cases.

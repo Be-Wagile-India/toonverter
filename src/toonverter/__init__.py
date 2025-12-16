@@ -11,6 +11,7 @@ Quick Start:
 """
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any, Optional, cast
 
 from toonverter.core.spec import ToonEncodeOptions
@@ -41,13 +42,123 @@ from .formats import register_default_formats
 from .integrations.redis_integration import RedisToonWrapper
 from .plugins import load_plugins
 from .schema import SchemaField, SchemaInferrer, SchemaValidator
-from .utils import read_file, write_file
+from .utils import load_stream, read_file, write_file
 
 
 # Initialize package
 register_default_formats()
 
 # Level 1 Facade API - Simple functions for 90% of users
+
+
+def convert_stream(
+    source: str,
+    target: str,
+    from_format: str,
+    to_format: str,
+    progress_callback: Callable[[int], None] | None = None,
+    **options: Any,
+) -> None:
+    """Convert data using streaming (low memory usage).
+
+
+
+
+
+    Currently supports JSON/JSONL/NDJSON as source.
+
+
+    Target support:
+
+
+      - JSONL/NDJSON: Writes line by line.
+
+
+      - JSON: Writes as a streamed array.
+
+
+      - Other: Writes item by item (may not be valid for all formats without container).
+
+
+
+
+
+    Args:
+
+
+        source: Path to source file
+
+
+        target: Path to target file
+
+
+        from_format: Source format
+
+
+        to_format: Target format
+
+
+        progress_callback: Optional callback for progress reporting (called with 1 per item)
+
+
+        **options: Additional conversion options
+
+
+    """
+
+    path = Path(target)
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Get adapter for target format
+    # For streaming formats like JSONL/NDJSON, we use the JSON adapter for individual items
+    target_format_name = "json" if to_format in ("jsonl", "ndjson") else to_format
+    target_adapter = registry.get(target_format_name)
+
+    # Prepare encoding options
+    encode_opts: EncodeOptions | ToonEncodeOptions | None = None
+    if options:
+        if to_format == "toon":
+            temp_generic_options = EncodeOptions(**options)
+            encode_opts = _convert_options(temp_generic_options)
+        else:
+            encode_opts = EncodeOptions(**options)
+
+    # Open target file
+    with path.open("w", encoding="utf-8") as f:
+        # Stream from source
+        stream = load_stream(source, format=from_format)
+
+        # Handle JSON Array start
+        is_json_array = to_format == "json"
+        if is_json_array:
+            f.write("[")
+
+        first = True
+        for item in stream:
+            # Encode item
+            encoded_item = target_adapter.encode(item, cast("Any", encode_opts))
+
+            if is_json_array:
+                if not first:
+                    f.write(",")
+                f.write(encoded_item)
+            elif to_format in ("jsonl", "ndjson"):
+                f.write(encoded_item + "\n")
+            else:
+                # Fallback for other formats (e.g. TOON lines?)
+                # Just write the encoded item followed by newline or space?
+                # For TOON, it doesn't have a standard "stream" format yet,
+                # but appending with newlines is a reasonable default for many text formats.
+                f.write(encoded_item + "\n")
+
+            first = False
+            if progress_callback:
+                progress_callback(1)
+
+        # Handle JSON Array end
+        if is_json_array:
+            f.write("]")
 
 
 def convert(
@@ -421,6 +532,7 @@ __all__ = [
     "compare",
     # Level 1 Facade API
     "convert",
+    "convert_stream",
     "count_tokens",
     "decode",
     "encode",
@@ -428,6 +540,7 @@ __all__ = [
     "is_supported",
     "list_formats",
     "load",
+    "load_stream",
     "load_plugins",
     # Utilities
     "registry",

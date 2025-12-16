@@ -58,7 +58,7 @@ install-rust-cov: ## Install cargo-tarpaulin for Rust test coverage
 	$(CARGO) install cargo-tarpaulin
 
 test-rust-cov: ## Run Rust tests with coverage report (requires cargo-tarpaulin)
-	$(RUST_COMMON_FLAGS) $(CARGO) tarpaulin --manifest-path rust/Cargo.toml --no-default-features --out Html --output-dir coverage-rust
+	$(RUST_COMMON_FLAGS) $(CARGO) tarpaulin --manifest-path rust/Cargo.toml --no-default-features --out Html --output-dir coverage-rust --tests
 
 test-cov: ## Run tests with detailed coverage report
 	$(PYTEST) -v --cov=$(SRC_DIR) --cov-report=html --cov-report=term-missing
@@ -121,8 +121,13 @@ docs: ## Build documentation
 serve-docs: docs ## Build and serve documentation locally
 	cd docs/_build/html && $(PYTHON) -m http.server 8000
 
-benchmark: ## Run performance benchmarks
-	$(PYTEST) benchmarks/ -v --benchmark-only
+benchmark: ## Run Python performance benchmarks
+	$(PYTEST) tests/performance/ -v --benchmark-only --no-cov
+
+benchmark-rust: ## Run Rust performance benchmarks
+	$(RUST_COMMON_FLAGS) $(CARGO) bench --manifest-path rust/Cargo.toml --no-default-features
+
+benchmark-all: benchmark benchmark-rust ## Run all performance benchmarks
 
 profile: ## Profile code performance
 	$(PYTHON) -m cProfile -o profile.prof -m pytest tests/
@@ -134,5 +139,8 @@ init: install-dev ## Initialize development environment
 	@echo "Development environment initialized successfully!"
 	@echo "Run 'make test' to verify everything works."
 
-ci: lint type-check test ## Run CI pipeline locally
+ci: lint type-check test test-rust test-rust-cov-fail-under ## Run CI pipeline locally
 	@echo "CI checks completed successfully!"
+
+test-rust-cov-fail-under: ## Run Rust coverage with --fail-under 80
+	$(RUST_COMMON_FLAGS) $(CARGO) tarpaulin --manifest-path rust/Cargo.toml --no-default-features --workspace --fail-under 80
