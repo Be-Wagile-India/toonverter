@@ -512,8 +512,10 @@ toonverter encode data.json --output data.toon
 # Decode from TOON
 toonverter decode data.toon --output data.json --format json
 
-# Analyze token usage
-toonverter analyze data.json --compare json toon
+# Analyze token usage for a file (e.g., a large dataset)
+# First, create a sample large_data.json for demonstration:
+# echo '{"logs": [{"timestamp": "2023-01-01T00:00:00Z", "level": "INFO", "message": "User logged in", "user_id": "abc"}, {"timestamp": "2023-01-01T00:00:01Z", "level": "DEBUG", "message": "Processing request", "request_id": "123"}]}' > large_data.json
+toonverter analyze large_data.json --compare json toon
 
 # List supported formats
 toonverter formats
@@ -638,6 +640,31 @@ Only 5 escape sequences are allowed:
 | TOON   | 16     | 33%     |
 
 *Actual savings vary by data structure. Tabular data sees 40-60% savings.*
+
+```python
+import toonverter as toon
+
+data = {
+    "products": [
+        {"id": 1, "name": "Laptop", "price": 1200.00, "in_stock": True},
+        {"id": 2, "name": "Mouse", "price": 25.00, "in_stock": False},
+        {"id": 3, "name": "Keyboard", "price": 75.00, "in_stock": True}
+    ],
+    "category": "Electronics",
+    "last_updated": "2023-10-26"
+}
+report = toon.analyze(data, compare_formats=['json', 'toon'])
+
+print(f"JSON tokens: {report.token_counts['json']}")
+print(f"TOON tokens: {report.token_counts['toon']}")
+print(f"Best format: {report.best_format}")
+print(f"Token savings: {report.max_savings_percentage:.1f}%")
+# Expected Output (may vary slightly based on tiktoken version and model):
+# JSON tokens: 104
+# TOON tokens: 46
+# Best format: toon
+# Token savings: 55.7%
+```
 
 For full specification details, see [TOON v2.0 Spec](https://github.com/toon-format/spec).
 

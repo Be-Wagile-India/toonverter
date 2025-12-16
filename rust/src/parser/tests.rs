@@ -389,7 +389,9 @@ fn test_parse_array_header_compact_unexpected_token() {
     let mut parser = ToonParser::new(lexer);
     let result = parser.parse_array_header_and_content();
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("Expected field name, ',' or ':' for compact tabular header"));
+    assert!(result
+        .unwrap_err()
+        .contains("Expected field name, ',' or ':' for compact tabular header"));
 }
 
 #[test]

@@ -229,8 +229,6 @@ impl<'a> ToonLexer<'a> {
             }
         };
 
-
-
         let start_col = self.current_column;
 
         let token_type = match c {
