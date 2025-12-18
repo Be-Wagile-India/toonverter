@@ -66,6 +66,18 @@ class TestToonStreamEncoder:
         expected = "[2]:\n- a\n- b"
         assert "".join(encoder.iterencode(stream_data)) == expected
 
+    def test_iterencode_stream_list_indefinite(self, encoder):
+        """Test iterencode for a StreamList with indefinite length (*)."""
+
+        def gen():
+            yield 1
+            yield 2
+            yield 3
+
+        stream_data = StreamList(iterator=gen(), length=None)
+        expected = "[*]:\n- 1\n- 2\n- 3"
+        assert "".join(encoder.iterencode(stream_data)) == expected
+
     def test_iterencode_dict_list_dict(self, encoder):
         """Test iterencode for a dictionary containing a list of dictionaries."""
         data = {"main": [{"id": 1, "val": "A"}, {"id": 2, "val": "B"}]}

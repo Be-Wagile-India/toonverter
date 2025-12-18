@@ -18,6 +18,7 @@ pub enum TokenType {
     ArrayEnd,   // ]
     BraceStart, // {
     BraceEnd,   // }
+    Star,       // *
     Identifier(String),
 }
 

@@ -36,6 +36,7 @@ class TokenType(Enum):
     ARRAY_END = "array_end"  # ]
     BRACE_START = "brace_start"  # {
     BRACE_END = "brace_end"  # }
+    STAR = "star"  # * (for indefinite length)
 
     # Special
     IDENTIFIER = "identifier"  # Unquoted key or value
@@ -302,6 +303,19 @@ class ToonLexer:
                 i += 1
                 continue
 
+            if char == "*":
+                tokens.append(
+                    Token(
+                        type=TokenType.STAR,
+                        value="*",
+                        line=line_num,
+                        column=i,
+                        indent_level=indent_level,
+                    )
+                )
+                i += 1
+                continue
+
             # Quoted string
             if char == '"':
                 string_token, new_i = self._scan_quoted_string(line, i, line_num, indent_level)
@@ -398,7 +412,7 @@ class ToonLexer:
         # Scan until delimiter or special character
         while i < len(line):
             char = line[i]
-            if char in (":", ",", "[", "]", "{", "}", " ", "\t"):
+            if char in (":", ",", "[", "]", "{", "}", " ", "\t", "*"):
                 break
             chars.append(char)
             i += 1

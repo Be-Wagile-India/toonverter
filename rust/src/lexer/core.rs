@@ -116,6 +116,7 @@ impl<'a> ToonLexer<'a> {
                 || c == ' '
                 || c == '\t'
                 || c == '\n'
+                || c == '*'
             {
                 break;
             }
@@ -239,6 +240,7 @@ impl<'a> ToonLexer<'a> {
             ']' => TokenType::ArrayEnd,
             '{' => TokenType::BraceStart,
             '}' => TokenType::BraceEnd,
+            '*' => TokenType::Star,
             '-' => {
                 if let Some(&next_c) = self.peek_char() {
                     if next_c.is_ascii_digit() {

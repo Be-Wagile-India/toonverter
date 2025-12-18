@@ -99,15 +99,18 @@ class StreamDecoder:
 
         # 2. Length
         length_token = next(tokens)
-        if length_token.type != TokenType.NUMBER:
+        length: int | None = None
+        if length_token.type == TokenType.NUMBER:
+            length = int(length_token.value)  # type: ignore
+        elif length_token.type == TokenType.STAR:
+            length = None
+        else:
             # Maybe empty array []?
             # If ARRAY_END comes next
             if length_token.type == TokenType.ARRAY_END:
                 return  # Empty array
-            msg = "Expected array length"
+            msg = "Expected array length or '*'"
             raise DecodingError(msg)
-
-        length = int(length_token.value)  # type: ignore
 
         # 3. Skip to Colon (handling fields/delimiters)
         while True:
@@ -120,7 +123,7 @@ class StreamDecoder:
         # 4. Parse Items
         items_yielded = 0
 
-        while items_yielded < length:
+        while length is None or items_yielded < length:
             t_peeked = tokens.peek()
             if t_peeked is None or t_peeked.type == TokenType.EOF:
                 break

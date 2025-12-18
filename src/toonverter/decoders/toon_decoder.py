@@ -236,7 +236,7 @@ class ToonDecoder:
             # Root list array (e.g., - 1\n- 2)
             # Create a dummy header to indicate indefinite length
             header = {
-                "length": -1,
+                "length": None,
                 "form": ArrayForm.LIST,
                 "delimiter": Delimiter.COMMA,
                 "fields": None,
@@ -556,11 +556,16 @@ class ToonDecoder:
 
         # Parse length
         length_token = self.tokens[self.pos]
-        if length_token.type != TokenType.NUMBER:
-            msg = "Expected array length number"
+        length: int | None = None
+        if length_token.type == TokenType.NUMBER:
+            length = int(length_token.value)  # type: ignore
+            self.pos += 1
+        elif length_token.type == TokenType.STAR:
+            length = None
+            self.pos += 1
+        else:
+            msg = "Expected array length number or '*'"
             raise DecodingError(msg)
-        length = int(length_token.value)  # type: ignore
-        self.pos += 1
 
         # Check for delimiter marker
         delimiter = Delimiter.COMMA
@@ -829,7 +834,7 @@ class ToonDecoder:
                 raise DecodingError(error_msg)
 
         # Validate length in strict mode
-        if self.options.strict and header["length"] != -1 and len(values) != header["length"]:
+        if self.options.strict and header["length"] is not None and len(values) != header["length"]:
             error_msg = f"Array length mismatch: declared {header['length']}, got {len(values)}"
             raise ValidationError(error_msg)
 

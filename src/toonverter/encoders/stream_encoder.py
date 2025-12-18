@@ -20,10 +20,10 @@ from toonverter.encoders.string_encoder import StringEncoder
 
 @dataclass
 class StreamList:
-    """Helper class for streaming iterators with known length."""
+    """Helper class for streaming iterators with optional length."""
 
     iterator: Iterator[Any]
-    length: int
+    length: int | None = None
 
 
 class ContextType(Enum):
@@ -107,7 +107,8 @@ class ToonStreamEncoder:
                     yield "[0]:"
                     return
 
-                yield f"[{data.length}]:\n"
+                length_str = "*" if data.length is None else str(data.length)
+                yield f"[{length_str}]:\n"
                 first_yield = False
 
                 stack.append(
@@ -173,7 +174,8 @@ class ToonStreamEncoder:
                             if value.length == 0:
                                 yield f"\n{self.indent_mgr.indent(ctx.depth + 1)}[0]:"
                             else:
-                                yield f"\n{self.indent_mgr.indent(ctx.depth + 1)}[{value.length}]:\n"
+                                length_str = "*" if value.length is None else str(value.length)
+                                yield f"\n{self.indent_mgr.indent(ctx.depth + 1)}[{length_str}]:\n"
                                 stack.append(
                                     EncoderContext(
                                         type=ContextType.LIST,
@@ -230,8 +232,9 @@ class ToonStreamEncoder:
                             # Nested StreamList
                             yield f"{prefix}{indent}-"
                             first_yield = False
-                            if item.length > 0:
-                                yield f" [{item.length}]:"
+                            if item.length is None or item.length > 0:
+                                length_str = "*" if item.length is None else str(item.length)
+                                yield f" [{length_str}]:"
                                 stack.append(
                                     EncoderContext(
                                         type=ContextType.LIST,

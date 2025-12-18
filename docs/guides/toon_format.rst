@@ -51,6 +51,19 @@ Single value (string, number, boolean, null):
 
    Hello World
 
+4. Indefinite Array Form
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+For infinite generators or streams where length is unknown upfront, using the ``*`` marker:
+
+.. code-block:: yaml
+
+   [*]:
+     - 1
+     - 2
+     - 3
+     - ...
+
 Three Array Forms
 -----------------
 
@@ -111,7 +124,24 @@ For complex or mixed structures:
 - Supports nested objects and arrays
 - Each item starts with ``-`` marker
 
-4. Compact Single-Column Array (Implicit Schema)
+4. Indefinite Array
+^^^^^^^^^^^^^^^^^^^
+
+For infinite generators or data streams where length cannot be pre-calculated:
+
+.. code-block:: yaml
+
+   stream[*]:
+     - 1
+     - 2
+     - 3
+
+**Requirements**:
+- Marker ``*`` indicates unknown length
+- Supports both List and Tabular forms
+- Continues until indentation level changes or EOF
+
+5. Compact Single-Column Array (Implicit Schema)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A special concise form for arrays of single-key objects:
