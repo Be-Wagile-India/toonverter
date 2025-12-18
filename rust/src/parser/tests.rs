@@ -342,8 +342,6 @@ fn test_parse_array_header_tabular_with_data() {
     }
 }
 
-
-
 #[test]
 fn test_parse_value_object_with_indent() {
     let text = "{\n  key: value\n}";
@@ -377,8 +375,6 @@ fn test_parse_value_inline_object() {
     expected.insert("key2".to_string(), ToonValue::String("val2".to_string()));
     assert_eq!(result, ToonValue::Dict(expected));
 }
-
-
 
 #[test]
 fn test_parse_array_header_compact_unexpected_token() {
@@ -502,10 +498,6 @@ fn test_parse_array_header_explicit_fields_error() {
     let err_msg = result.unwrap_err();
     assert!(err_msg.contains("Expected field name or '}'"));
 }
-
-
-
-
 
 #[test]
 fn test_parse_root_comments_newlines() {
@@ -654,15 +646,13 @@ fn test_parse_root_extra_tokens_after_value() {
     assert!(result.unwrap_err().contains("Extra tokens found"));
 }
 
-
-
 #[test]
 fn test_parse_array_implicit_schema_override() {
     let text = "[abc]{def}: 1, 2";
     let lexer = ToonLexer::new(text, 2);
     let mut parser = ToonParser::new(lexer);
     let result = parser.parse_root().unwrap();
-    
+
     if let ToonValue::List(list) = result {
         assert_eq!(list.len(), 2);
         if let ToonValue::Dict(d1) = &list[0] {
@@ -679,19 +669,19 @@ fn test_parse_array_implicit_schema_override() {
 
 #[test]
 fn test_parse_nested_list_indentation() {
-    let text_nested = "-\n  - sub1\n  - sub2"; 
+    let text_nested = "-\n  - sub1\n  - sub2";
     let lexer = ToonLexer::new(text_nested, 2);
     let mut parser = ToonParser::new(lexer);
     let result = parser.parse_root().unwrap();
-    
+
     if let ToonValue::List(l) = result {
-        assert_eq!(l.len(), 1); 
+        assert_eq!(l.len(), 1);
         if let ToonValue::List(sub) = &l[0] {
             assert_eq!(sub.len(), 2);
             assert_eq!(sub[0], ToonValue::String("sub1".to_string()));
             assert_eq!(sub[1], ToonValue::String("sub2".to_string()));
         } else {
-             panic!("Expected sublist, got {:?}", l[0]);
+            panic!("Expected sublist, got {:?}", l[0]);
         }
     }
 }
@@ -710,4 +700,3 @@ fn test_parse_primitives() {
     let mut parser = ToonParser::new(ToonLexer::new(text_null, 2));
     assert_eq!(parser.parse_value().unwrap(), ToonValue::Null);
 }
-

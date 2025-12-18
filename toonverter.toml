@@ -5,3 +5,4 @@ use_rust_encoder = true
 # but not available, instead of silently falling back to Python.
 strict_rust_build = false
 parallelism_threshold = 1000
+recursion_depth_limit = 200

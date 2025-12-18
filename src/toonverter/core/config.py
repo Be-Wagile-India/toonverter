@@ -140,6 +140,9 @@ PARALLELISM_THRESHOLD = _get_int_setting(
     "parallelism_threshold", "TOON_PARALLELISM_THRESHOLD", 1000
 )
 
+# Recursion Depth Limit: Default to 200
+RECURSION_DEPTH_LIMIT = _get_int_setting("recursion_depth_limit", "TOON_RECURSION_DEPTH_LIMIT", 200)
+
 # Validation logic
 if not _RUST_AVAILABLE:
     msg = "Rust extension is not available."

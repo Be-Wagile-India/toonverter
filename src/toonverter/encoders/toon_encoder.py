@@ -8,7 +8,12 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import Any
 
-from toonverter.core.config import PARALLELISM_THRESHOLD, USE_RUST_ENCODER, rust_core
+from toonverter.core.config import (
+    PARALLELISM_THRESHOLD,
+    RECURSION_DEPTH_LIMIT,
+    USE_RUST_ENCODER,
+    rust_core,
+)
 from toonverter.core.exceptions import EncodingError, ValidationError
 from toonverter.core.spec import ArrayForm, Delimiter, RootForm, ToonEncodeOptions, ToonValue
 from toonverter.core.types import EncodeOptions
@@ -99,6 +104,7 @@ class ToonEncoder:
                         data,
                         indent_size=self.options.indent_size,
                         delimiter=self.options.delimiter.value,
+                        recursion_depth_limit=RECURSION_DEPTH_LIMIT,
                     )
                 except ValueError as e:
                     # Fallback on error or raise?
@@ -200,6 +206,8 @@ class ToonEncoder:
         # Regular key-value encoding
         if isinstance(value, dict):
             # Nested object
+            if not value:
+                return [f"{indent}{key}: {{}}"]
             return [f"{indent}{key}:", *self.encode_object(value, depth + 1)]
         if isinstance(value, list):
             # Array - detect form and encode

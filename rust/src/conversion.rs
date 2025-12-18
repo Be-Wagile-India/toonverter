@@ -6,15 +6,20 @@ use pyo3::types::{PyDict, PyList, PyString};
 
 use crate::ir::ToonValue;
 
-// Maximum recursion depth to prevent stack overflow
-const MAX_DEPTH: usize = 200;
-
-pub fn to_toon_value(obj: &Bound<'_, PyAny>) -> PyResult<ToonValue> {
-    to_toon_value_recursive(obj, 0)
+pub fn to_toon_value(
+    obj: &Bound<'_, PyAny>,
+    recursion_depth_limit: Option<usize>,
+) -> PyResult<ToonValue> {
+    let limit = recursion_depth_limit.unwrap_or(200);
+    to_toon_value_recursive(obj, 0, limit)
 }
 
-fn to_toon_value_recursive(obj: &Bound<'_, PyAny>, depth: usize) -> PyResult<ToonValue> {
-    if depth > MAX_DEPTH {
+fn to_toon_value_recursive(
+    obj: &Bound<'_, PyAny>,
+    depth: usize,
+    limit: usize,
+) -> PyResult<ToonValue> {
+    if depth > limit {
         return Err(PyRecursionError::new_err(
             "Maximum recursion depth exceeded during TOON conversion",
         ));
@@ -37,14 +42,14 @@ fn to_toon_value_recursive(obj: &Bound<'_, PyAny>, depth: usize) -> PyResult<Too
         let mut map = IndexMap::new();
         for (k, v) in dict {
             let k_str = k.extract::<String>()?;
-            let v_val = to_toon_value_recursive(&v, depth + 1)?;
+            let v_val = to_toon_value_recursive(&v, depth + 1, limit)?;
             map.insert(k_str, v_val);
         }
         Ok(ToonValue::Dict(map))
     } else if let Ok(list) = obj.downcast::<PyList>() {
         let mut vec = Vec::with_capacity(list.len());
         for item in list {
-            vec.push(to_toon_value_recursive(&item, depth + 1)?);
+            vec.push(to_toon_value_recursive(&item, depth + 1, limit)?);
         }
         Ok(ToonValue::List(vec))
     } else {
@@ -97,7 +102,7 @@ mod tests {
             let tv = ToonValue::Dict(map);
 
             let py_obj = to_py_object(py, &tv).unwrap();
-            let back = to_toon_value(py_obj.bind(py)).unwrap();
+            let back = to_toon_value(py_obj.bind(py), None).unwrap();
             assert_eq!(tv, back);
         });
     }
@@ -109,25 +114,25 @@ mod tests {
             // Null
             let tv = ToonValue::Null;
             let py_obj = to_py_object(py, &tv).unwrap();
-            let back = to_toon_value(py_obj.bind(py)).unwrap();
+            let back = to_toon_value(py_obj.bind(py), None).unwrap();
             assert_eq!(tv, back);
 
             // Boolean
             let tv = ToonValue::Boolean(true);
             let py_obj = to_py_object(py, &tv).unwrap();
-            let back = to_toon_value(py_obj.bind(py)).unwrap();
+            let back = to_toon_value(py_obj.bind(py), None).unwrap();
             assert_eq!(tv, back);
 
             // Float
             let tv = ToonValue::Float(1.23);
             let py_obj = to_py_object(py, &tv).unwrap();
-            let back = to_toon_value(py_obj.bind(py)).unwrap();
+            let back = to_toon_value(py_obj.bind(py), None).unwrap();
             assert_eq!(tv, back);
 
             // String
             let tv = ToonValue::String("hello".to_string());
             let py_obj = to_py_object(py, &tv).unwrap();
-            let back = to_toon_value(py_obj.bind(py)).unwrap();
+            let back = to_toon_value(py_obj.bind(py), None).unwrap();
             assert_eq!(tv, back);
         });
     }
@@ -142,7 +147,7 @@ mod tests {
             let tv = ToonValue::List(list);
 
             let py_obj = to_py_object(py, &tv).unwrap();
-            let back = to_toon_value(py_obj.bind(py)).unwrap();
+            let back = to_toon_value(py_obj.bind(py), None).unwrap();
             assert_eq!(tv, back);
         });
     }
@@ -153,7 +158,7 @@ mod tests {
         Python::with_gil(|py| {
             // Create a Python object that is not supported (e.g., a set)
             let set = py.eval_bound("{1, 2}", None, None).unwrap();
-            let result = to_toon_value(&set);
+            let result = to_toon_value(&set, None);
             assert!(result.is_err());
             assert!(result.unwrap_err().to_string().contains("Unsupported type"));
         });
@@ -164,7 +169,7 @@ mod tests {
         let _ = &*INITIALIZED;
         Python::with_gil(|py| {
             let tuple_obj = py.eval_bound("(1, 2, 3)", None, None).unwrap();
-            let result = to_toon_value(&tuple_obj);
+            let result = to_toon_value(&tuple_obj, None);
             assert!(result.is_err());
             assert!(result
                 .unwrap_err()
@@ -183,7 +188,7 @@ mod tests {
             let obj_type = module.getattr("MyCustomObject").unwrap();
             let custom_obj = obj_type.call0().unwrap(); // Instantiate MyCustomObject
 
-            let result = to_toon_value(&custom_obj);
+            let result = to_toon_value(&custom_obj, None);
             assert!(result.is_err());
             assert!(result
                 .unwrap_err()
@@ -198,14 +203,14 @@ mod tests {
         Python::with_gil(|py| {
             let data = PyDict::new_bound(py);
             let mut current = data.clone();
-            for _ in 0..(MAX_DEPTH + 10) {
+            for _ in 0..(200 + 10) {
                 // Go beyond the limit
                 let next_dict = PyDict::new_bound(py);
                 current.set_item("a", next_dict.clone()).unwrap();
                 current = next_dict;
             }
 
-            let result = to_toon_value(&data);
+            let result = to_toon_value(&data, None);
             assert!(result.is_err());
             let err = result.unwrap_err();
             assert!(err.to_string().contains("Maximum recursion depth exceeded"));
@@ -217,7 +222,7 @@ mod tests {
         let _ = &*INITIALIZED;
         Python::with_gil(|py| {
             let large_int_py = py.eval_bound("2**100", None, None).unwrap(); // Python's arbitrary precision int
-            let tv = to_toon_value(&large_int_py).unwrap();
+            let tv = to_toon_value(&large_int_py, None).unwrap();
 
             if let ToonValue::BigInteger(ref bi) = tv {
                 assert_eq!(bi.to_string(), "1267650600228229401496703205376");

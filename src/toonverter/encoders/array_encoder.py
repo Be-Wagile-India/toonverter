@@ -210,7 +210,8 @@ class ArrayEncoder:
                 item_lines = value_encoder.encode_object(item, depth + 2)
                 if item_lines:
                     # First line with "- " prefix at depth+1
-                    lines.append(f"{item_indent}- {item_lines[0]}")
+                    # Strip leading whitespace from the first line since "- " provides the indentation
+                    lines.append(f"{item_indent}- {item_lines[0].lstrip()}")
                     # Rest of lines already at depth+2 from encode_object
                     lines.extend(item_lines[1:])
             elif isinstance(item, list):
@@ -313,9 +314,9 @@ class ArrayEncoder:
 
         for item in arr:
             if isinstance(item, dict):
-                item_lines = value_encoder.encode_object(item, 1)
+                item_lines = value_encoder.encode_object(item, 2)
                 if item_lines:
-                    lines.append(f"{item_indent}- {item_lines[0]}")
+                    lines.append(f"{item_indent}- {item_lines[0].lstrip()}")
                     lines.extend(item_lines[1:])
             else:
                 encoded = self._encode_value(item)
@@ -386,9 +387,9 @@ class ArrayEncoder:
         for item in arr:
             if isinstance(item, dict):
                 # Nested dict
-                item_lines = value_encoder.encode_object(item, depth + 1)
+                item_lines = value_encoder.encode_object(item, depth + 2)
                 if item_lines:
-                    lines.append(f"{nested_item_indent}- {item_lines[0]}")
+                    lines.append(f"{nested_item_indent}- {item_lines[0].lstrip()}")
                     lines.extend(item_lines[1:])
             elif isinstance(item, list):
                 # Double-nested array - recursion

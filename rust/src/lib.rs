@@ -40,15 +40,16 @@ fn decode_toon(py: Python, text: &str, indent_size: Option<usize>) -> PyResult<P
 }
 
 #[pyfunction]
-#[pyo3(signature = (obj, indent_size=None, delimiter=None))]
+#[pyo3(signature = (obj, indent_size=None, delimiter=None, recursion_depth_limit=None))]
 fn encode_toon(
     py: Python,
     obj: Bound<'_, PyAny>,
     indent_size: Option<usize>,
     delimiter: Option<String>,
+    recursion_depth_limit: Option<usize>,
 ) -> PyResult<String> {
     // Need GIL for conversion from Python object to IR
-    let ir = to_toon_value(&obj)?;
+    let ir = to_toon_value(&obj, recursion_depth_limit)?;
 
     let indent = indent_size.unwrap_or(2);
     let delim = delimiter.unwrap_or_else(|| ",".to_string());
@@ -167,7 +168,7 @@ mod tests {
             // Test encode_toon
             let dict_to_encode = PyDict::new_bound(py);
             dict_to_encode.set_item("a", 1).unwrap();
-            let encoded = encode_toon(py, dict_to_encode.as_any().clone(), None, None);
+            let encoded = encode_toon(py, dict_to_encode.as_any().clone(), None, None, None);
             assert!(encoded.is_ok());
             assert_eq!(encoded.unwrap(), "a: 1");
 
@@ -195,7 +196,7 @@ mod tests {
 
             // encode_toon error (set is not supported)
             let set = py.eval_bound("{1, 2}", None, None).unwrap();
-            let res_enc = encode_toon(py, set, None, None);
+            let res_enc = encode_toon(py, set, None, None, None);
             assert!(res_enc.is_err());
         });
     }

@@ -6,7 +6,7 @@ the official TOON v2.0 specification.
 
 from typing import Any
 
-from toonverter.core.config import USE_RUST_DECODER, rust_core
+from toonverter.core.config import RECURSION_DEPTH_LIMIT, USE_RUST_DECODER, rust_core
 from toonverter.core.exceptions import DecodingError, ValidationError
 from toonverter.core.spec import (
     ArrayForm,
@@ -17,9 +17,6 @@ from toonverter.core.spec import (
 )
 
 from .lexer import Token, TokenType, ToonLexer
-
-
-MAX_RECURSION_DEPTH = 500
 
 
 class ToonDecoder:
@@ -276,8 +273,8 @@ class ToonDecoder:
         Returns:
             Parsed value
         """
-        if depth > MAX_RECURSION_DEPTH:
-            msg = f"Maximum recursion depth ({MAX_RECURSION_DEPTH}) exceeded"
+        if depth > RECURSION_DEPTH_LIMIT:
+            msg = f"Maximum recursion depth ({RECURSION_DEPTH_LIMIT}) exceeded"
             raise DecodingError(msg)
 
         # Skip whitespace/newlines
