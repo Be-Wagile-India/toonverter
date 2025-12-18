@@ -11,8 +11,8 @@
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](http://mypy-lang.org/)
 [![TOON Spec v2.0](https://img.shields.io/badge/TOON%20Spec-v2.0%20✓-success.svg)](https://github.com/toon-format/spec)
-[![Tests](https://img.shields.io/badge/tests-1125%20passing-success.svg)](tests/)
-[![Coverage](https://img.shields.io/badge/coverage-87.67%25-brightgreen.svg)](htmlcov/index.html)
+[![Tests](https://img.shields.io/badge/tests-1127%20passing-success.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-86.99%25-brightgreen.svg)](htmlcov/index.html)
 
 **Token-Optimized Object Notation (TOON) v2.0** - The most comprehensive Python library for TOON format, featuring **100% spec compliance**, 10 framework integrations, and production-ready tools for reducing LLM token usage by 30-60%.
 
@@ -36,7 +36,8 @@
 
 ### Core Capabilities
 - **Rust-Accelerated Core**: Optional Rust extension for native-speed encoding/decoding.
-- **100% TOON v2.0 Spec Compliant**: All 26 specification tests passing
+- **True O(1) Memory Streaming**: Event-based decoder for processing terabyte-scale data with constant RAM usage.
+- **100% TOON v2.0 Spec Compliant**: All specification tests passing, including new Indefinite Arrays ``[*]``.
 - **30-60% Token Savings**: Verified with benchmarks on real-world data
 - **Multi-Format Support**: JSON, YAML, TOML, CSV, XML ↔ TOON
 - **Vision Optimization**: Reduce image token costs for multimodal models
@@ -655,6 +656,40 @@ print(f"Token savings: {report.max_savings_percentage:.1f}%")
 For full specification details, see [TOON v2.0 Spec](https://github.com/toon-format/spec).
 
 ## Advanced Features
+
+### Memory-Efficient Streaming
+
+Process massive TOON datasets with near-zero memory footprint using the `StreamDecoder`. This is ideal for log streams, terabyte-scale datasets, or LLM responses that are still being generated.
+
+```python
+import toonverter as toon
+
+# 1. Item-by-Item Streaming (O(1) Memory per item)
+# Reconstructs full objects one-by-one from a root array
+with open("massive_data.toon", "r") as f:
+    decoder = toon.StreamDecoder()
+    for item in decoder.items(f):
+        process(item)  # Only one item in memory at a time
+
+# 2. Low-Level Event Streaming (True O(1) Constant Memory)
+# Yields raw parsing events (START_OBJECT, KEY, VALUE, etc.)
+# Best for deeply nested structures that exceed RAM
+for event, value in decoder.items(f, events=True):
+    if event == toon.ParserEvent.KEY:
+        print(f"Found field: {value}")
+
+# 3. Indefinite Stream Encoding
+# Encode infinite generators using the [*] indefinite array syntax
+from toonverter.encoders.stream_encoder import StreamList, ToonStreamEncoder
+import itertools
+
+infinite_gen = itertools.count(start=1)
+stream_data = StreamList(iterator=infinite_gen, length=None)
+
+encoder = ToonStreamEncoder()
+for chunk in encoder.iterencode(stream_data):
+    sys.stdout.write(chunk)
+```
 
 ### High-Performance Batch Processing
 

@@ -4,6 +4,7 @@ Tokenizes TOON input into structured tokens for parsing.
 Handles indentation tracking, line-by-line scanning, and token classification.
 """
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import Enum
 
@@ -78,14 +79,13 @@ class ToonLexer:
         self.current_indent = 0
         self.indent_stack: list[int] = [0]
 
-    def tokenize(self) -> list[Token]:
+    def tokenize(self) -> Iterator[Token]:
         """Tokenize entire input.
 
-        Returns:
-            List of tokens
+        Yields:
+            Tokens one by one
         """
-        tokens: list[Token] = []
-
+        self.current_indent = 0
         for line_num, line in enumerate(self.lines):
             self.current_line = line_num
             self.current_column = 0
@@ -103,74 +103,58 @@ class ToonLexer:
                 # Emit indent/dedent tokens
                 if indent_level > self.current_indent:
                     for _ in range(indent_level - self.current_indent):
-                        tokens.append(
-                            Token(
-                                type=TokenType.INDENT,
-                                value=None,
-                                line=line_num,
-                                column=0,
-                                indent_level=indent_level,
-                            )
+                        yield Token(
+                            type=TokenType.INDENT,
+                            value=None,
+                            line=line_num,
+                            column=0,
+                            indent_level=self.current_indent + 1,
                         )
-                    self.current_indent = indent_level
+                        self.current_indent += 1
                 elif indent_level < self.current_indent:
                     for _ in range(self.current_indent - indent_level):
-                        tokens.append(
-                            Token(
-                                type=TokenType.DEDENT,
-                                value=None,
-                                line=line_num,
-                                column=0,
-                                indent_level=indent_level,
-                            )
+                        yield Token(
+                            type=TokenType.DEDENT,
+                            value=None,
+                            line=line_num,
+                            column=0,
+                            indent_level=self.current_indent - 1,
                         )
-                    self.current_indent = indent_level
-            # else: comment-only or empty lines do not change current_indent.
-            # Their tokens will inherit current_indent.
+                        self.current_indent -= 1
 
-            # Tokenize line content. Use line.lstrip() to preserve inline comments' original column.
-            # The indent_level for the token should be self.current_indent, representing logical depth.
-            line_tokens = self._tokenize_line(line.lstrip(), line_num, self.current_indent)
-            tokens.extend(line_tokens)
+            # Tokenize line content.
+            yield from self._tokenize_line(line.lstrip(), line_num, self.current_indent)
 
             # Add newline token
-            tokens.append(
-                Token(
-                    type=TokenType.NEWLINE,
-                    value=None,
-                    line=line_num,
-                    column=len(line),
-                    indent_level=self.current_indent,
-                )
+            yield Token(
+                type=TokenType.NEWLINE,
+                value=None,
+                line=line_num,
+                column=len(line),
+                indent_level=self.current_indent,
             )
 
         # Add final dedents if needed
         while self.current_indent > 0:
-            tokens.append(
-                Token(
-                    type=TokenType.DEDENT,
-                    value=None,
-                    line=len(self.lines),
-                    column=0,
-                    indent_level=0,
-                )
-            )
             self.current_indent -= 1
-
-        # Add EOF token
-        tokens.append(
-            Token(
-                type=TokenType.EOF,
+            yield Token(
+                type=TokenType.DEDENT,
                 value=None,
                 line=len(self.lines),
                 column=0,
-                indent_level=0,
+                indent_level=self.current_indent,
             )
+
+        # Add EOF token
+        yield Token(
+            type=TokenType.EOF,
+            value=None,
+            line=len(self.lines),
+            column=0,
+            indent_level=0,
         )
 
-        return tokens
-
-    def _tokenize_line(self, line: str, line_num: int, indent_level: int) -> list[Token]:
+    def _tokenize_line(self, line: str, line_num: int, indent_level: int) -> Iterator[Token]:
         """Tokenize a single line.
 
         Args:
@@ -178,10 +162,9 @@ class ToonLexer:
             line_num: Line number
             indent_level: Current indent level
 
-        Returns:
-            List of tokens for this line
+        Yields:
+            Tokens for this line
         """
-        tokens: list[Token] = []
         i = 0
 
         while i < len(line):
@@ -194,28 +177,24 @@ class ToonLexer:
 
             # Colon
             if char == ":":
-                tokens.append(
-                    Token(
-                        type=TokenType.COLON,
-                        value=":",
-                        line=line_num,
-                        column=i,
-                        indent_level=indent_level,
-                    )
+                yield Token(
+                    type=TokenType.COLON,
+                    value=":",
+                    line=line_num,
+                    column=i,
+                    indent_level=indent_level,
                 )
                 i += 1
                 continue
 
             # Comma
             if char == ",":
-                tokens.append(
-                    Token(
-                        type=TokenType.COMMA,
-                        value=",",
-                        line=line_num,
-                        column=i,
-                        indent_level=indent_level,
-                    )
+                yield Token(
+                    type=TokenType.COMMA,
+                    value=",",
+                    line=line_num,
+                    column=i,
+                    indent_level=indent_level,
                 )
                 i += 1
                 continue
@@ -224,94 +203,80 @@ class ToonLexer:
             if char == "-" and (i == 0 or line[i - 1] in (" ", "\t")):
                 # Check if it's a list marker (followed by space)
                 if i + 1 < len(line) and line[i + 1] == " ":
-                    tokens.append(
-                        Token(
-                            type=TokenType.DASH,
-                            value="-",
-                            line=line_num,
-                            column=i,
-                            indent_level=indent_level,
-                        )
+                    yield Token(
+                        type=TokenType.DASH,
+                        value="-",
+                        line=line_num,
+                        column=i,
+                        indent_level=indent_level,
                     )
                     i += 2  # Skip dash and space
                     continue
 
             # Comment
             if char == "#":
-                tokens.append(
-                    Token(
-                        type=TokenType.COMMENT,
-                        value=line[i:],  # Value is the entire comment string
-                        line=line_num,
-                        column=i,
-                        indent_level=indent_level,
-                    )
+                yield Token(
+                    type=TokenType.COMMENT,
+                    value=line[i:],  # Value is the entire comment string
+                    line=line_num,
+                    column=i,
+                    indent_level=indent_level,
                 )
                 i = len(line)  # Consume rest of the line
                 continue
 
             # Array/brace markers
             if char == "[":
-                tokens.append(
-                    Token(
-                        type=TokenType.ARRAY_START,
-                        value="[",
-                        line=line_num,
-                        column=i,
-                        indent_level=indent_level,
-                    )
+                yield Token(
+                    type=TokenType.ARRAY_START,
+                    value="[",
+                    line=line_num,
+                    column=i,
+                    indent_level=indent_level,
                 )
                 i += 1
                 continue
 
             if char == "]":
-                tokens.append(
-                    Token(
-                        type=TokenType.ARRAY_END,
-                        value="]",
-                        line=line_num,
-                        column=i,
-                        indent_level=indent_level,
-                    )
+                yield Token(
+                    type=TokenType.ARRAY_END,
+                    value="]",
+                    line=line_num,
+                    column=i,
+                    indent_level=indent_level,
                 )
                 i += 1
                 continue
 
             if char == "{":
-                tokens.append(
-                    Token(
-                        type=TokenType.BRACE_START,
-                        value="{",
-                        line=line_num,
-                        column=i,
-                        indent_level=indent_level,
-                    )
+                yield Token(
+                    type=TokenType.BRACE_START,
+                    value="{",
+                    line=line_num,
+                    column=i,
+                    indent_level=indent_level,
                 )
                 i += 1
                 continue
 
             if char == "}":
-                tokens.append(
-                    Token(
-                        type=TokenType.BRACE_END,
-                        value="}",
-                        line=line_num,
-                        column=i,
-                        indent_level=indent_level,
-                    )
+                yield Token(
+                    type=TokenType.BRACE_END,
+                    value="}",
+                    line=line_num,
+                    column=i,
+                    indent_level=indent_level,
                 )
                 i += 1
                 continue
 
             if char == "*":
-                tokens.append(
-                    Token(
-                        type=TokenType.STAR,
-                        value="*",
-                        line=line_num,
-                        column=i,
-                        indent_level=indent_level,
-                    )
+                yield Token(
+                    type=TokenType.STAR,
+                    value="*",
+                    line=line_num,
+                    column=i,
+                    indent_level=indent_level,
                 )
                 i += 1
                 continue
@@ -319,16 +284,14 @@ class ToonLexer:
             # Quoted string
             if char == '"':
                 string_token, new_i = self._scan_quoted_string(line, i, line_num, indent_level)
-                tokens.append(string_token)
+                yield string_token
                 i = new_i
                 continue
 
             # Identifier or unquoted value
             token, new_i = self._scan_identifier(line, i, line_num, indent_level)
-            tokens.append(token)
+            yield token
             i = new_i
-
-        return tokens
 
     def _scan_quoted_string(
         self, line: str, start: int, line_num: int, indent_level: int

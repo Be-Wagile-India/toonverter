@@ -9,13 +9,14 @@ from typing import Any
 
 from toonverter.core.exceptions import DecodingError
 from toonverter.core.spec import RootForm, ToonDecodeOptions
+from toonverter.decoders.event_parser import ParserEvent, ToonEventParser
 from toonverter.decoders.lexer import Token, TokenType
 from toonverter.decoders.stream_lexer import StreamLexer
 from toonverter.decoders.toon_decoder import ToonDecoder
 
 
 class PeekableIterator:
-    """Iterator wrapper that allows peeking ahead."""
+    # ... (existing PeekableIterator implementation) ...
 
     def __init__(self, iterator: Iterator[Token]) -> None:
         self.iterator = iterator
@@ -50,6 +51,109 @@ class StreamDecoder:
     def __init__(self, options: ToonDecodeOptions | None = None) -> None:
         self.options = options or ToonDecodeOptions()
         self.chunk_decoder = ToonDecoder(self.options)
+
+    def items(self, stream: Iterator[str], events: bool = False) -> Iterator[Any]:
+        """Yield items from a root array one by one.
+
+        Args:
+            stream: Iterator of TOON lines.
+            events: If True, yield (ParserEvent, value) pairs instead of full objects.
+                    This is the most memory-efficient mode.
+
+        Yields:
+            Decoded items or parsing events.
+        """
+        lexer = StreamLexer(stream, indent_size=self.options.indent_size)
+        parser = ToonEventParser(lexer.tokenize())
+
+        parser_events = parser.parse()
+
+        try:
+            # Skip START_DOCUMENT
+            ev, _ = next(parser_events)
+
+            # Root must be START_ARRAY for item-by-item streaming
+            ev, val = next(parser_events)
+            if ev == ParserEvent.START_ARRAY:
+                if events:
+                    yield (ev, val)
+                    yield from parser_events
+                else:
+                    yield from self._yield_full_items(parser_events)
+            elif ev == ParserEvent.VALUE:
+                # Root primitive
+                yield val
+            elif ev == ParserEvent.START_OBJECT:
+                # Root object - yield as single item if not in events mode
+                if events:
+                    yield (ev, val)
+                    yield from parser_events
+                else:
+                    # Reconstruct full root object
+                    yield self._reconstruct_item(ev, val, parser_events)
+        except StopIteration:
+            pass
+
+    def _yield_full_items(self, events: Iterator[tuple[ParserEvent, Any]]) -> Iterator[Any]:
+        """Reconstruct top-level items from events."""
+        for event, value in events:
+            if event == ParserEvent.END_ARRAY:
+                break
+
+            # Reconstruct one full item
+            item = self._reconstruct_item(event, value, events)
+            yield item
+
+    def _reconstruct_item(
+        self, first_event: ParserEvent, first_value: Any, events: Iterator[tuple[ParserEvent, Any]]
+    ) -> Any:
+        """Helper to reconstruct a single complex item from event stream."""
+        if first_event == ParserEvent.VALUE:
+            return first_value
+
+        stack: list[Any] = []
+        current_key: str | None = None
+
+        # Initialize stack with first container
+        if first_event == ParserEvent.START_OBJECT:
+            stack.append({})
+        elif first_event == ParserEvent.START_ARRAY:
+            stack.append([])
+        else:
+            return first_value  # Should not happen for KEY/VALUE
+
+        for event, value in events:
+            if event == ParserEvent.START_OBJECT:
+                stack.append({})
+            elif event == ParserEvent.START_ARRAY:
+                stack.append([])
+            elif event == ParserEvent.KEY:
+                current_key = value
+            elif event == ParserEvent.VALUE:
+                target = stack[-1]
+                if isinstance(target, dict):
+                    if current_key is None:
+                        # Should not happen in valid TOON, but for robustness:
+                        continue
+                    target[current_key] = value
+                    current_key = None
+                else:
+                    target.append(value)
+            elif event in (ParserEvent.END_OBJECT, ParserEvent.END_ARRAY):
+                finished = stack.pop()
+                if not stack:
+                    return finished
+
+                target = stack[-1]
+                if isinstance(target, dict):
+                    if current_key is not None:
+                        target[current_key] = finished
+                        current_key = None
+                else:
+                    target.append(finished)
+
+        # If we reach here, doc ended prematurely
+        return stack[0] if stack else None
 
     def decode_stream(self, stream: Iterator[str]) -> Iterator[Any]:
         """Decode a stream of TOON lines.

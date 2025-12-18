@@ -90,7 +90,7 @@ class ToonDecoder:
 
             # Tokenize input
             lexer = ToonLexer(data_str, indent_size=self.options.indent_size)
-            self.tokens = lexer.tokenize()
+            self.tokens = list(lexer.tokenize())
             self.pos = 0
 
             # Parse root based on first token

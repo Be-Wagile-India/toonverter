@@ -34,7 +34,7 @@ from .core import (
     registry,
 )
 from .core.registry import get_registry
-from .decoders import ToonDecoder
+from .decoders import StreamDecoder, ToonDecoder
 from .differ import DiffResult
 from .encoders import ToonEncoder
 from .encoders.toon_encoder import _convert_options
@@ -526,6 +526,7 @@ __all__ = [
     "SchemaField",
     "SchemaInferrer",
     "SchemaValidator",
+    "StreamDecoder",
     # Version info
     "__version__",
     "analyze",

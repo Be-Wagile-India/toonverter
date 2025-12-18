@@ -32,6 +32,7 @@ class StreamLexer:
 
     def tokenize(self) -> Iterator[Token]:
         """Yield tokens one by one."""
+        self.current_indent = 0
         for line in self.source:
             # Handle potential trailing newlines from file reading
             line_content = line.rstrip("\n")
@@ -53,9 +54,9 @@ class StreamLexer:
                         value=None,
                         line=self.current_line,
                         column=0,
-                        indent_level=indent_level,
+                        indent_level=self.current_indent + 1,
                     )
-                self.current_indent = indent_level
+                    self.current_indent += 1
 
             elif indent_level < self.current_indent:
                 for _ in range(self.current_indent - indent_level):
@@ -64,17 +65,18 @@ class StreamLexer:
                         value=None,
                         line=self.current_line,
                         column=0,
-                        indent_level=indent_level,
+                        indent_level=self.current_indent - 1,
                     )
-                self.current_indent = indent_level
+                    self.current_indent -= 1
 
             # Reuse ToonLexer's stateless line tokenization
             stripped = line_content.strip()
             if stripped == "-":
                 stripped = "- "
 
-            line_tokens = self._line_lexer._tokenize_line(stripped, self.current_line, indent_level)
-            yield from line_tokens
+            yield from self._line_lexer._tokenize_line(
+                stripped, self.current_line, self.current_indent
+            )
 
             # Add newline token
             yield Token(
@@ -82,21 +84,21 @@ class StreamLexer:
                 value=None,
                 line=self.current_line,
                 column=len(line_content),
-                indent_level=indent_level,
+                indent_level=self.current_indent,
             )
 
             self.current_line += 1
 
         # Add final dedents
         while self.current_indent > 0:
+            self.current_indent -= 1
             yield Token(
                 type=TokenType.DEDENT,
                 value=None,
                 line=self.current_line,
                 column=0,
-                indent_level=0,
+                indent_level=self.current_indent,
             )
-            self.current_indent -= 1
 
         # Add EOF token
         yield Token(

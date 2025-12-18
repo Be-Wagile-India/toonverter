@@ -151,6 +151,7 @@ Contents
    guides/quick_start
    guides/toon_format
    guides/configuration
+   guides/streaming
    guides/deduplication
    guides/schema_tools
 

@@ -116,3 +116,23 @@ class TestToonStreamDecoder:
         # Fallback yields the single parsed object
         assert len(items) == 1
         assert items[0] == {"name": "Alice", "age": 30}
+
+    def test_stream_items_completeness(self, stream_decoder: StreamDecoder) -> None:
+        """Test the new items() method with various structures."""
+        # 1. Root array
+        toon = "[*]:\n- val1\n- {k: v}\n- [1]: nested"
+        items = list(stream_decoder.items(stream_from_string(toon)))
+        assert items == ["val1", {"k": "v"}, ["nested"]]
+
+        # 2. Root object
+        toon_obj = "a: 1\nb: 2"
+        items = list(stream_decoder.items(stream_from_string(toon_obj)))
+        assert items == [{"a": 1, "b": 2}]
+
+        # 3. Events mode
+        toon_ev = "[1]: item"
+        events = list(stream_decoder.items(stream_from_string(toon_ev), events=True))
+        from toonverter.decoders.event_parser import ParserEvent
+
+        assert (ParserEvent.START_ARRAY, 1) in events
+        assert (ParserEvent.VALUE, "item") in events
