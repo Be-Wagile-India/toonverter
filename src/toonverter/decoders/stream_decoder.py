@@ -180,23 +180,9 @@ class StreamDecoder:
                 if t.type == TokenType.DASH:
                     break  # Next item
 
-                # DEDENT check: strict inequality for robustness?
-                # If we drop BELOW the start indent, we are out.
+                # DEDENT check: Stop when dedenting below start indent (end of block).
                 if t.type == TokenType.DEDENT and t.indent_level < start_indent:
                     break
-
-                # If we hit DEDENT that returns us TO start_indent (e.g. closing a nested block),
-                # we keep going? No, if start_indent is the item level, and we DEDENT *to* it,
-                # it means we just finished a child block. We are still *in* the item?
-                # Wait. The item IS the block.
-                # If the item started at indent 1.
-                # A nested object goes to indent 2.
-                # DEDENT to 1 means end of nested object.
-                # We are back at item level.
-                # Should we stop?
-                # If the item IS an object, it ends when we dedent back to list level (0).
-
-                # Correct logic: We stop when we dedent to < start_indent.
 
                 # Inline array item separator
                 if t.type == TokenType.COMMA:
@@ -238,15 +224,5 @@ class StreamDecoder:
             # Just whitespace/newlines? Return None?
             return None
 
-        # Detect form again?
-        # We can just use _parse_value(depth=0) because ToonDecoder logic
-        # calculates relative depth or uses absolute checks.
-
-        # Actually, we should try to parse the *root* of this chunk.
-        # If it looks like an object (starts with key:), parse object.
-        # If array, parse array.
-        # If primitive, parse primitive.
-
-        # Simplest hack: wrap logic
-        # We rely on _parse_value which handles dispatch.
+        # Use _parse_value(depth=0) to dispatch to correct parsing method
         return self.chunk_decoder._parse_value(depth=0)

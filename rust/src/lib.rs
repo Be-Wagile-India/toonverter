@@ -115,8 +115,6 @@ mod tests {
     use super::*;
     use crate::ir::ToonValue;
     use indexmap::IndexMap;
-    // use pyo3::types::{IntoPyDict, PyList, PyString}; // No longer needed for internal Rust tests
-    // use pyo3::{Bound, Python}; // No longer needed for internal Rust tests
 
     #[test]
     fn test_internal_encode_decode_roundtrip() {

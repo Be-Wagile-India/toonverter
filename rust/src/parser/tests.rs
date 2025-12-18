@@ -109,7 +109,6 @@ fn test_parse_value_unexpected_token_error() {
 
 #[test]
 fn test_parse_array_header_implicit_schema() {
-    // Renamed test
     let text = "[abc]: 1,2,3";
     let lexer = ToonLexer::new(text, 2);
     let mut parser = ToonParser::new(lexer);
@@ -343,22 +342,7 @@ fn test_parse_array_header_tabular_with_data() {
     }
 }
 
-/*
-#[test]
-fn test_parse_implicit_inline_object_continuation() {
-    let text = "key: val1, key2: val2\n  key3: val3";
-    let lexer = ToonLexer::new(text, 2);
-    let mut parser = ToonParser::new(lexer);
-    let result = parser.parse_implicit_inline_object().unwrap();
-    if let ToonValue::Dict(d) = result {
-        assert_eq!(d.get("key"), Some(&ToonValue::String("val1".to_string())));
-        assert_eq!(d.get("key2"), Some(&ToonValue::String("val2".to_string())));
-        assert_eq!(d.get("key3"), Some(&ToonValue::String("val3".to_string())));
-    } else {
-        panic!("Expected Dict");
-    }
-}
-*/
+
 
 #[test]
 fn test_parse_value_object_with_indent() {
@@ -394,19 +378,7 @@ fn test_parse_value_inline_object() {
     assert_eq!(result, ToonValue::Dict(expected));
 }
 
-/*
-#[test]
-fn test_parse_implicit_inline_object_unexpected_token() {
-    let text = "key: val1, :"; // Missing key after comma
-    let lexer = ToonLexer::new(text, 2);
-    let mut parser = ToonParser::new(lexer);
-    let result = parser.parse_implicit_inline_object();
-    assert!(result.is_err());
-    assert!(result
-        .unwrap_err()
-        .contains("Unexpected token in implicit inline object: Colon"));
-}
-*/
+
 
 #[test]
 fn test_parse_array_header_compact_unexpected_token() {
@@ -531,33 +503,9 @@ fn test_parse_array_header_explicit_fields_error() {
     assert!(err_msg.contains("Expected field name or '}'"));
 }
 
-/*
-#[test]
-fn test_parse_implicit_inline_object_indented_eof() {
-    let text = "key: val\n  key2: val2"; // EOF after last indented field
-    let lexer = ToonLexer::new(text, 2);
-    let mut parser = ToonParser::new(lexer);
-    let result = parser.parse_implicit_inline_object().unwrap();
-    if let ToonValue::Dict(d) = result {
-        assert_eq!(d.get("key"), Some(&ToonValue::String("val".to_string())));
-        assert_eq!(d.get("key2"), Some(&ToonValue::String("val2".to_string())));
-    } else {
-        panic!("Expected Dict");
-    }
-}
-*/
 
-/*
-#[test]
-fn test_parse_implicit_inline_object_continuation_error() {
-    let text = "key: val\n  ["; // ArrayStart at indented line start (expected key)
-    let lexer = ToonLexer::new(text, 2);
-    let mut parser = ToonParser::new(lexer);
-    let result = parser.parse_implicit_inline_object();
-    assert!(result.is_err());
-    assert!(result.unwrap_err().contains("Expected key"));
-}
-*/
+
+
 
 #[test]
 fn test_parse_root_comments_newlines() {

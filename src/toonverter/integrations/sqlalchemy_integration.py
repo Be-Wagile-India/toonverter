@@ -258,10 +258,12 @@ def bulk_query_to_toon(
         # Process result in chunks
         if hasattr(result, "scalars"):
             # Result object
-            # This part seems to be missing the actual iteration logic for 'result.scalars()'
-            # Assuming it should iterate and append to chunk, similar to the 'else' block.
-            # For now, keeping it as is, but it might be a logical error in the original code.
-            pass  # Placeholder for potential missing logic
+            for row in result.scalars():
+                chunk.append(_model_to_dict(row))
+
+                if len(chunk) >= chunk_size:
+                    yield encoder.encode(cast("ToonValue", chunk))
+                    chunk = []
         else:
             # List of instances
             for row in result:

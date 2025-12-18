@@ -63,27 +63,8 @@ impl Serialize for ToonValue {
             ToonValue::Boolean(b) => serializer.serialize_bool(*b),
             ToonValue::Integer(i) => serializer.serialize_i64(*i),
             ToonValue::BigInteger(bi) => {
-                // Serialize BigInt as a number (if serializer supports it) or string?
-                // JSON spec allows numbers of any size, but many parsers limit to f64.
-                // For safety and compatibility, serialization to string might be safer for massive numbers,
-                // but Toon/JSON usually expects raw digits.
-                // serde_json handles BigInt (with features) or Number.
-                // Let's serialize as a custom number implementation or cast to f64 if acceptable?
-                // Actually, let's try to serialize as i64 if it fits (redundant) or just delegate to BigInt's serialize if available.
-                // However, num-bigint's default serialization might not be "raw number".
-                // Simplest valid JSON approach: serialize as a number.
-                // We'll trust the serializer handles it (e.g. converting to a number token).
-                // If using serde_json, BigInt can be serialized directly if features enabled.
-                // Since we didn't enable serde on num-bigint in Cargo.toml, we should convert to string or use a workaround.
-                // Wait, I didn't enable serde feature for num-bigint.
-                // Let's convert to string and serialize as a 'raw number' if possible, or string?
-                // TOON spec says: canonical numbers.
-                // For now, let's serialize as a Float to maintain existing behavior for JSON output,
-                // OR serialize as string digits?
-                // Better: serialize as a float for now to avoid breaking existing clients that expect standard JSON types,
-                // BUT this defeats the purpose of "Integer Precision Loss" fix for serialization.
-                // Correct fix: Enable serde feature for num-bigint or implement custom serialization.
-                // I will add serde feature to num-bigint in next step. For now, serialize as string.
+                // Serialize BigInt as a string to preserve precision, as JSON/TOON parsers
+                // vary in their support for large numbers.
                 serializer.serialize_str(&bi.to_string())
             }
             ToonValue::Float(f) => serializer.serialize_f64(*f),

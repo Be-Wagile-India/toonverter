@@ -262,11 +262,7 @@ def infer(input_file: str, output: str | None) -> None:
             except ImportError:
                 item_schema = inferrer.infer_from_stream(stream)
 
-            # Wrap in array to match file structure (List of Items) if it was a stream of items
-            # But wait, if it's a JSON object (not array), load_stream isn't appropriate?
-            # load_stream currently handles JSON Arrays and JSONL.
-            # If the input is a single huge JSON object, load_stream might fail or yield nothing if it expects array.
-            # Assuming standard "list of records" use case for streaming.
+            # Wrap in array to match file structure (List of Items) for standard streaming use case
             schema = SchemaField(type="array", items=item_schema)
         else:
             # Standard load for other formats

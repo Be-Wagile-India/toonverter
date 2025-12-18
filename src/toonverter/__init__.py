@@ -37,7 +37,7 @@ from .core.registry import get_registry
 from .decoders import ToonDecoder
 from .differ import DiffResult
 from .encoders import ToonEncoder
-from .encoders.toon_encoder import _convert_options  # Added import
+from .encoders.toon_encoder import _convert_options
 from .formats import register_default_formats
 from .integrations.redis_integration import RedisToonWrapper
 from .plugins import load_plugins
