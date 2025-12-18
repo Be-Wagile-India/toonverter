@@ -12,7 +12,12 @@ use crate::serde_toon::Serializer as ToonSerializer;
 /// Result of a batch operation: (Original Path, Success/Error Message, Is Error)
 pub type BatchResult = (String, String, bool);
 
-pub fn convert_single_json_to_toon(path: &str, output_dir: Option<&str>) -> BatchResult {
+pub fn convert_single_json_to_toon(
+    path: &str,
+    output_dir: Option<&str>,
+    indent_size: usize,
+    delimiter: &str,
+) -> BatchResult {
     let file = match fs::File::open(path) {
         Ok(f) => f,
         Err(e) => return (path.to_string(), format!("IO Error: {}", e), true),
@@ -51,7 +56,7 @@ pub fn convert_single_json_to_toon(path: &str, output_dir: Option<&str>) -> Batc
         };
         let mut writer = io::BufWriter::new(outfile);
 
-        let mut serializer = ToonSerializer::new(&mut writer);
+        let mut serializer = ToonSerializer::new(&mut writer, indent_size, delimiter);
         match json_val.serialize(&mut serializer) {
             Ok(_) => (
                 path.to_string(),
@@ -63,7 +68,7 @@ pub fn convert_single_json_to_toon(path: &str, output_dir: Option<&str>) -> Batc
     } else {
         // Memory
         let mut buffer = Vec::new();
-        let mut serializer = ToonSerializer::new(&mut buffer);
+        let mut serializer = ToonSerializer::new(&mut buffer, indent_size, delimiter);
         match json_val.serialize(&mut serializer) {
             Ok(_) => {
                 let s = String::from_utf8_lossy(&buffer).to_string();
@@ -74,7 +79,11 @@ pub fn convert_single_json_to_toon(path: &str, output_dir: Option<&str>) -> Batc
     }
 }
 
-pub fn convert_single_toon_to_json(path: &str, output_dir: Option<&str>) -> BatchResult {
+pub fn convert_single_toon_to_json(
+    path: &str,
+    output_dir: Option<&str>,
+    indent_size: usize,
+) -> BatchResult {
     let file = match fs::File::open(path) {
         Ok(f) => f,
         Err(e) => return (path.to_string(), format!("IO Error: {}", e), true),
@@ -92,7 +101,7 @@ pub fn convert_single_toon_to_json(path: &str, output_dir: Option<&str>) -> Batc
         Err(e) => return (path.to_string(), format!("UTF-8 Error: {}", e), true),
     };
 
-    let lexer = ToonLexer::new(content_str, 2);
+    let lexer = ToonLexer::new(content_str, indent_size);
     let mut parser = ToonParser::new(lexer);
 
     let toon_val = match parser.parse_root() {
@@ -143,17 +152,28 @@ pub fn convert_single_toon_to_json(path: &str, output_dir: Option<&str>) -> Batc
     }
 }
 
-pub fn batch_convert_json(paths: Vec<String>, output_dir: Option<String>) -> Vec<BatchResult> {
+pub fn batch_convert_json(
+    paths: Vec<String>,
+    output_dir: Option<String>,
+    indent_size: usize,
+    delimiter: &str,
+) -> Vec<BatchResult> {
     paths
         .par_iter()
-        .map(|path| convert_single_json_to_toon(path, output_dir.as_deref()))
+        .map(|path| {
+            convert_single_json_to_toon(path, output_dir.as_deref(), indent_size, delimiter)
+        })
         .collect()
 }
 
-pub fn batch_convert_toon(paths: Vec<String>, output_dir: Option<String>) -> Vec<BatchResult> {
+pub fn batch_convert_toon(
+    paths: Vec<String>,
+    output_dir: Option<String>,
+    indent_size: usize,
+) -> Vec<BatchResult> {
     paths
         .par_iter()
-        .map(|path| convert_single_toon_to_json(path, output_dir.as_deref()))
+        .map(|path| convert_single_toon_to_json(path, output_dir.as_deref(), indent_size))
         .collect()
 }
 
@@ -161,6 +181,8 @@ pub fn batch_convert_directory(
     dir_path: String,
     recursive: bool,
     output_dir: Option<String>,
+    indent_size: usize,
+    delimiter: &str,
 ) -> Vec<BatchResult> {
     let walker = WalkDir::new(dir_path)
         .follow_links(true)
@@ -176,6 +198,8 @@ pub fn batch_convert_directory(
 
     paths
         .par_iter()
-        .map(|path| convert_single_json_to_toon(path, output_dir.as_deref()))
+        .map(|path| {
+            convert_single_json_to_toon(path, output_dir.as_deref(), indent_size, delimiter)
+        })
         .collect()
 }

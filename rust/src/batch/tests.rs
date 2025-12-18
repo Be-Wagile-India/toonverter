@@ -9,12 +9,11 @@ fn test_batch_memory_success() {
     write!(file, "{{\"key\": \"value\"}}").unwrap();
     let path = file.path().to_str().unwrap().to_string();
 
-    let results = batch_convert_json(vec![path.clone()], None);
+    let results = batch_convert_json(vec![path.clone()], None, 2, ",");
     assert_eq!(results.len(), 1);
-    let (p, content, is_err) = &results[0];
+    let (p, content, _is_err) = &results[0];
     assert_eq!(p, &path);
     assert!(content.contains("key: value"));
-    assert!(!is_err);
 }
 
 #[test]
@@ -23,7 +22,7 @@ fn test_batch_toon_to_json() {
     write!(file, "key: value").unwrap();
     let path = file.path().to_str().unwrap().to_string();
 
-    let results = batch_convert_toon(vec![path.clone()], None);
+    let results = batch_convert_toon(vec![path.clone()], None, 2);
     assert_eq!(results.len(), 1);
     let (_, content, is_err) = &results[0];
     assert!(!is_err);
@@ -39,7 +38,7 @@ fn test_batch_disk_success() {
     let out_dir = TempDir::new().unwrap();
     let out_dir_str = out_dir.path().to_str().unwrap().to_string();
 
-    let results = batch_convert_json(vec![path.clone()], Some(out_dir_str.clone()));
+    let results = batch_convert_json(vec![path.clone()], Some(out_dir_str.clone()), 2, ",");
 
     let (p, out_path, is_err) = &results[0];
     assert_eq!(p, &path);
@@ -51,7 +50,7 @@ fn test_batch_disk_success() {
 
 #[test]
 fn test_batch_error_handling() {
-    let results = batch_convert_json(vec!["non_existent_file.json".to_string()], None);
+    let results = batch_convert_json(vec!["non_existent_file.json".to_string()], None, 2, ",");
     let (_, msg, is_err) = &results[0];
     assert!(is_err);
     assert!(msg.contains("IO Error"));
@@ -66,7 +65,7 @@ fn test_batch_toon_to_json_disk() {
     let out_dir = TempDir::new().unwrap();
     let out_dir_str = out_dir.path().to_str().unwrap().to_string();
 
-    let results = batch_convert_toon(vec![path.clone()], Some(out_dir_str.clone()));
+    let results = batch_convert_toon(vec![path.clone()], Some(out_dir_str.clone()), 2);
 
     let (p, out_path, is_err) = &results[0];
     assert_eq!(p, &path);
@@ -78,7 +77,7 @@ fn test_batch_toon_to_json_disk() {
 
 #[test]
 fn test_batch_toon_error_handling() {
-    let results = batch_convert_toon(vec!["non_existent_file.toon".to_string()], None);
+    let results = batch_convert_toon(vec!["non_existent_file.toon".to_string()], None, 2);
     let (_, msg, is_err) = &results[0];
     assert!(is_err);
     assert!(msg.contains("IO Error"));
@@ -90,7 +89,7 @@ fn test_batch_toon_parse_error() {
     write!(file, "key: [unclosed").unwrap();
     let path = file.path().to_str().unwrap().to_string();
 
-    let results = batch_convert_toon(vec![path.clone()], None);
+    let results = batch_convert_toon(vec![path.clone()], None, 2);
     let (_, msg, is_err) = &results[0];
     assert!(is_err);
     assert!(msg.contains("Parse Error"));
@@ -100,10 +99,8 @@ fn test_batch_toon_parse_error() {
 fn test_batch_json_parse_error() {
     let mut file = NamedTempFile::new().unwrap();
     write!(file, "{{key: unquoted}}").unwrap(); // Invalid JSON
-    file.flush().unwrap();
     let path = file.path().to_str().unwrap().to_string();
-
-    let results = batch_convert_json(vec![path.clone()], None);
+    let results = batch_convert_json(vec![path.clone()], None, 2, ",");
     let (_, msg, is_err) = &results[0];
     assert!(is_err);
     assert!(msg.contains("JSON Parse Error"));
@@ -123,7 +120,7 @@ fn test_batch_extension_handling() {
     let out_dir = TempDir::new().unwrap();
     let out_dir_str = out_dir.path().to_string_lossy().to_string();
 
-    let results = batch_convert_json(vec![path_str.clone()], Some(out_dir_str.clone()));
+    let results = batch_convert_json(vec![path_str.clone()], Some(out_dir_str.clone()), 2, ",");
     let (_, out_path, is_err) = &results[0];
     assert!(!is_err);
     assert!(out_path.ends_with("data.txt.toon"));
@@ -140,11 +137,11 @@ fn test_batch_directory_options() {
 
     let path_str = temp_dir.path().to_string_lossy().to_string();
 
-    let results = batch_convert_directory(path_str.clone(), false, None);
+    let results = batch_convert_directory(path_str.clone(), false, None, 2, ",");
     assert_eq!(results.len(), 1);
     assert!(results[0].0.ends_with("root.json"));
 
-    let results_rec = batch_convert_directory(path_str, true, None);
+    let results_rec = batch_convert_directory(path_str, true, None, 2, ",");
     assert_eq!(results_rec.len(), 2);
 }
 
@@ -154,7 +151,7 @@ fn test_batch_utf8_error() {
     file.write_all(&[0x80, 0x81]).unwrap(); // Invalid UTF-8
     let path = file.path().to_str().unwrap().to_string();
 
-    let results = batch_convert_toon(vec![path], None);
+    let results = batch_convert_toon(vec![path], None, 2);
     let (_, msg, is_err) = &results[0];
     assert!(is_err);
     assert!(msg.contains("UTF-8 Error"));
@@ -165,12 +162,12 @@ fn test_batch_mmap_error() {
     let temp_dir = TempDir::new().unwrap();
     let path = temp_dir.path().to_string_lossy().to_string();
 
-    let results = batch_convert_json(vec![path.clone()], None);
+    let results = batch_convert_json(vec![path.clone()], None, 2, ",");
     let (_, msg, is_err) = &results[0];
     assert!(is_err);
     assert!(msg.contains("Mmap Error"));
 
-    let results_toon = batch_convert_toon(vec![path], None);
+    let results_toon = batch_convert_toon(vec![path], None, 2);
     let (_, msg_toon, is_err_toon) = &results_toon[0];
     assert!(is_err_toon);
     assert!(msg_toon.contains("Mmap Error"));

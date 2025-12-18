@@ -19,6 +19,9 @@ class DegradationCandidate:
     key: Any
 
 
+MAX_RECURSION_DEPTH = 200  # Safe limit below system default
+
+
 class ContextOptimizer:
     """Optimizes data structure to fit within a token budget."""
 
@@ -101,20 +104,29 @@ class ContextOptimizer:
 
     def _scan_candidates(self, data: Any) -> list[DegradationCandidate]:
         candidates: list[DegradationCandidate] = []
-        self._visit(data, [], candidates)
+        self._visit(data, [], candidates, depth=0)
         return candidates
 
-    def _visit(self, node: Any, path: list[str], candidates: list[DegradationCandidate]) -> None:
+    def _visit(
+        self,
+        node: Any,
+        path: list[str],
+        candidates: list[DegradationCandidate],
+        depth: int = 0,
+    ) -> None:
+        if depth > MAX_RECURSION_DEPTH:
+            return  # Stop optimizing this branch
+
         if isinstance(node, dict):
             for k, v in list(node.items()):
                 self._analyze_node(v, [*path, str(k)], candidates, parent=node, key=k)
                 if isinstance(v, (dict, list)):
-                    self._visit(v, [*path, str(k)], candidates)
+                    self._visit(v, [*path, str(k)], candidates, depth + 1)
         elif isinstance(node, list):
             for i, v in enumerate(node):
                 self._analyze_node(v, [*path, str(i)], candidates, parent=node, key=i)
                 if isinstance(v, (dict, list)):
-                    self._visit(v, [*path, str(i)], candidates)
+                    self._visit(v, [*path, str(i)], candidates, depth + 1)
 
     def _analyze_node(
         self,

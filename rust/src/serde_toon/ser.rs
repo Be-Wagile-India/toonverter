@@ -1,20 +1,22 @@
 use serde::{ser, Serialize};
 use std::io;
 
-pub struct Serializer<W> {
+pub struct Serializer<'a, W> {
     writer: W,
     indent_level: usize,
     indent_size: usize,
+    delimiter: &'a str,
     is_root: bool,
     in_list: bool,
 }
 
-impl<W: io::Write> Serializer<W> {
-    pub fn new(writer: W) -> Self {
+impl<'a, W: io::Write> Serializer<'a, W> {
+    pub fn new(writer: W, indent_size: usize, delimiter: &'a str) -> Self {
         Serializer {
             writer,
             indent_level: 0,
-            indent_size: 2,
+            indent_size,
+            delimiter,
             is_root: true,
             in_list: false,
         }
@@ -57,17 +59,17 @@ impl From<io::Error> for Error {
 
 type Result<T> = std::result::Result<T, Error>;
 
-impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
+impl<'b, 'a, W: io::Write> ser::Serializer for &'b mut Serializer<'a, W> {
     type Ok = ();
     type Error = Error;
 
-    type SerializeSeq = ListSerializer<'a, W>;
-    type SerializeTuple = ListSerializer<'a, W>;
-    type SerializeTupleStruct = ListSerializer<'a, W>;
-    type SerializeTupleVariant = ListSerializer<'a, W>;
-    type SerializeMap = MapSerializer<'a, W>;
-    type SerializeStruct = MapSerializer<'a, W>;
-    type SerializeStructVariant = MapSerializer<'a, W>;
+    type SerializeSeq = ListSerializer<'b, 'a, W>;
+    type SerializeTuple = ListSerializer<'b, 'a, W>;
+    type SerializeTupleStruct = ListSerializer<'b, 'a, W>;
+    type SerializeTupleVariant = ListSerializer<'b, 'a, W>;
+    type SerializeMap = MapSerializer<'b, 'a, W>;
+    type SerializeStruct = MapSerializer<'b, 'a, W>;
+    type SerializeStructVariant = MapSerializer<'b, 'a, W>;
 
     fn serialize_bool(self, v: bool) -> Result<()> {
         if v {
@@ -212,8 +214,13 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
         } else {
             "0".to_string()
         };
+        let delimiter_for_header = if self.delimiter == "," {
+            ""
+        } else {
+            self.delimiter
+        };
         self.writer
-            .write_all(format!("[{}]:", len_str).as_bytes())?;
+            .write_all(format!("[{}]{}:", len_str, delimiter_for_header).as_bytes())?;
         self.indent_level += 1;
         Ok(ListSerializer { serializer: self })
     }
@@ -275,11 +282,11 @@ impl<'a, W: io::Write> ser::Serializer for &'a mut Serializer<W> {
     }
 }
 
-pub struct ListSerializer<'a, W> {
-    serializer: &'a mut Serializer<W>,
+pub struct ListSerializer<'b, 'a, W> {
+    serializer: &'b mut Serializer<'a, W>,
 }
 
-impl<'a, W: io::Write> ser::SerializeSeq for ListSerializer<'a, W> {
+impl<'b, 'a, W: io::Write> ser::SerializeSeq for ListSerializer<'b, 'a, W> {
     type Ok = ();
     type Error = Error;
 
@@ -303,7 +310,7 @@ impl<'a, W: io::Write> ser::SerializeSeq for ListSerializer<'a, W> {
     }
 }
 
-impl<'a, W: io::Write> ser::SerializeTuple for ListSerializer<'a, W> {
+impl<'b, 'a, W: io::Write> ser::SerializeTuple for ListSerializer<'b, 'a, W> {
     type Ok = ();
     type Error = Error;
     fn serialize_element<T>(&mut self, value: &T) -> Result<()>
@@ -316,7 +323,7 @@ impl<'a, W: io::Write> ser::SerializeTuple for ListSerializer<'a, W> {
         ser::SerializeSeq::end(self)
     }
 }
-impl<'a, W: io::Write> ser::SerializeTupleStruct for ListSerializer<'a, W> {
+impl<'b, 'a, W: io::Write> ser::SerializeTupleStruct for ListSerializer<'b, 'a, W> {
     type Ok = ();
     type Error = Error;
     fn serialize_field<T>(&mut self, value: &T) -> Result<()>
@@ -329,7 +336,7 @@ impl<'a, W: io::Write> ser::SerializeTupleStruct for ListSerializer<'a, W> {
         ser::SerializeSeq::end(self)
     }
 }
-impl<'a, W: io::Write> ser::SerializeTupleVariant for ListSerializer<'a, W> {
+impl<'b, 'a, W: io::Write> ser::SerializeTupleVariant for ListSerializer<'b, 'a, W> {
     type Ok = ();
     type Error = Error;
     fn serialize_field<T>(&mut self, value: &T) -> Result<()>
@@ -343,13 +350,13 @@ impl<'a, W: io::Write> ser::SerializeTupleVariant for ListSerializer<'a, W> {
     }
 }
 
-pub struct MapSerializer<'a, W> {
-    serializer: &'a mut Serializer<W>,
+pub struct MapSerializer<'b, 'a, W> {
+    serializer: &'b mut Serializer<'a, W>,
     first: bool,
     is_root_map: bool,
 }
 
-impl<'a, W: io::Write> ser::SerializeMap for MapSerializer<'a, W> {
+impl<'b, 'a, W: io::Write> ser::SerializeMap for MapSerializer<'b, 'a, W> {
     type Ok = ();
     type Error = Error;
 
@@ -385,7 +392,7 @@ impl<'a, W: io::Write> ser::SerializeMap for MapSerializer<'a, W> {
     }
 }
 
-impl<'a, W: io::Write> ser::SerializeStruct for MapSerializer<'a, W> {
+impl<'b, 'a, W: io::Write> ser::SerializeStruct for MapSerializer<'b, 'a, W> {
     type Ok = ();
     type Error = Error;
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>
@@ -399,7 +406,7 @@ impl<'a, W: io::Write> ser::SerializeStruct for MapSerializer<'a, W> {
         ser::SerializeMap::end(self)
     }
 }
-impl<'a, W: io::Write> ser::SerializeStructVariant for MapSerializer<'a, W> {
+impl<'b, 'a, W: io::Write> ser::SerializeStructVariant for MapSerializer<'b, 'a, W> {
     type Ok = ();
     type Error = Error;
     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<()>

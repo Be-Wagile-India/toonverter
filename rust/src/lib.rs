@@ -1,10 +1,11 @@
-use pyo3::exceptions::PyValueError;
+use crate::error::ToonError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 pub mod batch;
 mod conversion;
 pub mod encoder;
+pub mod error;
 pub mod ir;
 pub mod lexer;
 pub mod parser;
@@ -25,58 +26,78 @@ fn decode_toon(py: Python, text: &str, indent_size: Option<usize>) -> PyResult<P
     }
 
     let indent = indent_size.unwrap_or(2);
-    let lexer = ToonLexer::new(text, indent);
-    let mut parser = ToonParser::new(lexer);
+    // Release GIL for lexing and parsing
+    let parse_result = py.allow_threads(|| {
+        let lexer = ToonLexer::new(text, indent);
+        let mut parser = ToonParser::new(lexer);
+        parser.parse_root()
+    });
 
-    match parser.parse_root() {
+    match parse_result {
         Ok(tv) => to_py_object(py, &tv),
-        Err(e) => Err(PyValueError::new_err(e)),
+        Err(e) => Err(ToonError::from(e).into()),
     }
 }
 
 #[pyfunction]
 #[pyo3(signature = (obj, indent_size=None, delimiter=None))]
 fn encode_toon(
-    _py: Python,
+    py: Python,
     obj: Bound<'_, PyAny>,
     indent_size: Option<usize>,
     delimiter: Option<String>,
 ) -> PyResult<String> {
+    // Need GIL for conversion from Python object to IR
     let ir = to_toon_value(&obj)?;
+
     let indent = indent_size.unwrap_or(2);
-    let delim = delimiter.as_deref().unwrap_or(",");
-    Ok(encode_toon_root(&ir, indent, delim))
+    let delim = delimiter.unwrap_or_else(|| ",".to_string());
+
+    // Release GIL for encoding string generation
+    py.allow_threads(move || Ok(encode_toon_root(&ir, indent, &delim)))
 }
 
 /// Batch convert JSON files.
 #[pyfunction]
-#[pyo3(signature = (paths, output_dir=None))]
+#[pyo3(signature = (paths, output_dir=None, indent_size=None, delimiter=None))]
 fn convert_json_batch(
     paths: Vec<String>,
     output_dir: Option<String>,
+    indent_size: Option<usize>,
+    delimiter: Option<String>,
 ) -> PyResult<Vec<(String, String, bool)>> {
-    Ok(batch_convert_json(paths, output_dir))
+    let indent = indent_size.unwrap_or(2);
+    let delim = delimiter.as_deref().unwrap_or(",");
+    Ok(batch_convert_json(paths, output_dir, indent, delim))
 }
 
 /// Batch convert TOON files to JSON.
 #[pyfunction]
-#[pyo3(signature = (paths, output_dir=None))]
+#[pyo3(signature = (paths, output_dir=None, indent_size=None))]
 fn convert_toon_batch(
     paths: Vec<String>,
     output_dir: Option<String>,
+    indent_size: Option<usize>,
 ) -> PyResult<Vec<(String, String, bool)>> {
-    Ok(batch_convert_toon(paths, output_dir))
+    let indent = indent_size.unwrap_or(2);
+    Ok(batch_convert_toon(paths, output_dir, indent))
 }
 
 /// Batch convert JSON files in a directory.
 #[pyfunction]
-#[pyo3(signature = (dir_path, recursive=false, output_dir=None))]
+#[pyo3(signature = (dir_path, recursive=false, output_dir=None, indent_size=None, delimiter=None))]
 fn convert_json_directory(
     dir_path: String,
     recursive: bool,
     output_dir: Option<String>,
+    indent_size: Option<usize>,
+    delimiter: Option<String>,
 ) -> PyResult<Vec<(String, String, bool)>> {
-    Ok(batch_convert_directory(dir_path, recursive, output_dir))
+    let indent = indent_size.unwrap_or(2);
+    let delim = delimiter.as_deref().unwrap_or(",");
+    Ok(batch_convert_directory(
+        dir_path, recursive, output_dir, indent, delim,
+    ))
 }
 
 #[pymodule]
@@ -154,14 +175,14 @@ mod tests {
 
             // Test batch functions (smoke test mostly as logic is in batch.rs)
             // We just check they don't panic or fail immediately
-            let batch_res = convert_json_batch(vec![], None);
+            let batch_res = convert_json_batch(vec![], None, None, None);
             assert!(batch_res.is_ok());
             assert!(batch_res.unwrap().is_empty());
 
-            let batch_toon_res = convert_toon_batch(vec![], None);
+            let batch_toon_res = convert_toon_batch(vec![], None, None);
             assert!(batch_toon_res.is_ok());
 
-            let batch_dir_res = convert_json_directory(".".to_string(), false, None);
+            let batch_dir_res = convert_json_directory(".".to_string(), false, None, None, None);
             assert!(batch_dir_res.is_ok());
         })
     }

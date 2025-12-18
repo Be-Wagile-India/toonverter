@@ -22,8 +22,15 @@ This extension is built using `PyO3`, a framework for Rust bindings to the Pytho
 
 The Rust core currently focuses on:
 
-*   **Fast Encoding**: Accelerating the conversion of Python data to TOON format.
-*   **Fast Decoding**: Speeding up the parsing of TOON format into Python data structures.
+*   **Fast Encoding**: Accelerating the conversion of Python data to TOON format using a stateful `ToonWriter` for efficient buffer management.
+*   **Fast Decoding**: Speeding up the parsing of TOON format into Python data structures with a modular, recursive descent parser.
+*   **Batch Processing**: High-performance parallel file conversion using `rayon` and memory-mapped I/O (`memmap2`) for handling large datasets efficiently.
+
+Key Architectural Components:
+
+*   **Parser**: Decomposed into specialized helpers (`parse_array_header`, `parse_inline_content`) for better maintainability and robustness.
+*   **Encoder**: Encapsulates indentation and configuration state within a `ToonWriter` struct, simplifying recursive logic.
+*   **Error Handling**: Uses a structured `ToonError` enum to map internal Rust errors (IO, Syntax, JSON) to appropriate Python exceptions.
 
 Benefits of the Rust Extension:
 

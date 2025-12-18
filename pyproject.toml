@@ -442,7 +442,6 @@ omit = [
     "*/__pycache__/*",
     "*/site-packages/*",
     "*/integrations/*",
-    "*/cli/*",
     "*/plugins/loader.py",
 ]
 

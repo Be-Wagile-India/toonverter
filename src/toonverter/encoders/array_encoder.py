@@ -65,7 +65,12 @@ class ArrayEncoder:
         is_tabular = True
         tabular_keys: tuple[str, ...] | None = None
 
-        for i, item in enumerate(arr):
+        # Heuristic limit: scan at most 1000 items
+        # If an array is huge, checking 1000 is enough to confidently detect format
+        scan_limit = 1000
+        items_to_scan = arr[:scan_limit]
+
+        for i, item in enumerate(items_to_scan):
             # Check Primitive (for Inline)
             if is_inline:
                 if not self._is_primitive(item):

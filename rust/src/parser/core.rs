@@ -248,7 +248,8 @@ impl<'a> ToonParser<'a> {
                     self.advance()?;
                 }
                 TokenType::Identifier(_) | TokenType::String(_) => {
-                    self.parse_kv_pair(&mut dict)?;
+                    let (k, v) = self.parse_kv_pair()?;
+                    dict.insert(k, v);
                 }
                 _ => {
                     return Err(format!(
@@ -298,7 +299,8 @@ impl<'a> ToonParser<'a> {
                         }
                         TokenType::Eof => break,
                         _ => {
-                            self.parse_kv_pair(&mut dict)?;
+                            let (k, v) = self.parse_kv_pair()?;
+                            dict.insert(k, v);
                         }
                     }
                 }
@@ -310,6 +312,27 @@ impl<'a> ToonParser<'a> {
     }
 
     pub(crate) fn parse_array_header_and_content(&mut self) -> ParseResult<ToonValue> {
+        let (length, fields) = self.parse_array_header()?;
+
+        // Check form
+        if self.current()?.token_type == TokenType::Newline {
+            self.advance()?;
+            // Consume leading Comment tokens on new line
+            while self.current()?.token_type == TokenType::Comment {
+                self.advance()?;
+            }
+            if let Some(f) = fields {
+                let len = length.unwrap_or(0);
+                self.parse_tabular_content(len, f)
+            } else {
+                self.parse_list_content()
+            }
+        } else {
+            self.parse_inline_array_content(length, fields)
+        }
+    }
+
+    fn parse_array_header(&mut self) -> ParseResult<(Option<usize>, Option<Vec<String>>)> {
         self.advance()?; // skip [
 
         // Consume leading Newline or Comment tokens
@@ -319,20 +342,28 @@ impl<'a> ToonParser<'a> {
             self.advance()?;
         }
 
-        // Parse length
-        let len_token = self.current()?.clone();
-        let length = match len_token.token_type {
-            TokenType::Integer(i) => i as usize,
-            _ => return Err("Expected integer for array length".to_string()),
-        };
-        self.advance()?;
+        let mut length: Option<usize> = None;
+        let mut fields: Option<Vec<String>> = None;
 
-        // optional delimiter
-        if let TokenType::Identifier(ref s) = self.current()?.token_type {
-            if s == "|" {
+        // Parse length or implicit schema
+        let token = self.current()?.clone();
+        match token.token_type {
+            TokenType::Integer(i) => {
+                length = Some(i as usize);
                 self.advance()?;
             }
+            TokenType::Identifier(ref s) => {
+                fields = Some(vec![s.clone()]);
+                self.advance()?;
+            }
+            _ => return Err("Expected integer for array length or implicit schema".to_string()),
         }
+
+        // optional delimiter
+        if self.current()?.token_type == TokenType::Pipe {
+            self.advance()?;
+        }
+
         // Consume Newline or Comment after delimiter
         while self.current()?.token_type == TokenType::Newline
             || self.current()?.token_type == TokenType::Comment
@@ -341,7 +372,11 @@ impl<'a> ToonParser<'a> {
         }
 
         if self.current()?.token_type != TokenType::ArrayEnd {
-            return Err("Expected ] after array length".to_string());
+            let t = self.current()?;
+            return Err(format!(
+                "Expected ']' after array length, found {:?} at line {} col {}",
+                t.token_type, t.line, t.column
+            ));
         }
         self.advance()?;
 
@@ -352,8 +387,7 @@ impl<'a> ToonParser<'a> {
             self.advance()?;
         }
 
-        // Capture potential fields {fields} or inline header
-        let mut fields: Option<Vec<String>> = None;
+        // Capture potential fields {fields}
         if self.current()?.token_type == TokenType::BraceStart {
             self.advance()?;
             let mut captured_fields = Vec::new();
@@ -381,39 +415,16 @@ impl<'a> ToonParser<'a> {
                     _ => return Err("Expected field name or '}'".to_string()),
                 }
             }
-            fields = Some(captured_fields);
-        } else {
-            // compact header before colon: field1,field2 :
-            match self.current()?.token_type {
-                TokenType::Identifier(_) | TokenType::String(_) => {
-                    let mut captured_fields = Vec::new();
-                    while self.current()?.token_type != TokenType::Colon
-                        && self.current()?.token_type != TokenType::Newline
-                        && self.current()?.token_type != TokenType::Comment
-                        && self.current()?.token_type != TokenType::Eof
-                    {
-                        let token = self.current()?.clone();
-                        match token.token_type {
-                            TokenType::Identifier(s) | TokenType::String(s) => {
-                                captured_fields.push(s);
-                                self.advance()?;
-                            }
-                            TokenType::Comma => {
-                                self.advance()?;
-                            }
-                            _ => {
-                                return Err(
-                                    "Expected field name, ',' or ':' for compact tabular header"
-                                        .to_string(),
-                                )
-                            }
-                        }
-                    }
-                    if !captured_fields.is_empty() {
-                        fields = Some(captured_fields);
-                    }
-                }
-                _ => {} // No fields specified
+            if fields.is_none() {
+                fields = Some(captured_fields);
+            } else {
+                // Implicit schema was already set, but we found braces?
+                // This implies syntax [abc]{def}. Invalid? Or maybe override?
+                // For now, let's error or allow override. The original code didn't handle this explicitly as
+                // identifier sets fields, then brace sets fields.
+                // Original code: fields = Some(captured_fields);
+                // So it overwrites.
+                fields = Some(captured_fields);
             }
         }
 
@@ -426,30 +437,29 @@ impl<'a> ToonParser<'a> {
 
         // Expect :
         if self.current()?.token_type != TokenType::Colon {
-            return Err("Expected : after array header".to_string());
+            let t = self.current()?;
+            return Err(format!(
+                "Expected ':' after array header, found {:?} at line {} col {}",
+                t.token_type, t.line, t.column
+            ));
         }
         self.advance()?;
 
-        // Check form
-        if self.current()?.token_type == TokenType::Newline {
-            self.advance()?;
-            // Consume leading Comment tokens on new line
-            while self.current()?.token_type == TokenType::Comment {
-                self.advance()?;
-            }
-            if let Some(f) = fields {
-                self.parse_tabular_content(length, f)
-            } else {
-                self.parse_list_content()
-            }
-        } else {
-            // Inline form
-            let mut list = Vec::with_capacity(length);
-            for _ in 0..length {
+        Ok((length, fields))
+    }
+
+    fn parse_inline_array_content(
+        &mut self,
+        length: Option<usize>,
+        fields: Option<Vec<String>>,
+    ) -> ParseResult<ToonValue> {
+        let mut list = Vec::new();
+
+        if let Some(len) = length {
+            for _ in 0..len {
                 if self.current()?.token_type == TokenType::Comma {
                     self.advance()?;
                 }
-                // Consume Newline or Comment before value
                 while self.current()?.token_type == TokenType::Newline
                     || self.current()?.token_type == TokenType::Comment
                 {
@@ -458,6 +468,43 @@ impl<'a> ToonParser<'a> {
                 let val = self.parse_value()?;
                 list.push(val);
             }
+        } else {
+            // Length unknown, parse until end of inline list
+            loop {
+                match self.current()?.token_type {
+                    TokenType::Newline | TokenType::Comment | TokenType::Eof => break,
+                    TokenType::Comma => {
+                        self.advance()?;
+                    }
+                    _ => {}
+                }
+                match self.current()?.token_type {
+                    TokenType::Newline | TokenType::Comment | TokenType::Eof => break,
+                    _ => {}
+                }
+
+                let val = self.parse_value()?;
+                list.push(val);
+            }
+        }
+
+        // Apply fields wrapping if present
+        if let Some(f) = fields {
+            if f.len() == 1 {
+                let key = &f[0];
+                let wrapped: Vec<ToonValue> = list
+                    .into_iter()
+                    .map(|v| {
+                        let mut d = IndexMap::new();
+                        d.insert(key.clone(), v);
+                        ToonValue::Dict(d)
+                    })
+                    .collect();
+                Ok(ToonValue::List(wrapped))
+            } else {
+                Ok(ToonValue::List(list))
+            }
+        } else {
             Ok(ToonValue::List(list))
         }
     }
@@ -584,7 +631,8 @@ impl<'a> ToonParser<'a> {
             let token = self.current()?.clone();
             match token.token_type {
                 TokenType::Identifier(_) | TokenType::String(_) => {
-                    self.parse_kv_pair(&mut dict)?;
+                    let (k, v) = self.parse_kv_pair()?;
+                    dict.insert(k, v);
                 }
                 TokenType::Dedent => {
                     if token.indent_level < start_indent_level {
@@ -625,7 +673,8 @@ impl<'a> ToonParser<'a> {
                     self.advance()?;
                 }
                 TokenType::Identifier(_) | TokenType::String(_) => {
-                    self.parse_kv_pair(&mut dict)?;
+                    let (k, v) = self.parse_kv_pair()?;
+                    dict.insert(k, v);
                 }
                 _ => {
                     return Err(format!(
@@ -638,16 +687,13 @@ impl<'a> ToonParser<'a> {
         Ok(ToonValue::Dict(dict))
     }
 
-    pub(crate) fn parse_kv_pair(
-        &mut self,
-        dict: &mut IndexMap<String, ToonValue>,
-    ) -> ParseResult<()> {
+    pub(crate) fn parse_kv_pair(&mut self) -> ParseResult<(String, ToonValue)> {
         let key_str = match self.current()?.token_type.clone() {
             TokenType::Identifier(s) | TokenType::String(s) => {
                 self.advance()?;
                 s
             }
-            _ => return Err("Expected key".to_string()),
+            _ => return Err("Expected identifier or string as key".to_string()),
         };
 
         // Consume Newline or Comment before ArrayStart
@@ -659,15 +705,13 @@ impl<'a> ToonParser<'a> {
 
         if self.current()?.token_type == TokenType::ArrayStart {
             let val = self.parse_array_header_and_content()?;
-            dict.insert(key_str, val);
-
             // Consume Newline or Comment after value
             while self.current()?.token_type == TokenType::Newline
                 || self.current()?.token_type == TokenType::Comment
             {
                 self.advance()?;
             }
-            return Ok(());
+            return Ok((key_str, val));
         }
 
         // Consume Newline or Comment before Colon
@@ -689,7 +733,6 @@ impl<'a> ToonParser<'a> {
         }
 
         let val = self.parse_value()?;
-        dict.insert(key_str, val);
-        Ok(())
+        Ok((key_str, val))
     }
 }

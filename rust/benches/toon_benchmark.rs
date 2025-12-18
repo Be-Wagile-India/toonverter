@@ -38,33 +38,57 @@ fn generate_large_ir(size: usize) -> ToonValue {
 }
 
 fn bench_lexer(c: &mut Criterion) {
-    let input = generate_large_toon(100);
-    c.bench_function("lexer_100_items", |b| {
-        b.iter(|| {
-            let lexer = ToonLexer::new(black_box(&input), 2);
-            for _ in lexer {}
-        })
-    });
+    let mut group = c.benchmark_group("lexer");
+    for size in [10, 100, 1000, 10000].iter() {
+        let input = generate_large_toon(*size);
+        group.bench_with_input(
+            criterion::BenchmarkId::new("items", size),
+            &input,
+            |b, input| {
+                b.iter(|| {
+                    let lexer = ToonLexer::new(black_box(input), 2);
+                    for _ in lexer {}
+                })
+            },
+        );
+    }
+    group.finish();
 }
 
 fn bench_parser(c: &mut Criterion) {
-    let input = generate_large_toon(100);
-    c.bench_function("parser_100_items", |b| {
-        b.iter(|| {
-            let lexer = ToonLexer::new(black_box(&input), 2);
-            let mut parser = ToonParser::new(lexer);
-            let _ = parser.parse_root().unwrap();
-        })
-    });
+    let mut group = c.benchmark_group("parser");
+    for size in [10, 100, 1000, 10000].iter() {
+        let input = generate_large_toon(*size);
+        group.bench_with_input(
+            criterion::BenchmarkId::new("items", size),
+            &input,
+            |b, input| {
+                b.iter(|| {
+                    let lexer = ToonLexer::new(black_box(input), 2);
+                    let mut parser = ToonParser::new(lexer);
+                    let _ = parser.parse_root().unwrap();
+                })
+            },
+        );
+    }
+    group.finish();
 }
 
 fn bench_encoder(c: &mut Criterion) {
-    let ir = generate_large_ir(100);
-    c.bench_function("encoder_100_items", |b| {
-        b.iter(|| {
-            let _ = encode_toon_root(black_box(&ir), 2, ",");
-        })
-    });
+    let mut group = c.benchmark_group("encoder");
+    for size in [10, 100, 1000, 10000].iter() {
+        let ir = generate_large_ir(*size);
+        group.bench_with_input(
+            criterion::BenchmarkId::new("items", size),
+            &ir,
+            |b, ir_val| {
+                b.iter(|| {
+                    let _ = encode_toon_root(black_box(ir_val), 2, ",");
+                })
+            },
+        );
+    }
+    group.finish();
 }
 
 criterion_group!(benches, bench_lexer, bench_parser, bench_encoder);

@@ -5,6 +5,8 @@ from pathlib import Path
 
 import click
 
+from toonverter.core.exceptions import ToonConverterError
+
 
 @click.group()
 @click.version_option()
@@ -101,8 +103,11 @@ def convert(
         else:
             click.echo(f"✗ Conversion failed: {result.error}", err=True)
             sys.exit(1)
-    except Exception as e:
+    except ToonConverterError as e:
         click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected Error: {e}", err=True)
         sys.exit(1)
 
 
@@ -127,8 +132,11 @@ def encode(input_file: str, output: str | None, compact: bool) -> None:
             click.echo(f"✓ Encoded to {output}")
         else:
             click.echo(toon_str)
-    except Exception as e:
+    except ToonConverterError as e:
         click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected Error: {e}", err=True)
         sys.exit(1)
 
 
@@ -149,8 +157,11 @@ def decode(input_file: str, output: str | None, format: str) -> None:
         else:
             encoded = toon.encode(data, to_format=format)
             click.echo(encoded)
-    except Exception as e:
+    except ToonConverterError as e:
         click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected Error: {e}", err=True)
         sys.exit(1)
 
 
@@ -180,8 +191,11 @@ def analyze(input_file: str, compare: tuple[str, ...], model: str) -> None:
         from toonverter.analysis import format_report
 
         click.echo(format_report(report, format="text", detailed=False))
-    except Exception as e:
+    except ToonConverterError as e:
         click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected Error: {e}", err=True)
         sys.exit(1)
 
 
@@ -280,8 +294,11 @@ def infer(input_file: str, output: str | None) -> None:
         else:
             click.echo(json.dumps(schema_dict, indent=2))
 
-    except Exception as e:
+    except ToonConverterError as e:
         click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected Error: {e}", err=True)
         sys.exit(1)
 
 
@@ -323,8 +340,11 @@ def validate(input_file: str, schema: str, strict: bool) -> None:
         else:
             click.echo(f"✓ Data is valid against schema {schema}")
 
-    except Exception as e:
+    except ToonConverterError as e:
         click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected Error: {e}", err=True)
         sys.exit(1)
 
 
@@ -366,8 +386,11 @@ def diff(file1: str, file2: str, format: str) -> None:
         if not result.match:
             sys.exit(1)
 
-    except Exception as e:
+    except ToonConverterError as e:
         click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected Error: {e}", err=True)
         sys.exit(1)
 
 
@@ -394,8 +417,11 @@ def compress(input_file: str, output: str) -> None:
 
         click.echo(f"✓ Compressed to {output}")
 
-    except Exception as e:
+    except ToonConverterError as e:
         click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected Error: {e}", err=True)
         sys.exit(1)
 
 
@@ -422,8 +448,11 @@ def decompress(input_file: str, output: str) -> None:
 
         click.echo(f"✓ Decompressed to {output}")
 
-    except Exception as e:
+    except ToonConverterError as e:
         click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected Error: {e}", err=True)
         sys.exit(1)
 
 
@@ -469,8 +498,11 @@ def deduplicate(
             # Print to stdout
             click.echo(json.dumps(optimized, indent=2, default=str))
 
-    except Exception as e:
+    except ToonConverterError as e:
         click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected Error: {e}", err=True)
         sys.exit(1)
 
 
@@ -513,8 +545,121 @@ def schema_merge(schema_files: tuple[str, ...], output: str | None) -> None:
         else:
             click.echo(json.dumps(result, indent=2))
 
-    except Exception as e:
+    except ToonConverterError as e:
         click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command("batch-convert-json")
+@click.argument("input_files", nargs=-1, type=click.Path(exists=True), required=True)
+@click.option(
+    "--output-dir",
+    "-o",
+    type=click.Path(file_okay=False, writable=True),
+    help="Output directory for converted files. If not provided, output will be printed to stdout.",
+)
+def batch_convert_json_cmd(input_files: tuple[str, ...], output_dir: str | None) -> None:
+    """Convert multiple JSON files to TOON using Rust batch processing."""
+    import toonverter as toon
+
+    try:
+        results = toon.convert_json_batch(list(input_files), output_dir)
+        _report_batch_results(results, "JSON", "TOON", output_dir)
+    except NotImplementedError as e:
+        click.echo(f"✗ Error: {e}. Ensure Rust extension is available and enabled.", err=True)
+        sys.exit(1)
+    except ToonConverterError as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command("batch-convert-toon")
+@click.argument("input_files", nargs=-1, type=click.Path(exists=True), required=True)
+@click.option(
+    "--output-dir",
+    "-o",
+    type=click.Path(file_okay=False, writable=True),
+    help="Output directory for converted files. If not provided, output will be printed to stdout.",
+)
+def batch_convert_toon_cmd(input_files: tuple[str, ...], output_dir: str | None) -> None:
+    """Convert multiple TOON files to JSON using Rust batch processing."""
+    import toonverter as toon
+
+    try:
+        results = toon.convert_toon_batch(list(input_files), output_dir)
+        _report_batch_results(results, "TOON", "JSON", output_dir)
+    except NotImplementedError as e:
+        click.echo(f"✗ Error: {e}. Ensure Rust extension is available and enabled.", err=True)
+        sys.exit(1)
+    except ToonConverterError as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command("convert-dir-json")
+@click.argument("input_dir", type=click.Path(exists=True, file_okay=False))
+@click.option(
+    "--recursive",
+    "-r",
+    is_flag=True,
+    help="Recursively process files in subdirectories.",
+)
+@click.option(
+    "--output-dir",
+    "-o",
+    type=click.Path(file_okay=False, writable=True),
+    help="Output directory for converted files. If not provided, converted files will be placed next to original.",
+)
+def convert_dir_json_cmd(input_dir: str, recursive: bool, output_dir: str | None) -> None:
+    """Convert all JSON files in a directory to TOON using Rust batch processing."""
+    import toonverter as toon
+
+    try:
+        results = toon.convert_json_directory(input_dir, recursive, output_dir)
+        _report_batch_results(results, "JSON", "TOON", output_dir)
+    except NotImplementedError as e:
+        click.echo(f"✗ Error: {e}. Ensure Rust extension is available and enabled.", err=True)
+        sys.exit(1)
+    except ToonConverterError as e:
+        click.echo(f"✗ Error: {e}", err=True)
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"✗ Unexpected Error: {e}", err=True)
+        sys.exit(1)
+
+
+def _report_batch_results(
+    results: list[tuple[str, str, bool]],
+    from_fmt: str,
+    to_fmt: str,
+    output_dir: str | None,
+) -> None:
+    """Helper to report results of batch conversion."""
+    success_count = 0
+    error_count = 0
+    for path, content_or_error, is_error in results:
+        if is_error:
+            click.echo(f"✗ Failed to convert {path}: {content_or_error}", err=True)
+            error_count += 1
+        else:
+            if output_dir:
+                click.echo(f"✓ Converted {path} to {output_dir}/{Path(path).stem}.{to_fmt.lower()}")
+            else:
+                # Assuming content_or_error is the converted string if no output_dir
+                click.echo(f"--- {path} ---\n{content_or_error}\n--- End {path} ---")
+            success_count += 1
+
+    click.echo(f"\nSummary: {success_count} succeeded, {error_count} failed.")
+    if error_count > 0:
         sys.exit(1)
 
 

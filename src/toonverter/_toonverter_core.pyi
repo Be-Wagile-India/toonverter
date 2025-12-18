@@ -9,15 +9,24 @@ def encode_toon(obj: Any, indent_size: int | None = None, delimiter: str | None 
 
 # Returns list of (path, content_or_error, is_error)
 def convert_json_batch(
-    paths: list[str], output_dir: str | None = None
+    paths: list[str],
+    output_dir: str | None = None,
+    indent_size: int | None = None,
+    delimiter: str | None = None,
 ) -> list[tuple[str, str, bool]]: ...
 
 # Returns list of (path, content_or_error, is_error)
 def convert_toon_batch(
-    paths: list[str], output_dir: str | None = None
+    paths: list[str],
+    output_dir: str | None = None,
+    indent_size: int | None = None,
 ) -> list[tuple[str, str, bool]]: ...
 
 # Returns list of (path, content_or_error, is_error)
 def convert_json_directory(
-    dir_path: str, recursive: bool = False, output_dir: str | None = None
+    dir_path: str,
+    recursive: bool = False,
+    output_dir: str | None = None,
+    indent_size: int | None = None,
+    delimiter: str | None = None,
 ) -> list[tuple[str, str, bool]]: ...

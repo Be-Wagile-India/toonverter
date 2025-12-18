@@ -11,8 +11,8 @@
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](http://mypy-lang.org/)
 [![TOON Spec v2.0](https://img.shields.io/badge/TOON%20Spec-v2.0%20✓-success.svg)](https://github.com/toon-format/spec)
-[![Tests](https://img.shields.io/badge/tests-1101%20passing-success.svg)](tests/)
-[![Coverage](https://img.shields.io/badge/coverage-89.19%25-brightgreen.svg)](htmlcov/index.html)
+[![Tests](https://img.shields.io/badge/tests-1119%20passing-success.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-87.74%25-brightgreen.svg)](htmlcov/index.html)
 
 **Token-Optimized Object Notation (TOON) v2.0** - The most comprehensive Python library for TOON format, featuring **100% spec compliance**, 10 framework integrations, and production-ready tools for reducing LLM token usage by 30-60%.
 
@@ -500,27 +500,6 @@ docs = wrapper.mget_json(["doc:1", "doc:2", "doc:3"])
 # - compress: Find most efficient format
 ```
 
-### CLI Usage
-
-```bash
-# Convert files
-toonverter convert data.json data.toon --from json --to toon
-
-# Encode to TOON
-toonverter encode data.json --output data.toon
-
-# Decode from TOON
-toonverter decode data.toon --output data.json --format json
-
-# Analyze token usage for a file (e.g., a large dataset)
-# First, create a sample large_data.json for demonstration:
-# echo '{"logs": [{"timestamp": "2023-01-01T00:00:00Z", "level": "INFO", "message": "User logged in", "user_id": "abc"}, {"timestamp": "2023-01-01T00:00:01Z", "level": "DEBUG", "message": "Processing request", "request_id": "123"}]}' > large_data.json
-toonverter analyze large_data.json --compare json toon
-
-# List supported formats
-toonverter formats
-```
-
 ## TOON Format Specification v2.0
 
 TOON (Token-Optimized Object Notation) is designed for maximum token efficiency while maintaining readability.
@@ -789,7 +768,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Install**: `pip install toonverter`
 - **Import**: `import toonverter as toon`
-- **CLI**: `toonverter --help`
+- **CLI Usage Guide**: See [`USAGE.md`](USAGE.md)
 - **Test**: `python3 -m pytest tests/`
 - **Examples**: See `examples/` directory
 

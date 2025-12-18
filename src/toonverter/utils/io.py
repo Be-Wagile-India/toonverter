@@ -1,6 +1,7 @@
 """File I/O utilities."""
 
 import json
+import warnings
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
@@ -131,14 +132,9 @@ def _read_json_stream(file_path: str) -> Generator[Any, None, None]:
                 clean_line = clean_line[:-1]
 
             try:
-                yield json.loads(clean_line)
-
-            except json.JSONDecodeError:
-                # If we can't parse the line, skip it (might be part of a multiline object)
-
-                # In a robust implementation, we might want to accumulate buffer
-
-                pass
+                yield json.loads(line)
+            except json.JSONDecodeError as e:
+                warnings.warn(f"Skipping malformed JSON line in {file_path}: {e}", stacklevel=2)
 
 
 def load_stream(file_path: str, format: str | None = None) -> Generator[Any, None, None]:

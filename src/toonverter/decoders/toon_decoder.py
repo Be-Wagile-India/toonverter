@@ -8,9 +8,18 @@ from typing import Any
 
 from toonverter.core.config import USE_RUST_DECODER, rust_core
 from toonverter.core.exceptions import DecodingError, ValidationError
-from toonverter.core.spec import ArrayForm, Delimiter, RootForm, ToonDecodeOptions, ToonValue
+from toonverter.core.spec import (
+    ArrayForm,
+    Delimiter,
+    RootForm,
+    ToonDecodeOptions,
+    ToonValue,
+)
 
 from .lexer import Token, TokenType, ToonLexer
+
+
+MAX_RECURSION_DEPTH = 500
 
 
 class ToonDecoder:
@@ -88,16 +97,19 @@ class ToonDecoder:
             self.pos = 0
 
             # Parse root based on first token
-            root_form = self._detect_root_form()
             value: ToonValue
-
-            if root_form == RootForm.ARRAY:
-                value = self._parse_root_array()
-            elif root_form == RootForm.PRIMITIVE:
-                value = self._parse_root_primitive()
+            if self.pos < len(self.tokens) and self.tokens[self.pos].type == TokenType.BRACE_START:
+                value = self._parse_braced_object(0)
             else:
-                # RootForm.OBJECT
-                value = self._parse_root_object()
+                root_form = self._detect_root_form()
+
+                if root_form == RootForm.ARRAY:
+                    value = self._parse_root_array()
+                elif root_form == RootForm.PRIMITIVE:
+                    value = self._parse_root_primitive()
+                else:
+                    # RootForm.OBJECT
+                    value = self._parse_root_object()
 
             # Check for extra tokens (EOF check)
             self._skip_ignored_tokens()
@@ -264,6 +276,10 @@ class ToonDecoder:
         Returns:
             Parsed value
         """
+        if depth > MAX_RECURSION_DEPTH:
+            msg = f"Maximum recursion depth ({MAX_RECURSION_DEPTH}) exceeded"
+            raise DecodingError(msg)
+
         # Skip whitespace/newlines
         while self.pos < len(self.tokens) and self.tokens[self.pos].type == TokenType.NEWLINE:
             self.pos += 1

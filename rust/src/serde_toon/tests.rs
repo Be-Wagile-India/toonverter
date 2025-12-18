@@ -3,7 +3,7 @@ use serde::Serialize;
 
 fn to_toon<T: Serialize>(value: &T) -> String {
     let mut buffer = Vec::new();
-    let mut serializer = Serializer::new(&mut buffer);
+    let mut serializer = Serializer::new(&mut buffer, 2, ",");
     value.serialize(&mut serializer).unwrap();
     String::from_utf8(buffer).unwrap()
 }

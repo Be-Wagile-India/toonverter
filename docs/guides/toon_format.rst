@@ -111,6 +111,21 @@ For complex or mixed structures:
 - Supports nested objects and arrays
 - Each item starts with ``-`` marker
 
+4. Compact Single-Column Array (Implicit Schema)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A special concise form for arrays of single-key objects:
+
+.. code-block:: yaml
+
+   # Equivalent to [{id: 1}, {id: 2}, {id: 3}]
+   ids[3]: 1, 2, 3
+
+**Requirements**:
+- Header contains a single identifier inside brackets (e.g., ``[id]``)
+- Values are provided inline (comma-separated)
+- Automatically wraps each value into an object with the specified key
+
 **Inline Objects (Brace-enclosed)**:
 Objects can be expressed inline using braces `{key: value, ...}`. This is particularly useful as a value within tabular arrays or other inline contexts.
 

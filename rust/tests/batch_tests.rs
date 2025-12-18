@@ -11,7 +11,7 @@ fn test_convert_single_json_to_toon_no_ext() {
 
     let output_dir_str = tmp_dir.path().to_str().unwrap();
     let (_, output_filename, is_err) =
-        convert_single_json_to_toon(input_path.to_str().unwrap(), Some(output_dir_str));
+        convert_single_json_to_toon(input_path.to_str().unwrap(), Some(output_dir_str), 2, ",");
 
     assert!(!is_err);
     assert!(output_filename.ends_with("testfile.toon"));
@@ -28,7 +28,7 @@ fn test_convert_single_toon_to_json_no_ext() {
 
     let output_dir_str = tmp_dir.path().to_str().unwrap();
     let (_, output_filename, is_err) =
-        convert_single_toon_to_json(input_path.to_str().unwrap(), Some(output_dir_str));
+        convert_single_toon_to_json(input_path.to_str().unwrap(), Some(output_dir_str), 2);
 
     assert!(!is_err);
     assert!(output_filename.ends_with("testfile.json"));
@@ -40,7 +40,7 @@ fn test_convert_single_toon_to_json_no_ext() {
 #[test]
 fn test_convert_toon_to_json_file_not_found() {
     let non_existent_path = "non_existent.toon";
-    let (path, error_msg, is_err) = convert_single_toon_to_json(non_existent_path, None);
+    let (path, error_msg, is_err) = convert_single_toon_to_json(non_existent_path, None, 2);
     assert!(is_err);
     assert_eq!(path, non_existent_path);
     assert!(error_msg.contains("IO Error"));
@@ -52,7 +52,8 @@ fn test_convert_json_to_toon_invalid_json() {
     let input_path = tmp_dir.path().join("invalid.json");
     fs::write(&input_path, "{ \"key\": \"value\"").unwrap(); // Malformed JSON
 
-    let (path, error_msg, is_err) = convert_single_json_to_toon(input_path.to_str().unwrap(), None);
+    let (path, error_msg, is_err) =
+        convert_single_json_to_toon(input_path.to_str().unwrap(), None, 2, ",");
     assert!(is_err);
     assert_eq!(path, input_path.to_str().unwrap());
     assert!(error_msg.contains("JSON Parse Error"));
@@ -61,7 +62,7 @@ fn test_convert_json_to_toon_invalid_json() {
 #[test]
 fn test_convert_json_to_toon_file_not_found() {
     let non_existent_path = "non_existent.json";
-    let (path, error_msg, is_err) = convert_single_json_to_toon(non_existent_path, None);
+    let (path, error_msg, is_err) = convert_single_json_to_toon(non_existent_path, None, 2, ",");
     assert!(is_err);
     assert_eq!(path, non_existent_path);
     assert!(error_msg.contains("IO Error"));
@@ -74,7 +75,7 @@ fn test_convert_single_toon_to_json_invalid_utf8() {
     let mut file = fs::File::create(&input_path).unwrap();
     file.write_all(b"key: value\xc3\x28").unwrap(); // Invalid UTF-8 sequence
 
-    let (_, error_msg, is_err) = convert_single_toon_to_json(input_path.to_str().unwrap(), None);
+    let (_, error_msg, is_err) = convert_single_toon_to_json(input_path.to_str().unwrap(), None, 2);
 
     assert!(is_err);
     assert!(error_msg.contains("UTF-8 Error"));
@@ -86,7 +87,7 @@ fn test_convert_single_toon_to_json_invalid_toon_syntax() {
     let input_path = tmp_dir.path().join("malformed.toon");
     fs::write(&input_path, "key: [unclosed_array").unwrap(); // Malformed TOON
 
-    let (_, error_msg, is_err) = convert_single_toon_to_json(input_path.to_str().unwrap(), None);
+    let (_, error_msg, is_err) = convert_single_toon_to_json(input_path.to_str().unwrap(), None, 2);
 
     assert!(is_err);
     assert!(error_msg.contains("Parse Error"));
@@ -107,7 +108,7 @@ fn test_convert_single_json_to_toon_write_error() {
 
     // Simulate write error by passing a path that cannot be created
     let (_, error_msg, is_err) =
-        convert_single_json_to_toon(input_path.to_str().unwrap(), Some(output_dir_str));
+        convert_single_json_to_toon(input_path.to_str().unwrap(), Some(output_dir_str), 2, ",");
 
     assert!(is_err);
     assert!(error_msg.contains("Write Error"));
@@ -124,7 +125,7 @@ fn test_convert_single_toon_to_json_write_error() {
 
     // Simulate write error by passing a path that cannot be created
     let (_, error_msg, is_err) =
-        convert_single_toon_to_json(input_path.to_str().unwrap(), Some(output_dir_str));
+        convert_single_toon_to_json(input_path.to_str().unwrap(), Some(output_dir_str), 2);
 
     assert!(is_err);
     assert!(error_msg.contains("Write Error"));

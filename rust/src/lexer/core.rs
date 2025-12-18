@@ -234,6 +234,7 @@ impl<'a> ToonLexer<'a> {
         let token_type = match c {
             ':' => TokenType::Colon,
             ',' => TokenType::Comma,
+            '|' => TokenType::Pipe,
             '[' => TokenType::ArrayStart,
             ']' => TokenType::ArrayEnd,
             '{' => TokenType::BraceStart,

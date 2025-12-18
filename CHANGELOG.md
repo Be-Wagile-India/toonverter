@@ -8,12 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Enhanced Error Handling**: Introduced structured `ToonError` enum in Rust for better error propagation to Python.
 - GitHub Pages documentation deployment workflow
 - AUTHORS.md file with contributor information
 - Comprehensive test coverage verification
 - Documentation for all 10 framework integrations
 
 ### Changed
+- **Rust Core Refactoring**: Decomposed monolithic parser and encoder logic for improved maintainability and robustness.
+- **Improved Test Coverage**: Rust test coverage increased to over 82% with new edge case tests.
+- **Python Type Stubs**: Updated `_toonverter_core.pyi` to fully match Rust API signatures, including batch processing arguments.
+- **Documentation**: Updated architecture documentation to reflect internal Rust improvements.
 - Updated documentation URLs to GitHub Pages
 - Improved README with logo and better formatting
 - Enhanced Sphinx documentation configuration

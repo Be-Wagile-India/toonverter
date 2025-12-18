@@ -1,17 +1,34 @@
 use indexmap::IndexMap;
-use pyo3::exceptions::PyValueError;
+use num_bigint::BigInt;
+use pyo3::exceptions::{PyRecursionError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyString};
 
 use crate::ir::ToonValue;
 
+// Maximum recursion depth to prevent stack overflow
+const MAX_DEPTH: usize = 200;
+
 pub fn to_toon_value(obj: &Bound<'_, PyAny>) -> PyResult<ToonValue> {
+    to_toon_value_recursive(obj, 0)
+}
+
+fn to_toon_value_recursive(obj: &Bound<'_, PyAny>, depth: usize) -> PyResult<ToonValue> {
+    if depth > MAX_DEPTH {
+        return Err(PyRecursionError::new_err(
+            "Maximum recursion depth exceeded during TOON conversion",
+        ));
+    }
+
     if obj.is_none() {
         Ok(ToonValue::Null)
     } else if let Ok(b) = obj.extract::<bool>() {
         Ok(ToonValue::Boolean(b))
     } else if let Ok(i) = obj.extract::<i64>() {
         Ok(ToonValue::Integer(i))
+    } else if let Ok(bi) = obj.extract::<BigInt>() {
+        // Fallback for integers larger than i64
+        Ok(ToonValue::BigInteger(bi))
     } else if let Ok(f) = obj.extract::<f64>() {
         Ok(ToonValue::Float(f))
     } else if let Ok(s) = obj.extract::<String>() {
@@ -20,18 +37,16 @@ pub fn to_toon_value(obj: &Bound<'_, PyAny>) -> PyResult<ToonValue> {
         let mut map = IndexMap::new();
         for (k, v) in dict {
             let k_str = k.extract::<String>()?;
-            let v_val = to_toon_value(&v)?;
+            let v_val = to_toon_value_recursive(&v, depth + 1)?;
             map.insert(k_str, v_val);
         }
         Ok(ToonValue::Dict(map))
     } else if let Ok(list) = obj.downcast::<PyList>() {
         let mut vec = Vec::with_capacity(list.len());
         for item in list {
-            vec.push(to_toon_value(&item)?);
+            vec.push(to_toon_value_recursive(&item, depth + 1)?);
         }
         Ok(ToonValue::List(vec))
-    } else if let Ok(py_str) = obj.downcast::<PyString>() {
-        Ok(ToonValue::String(py_str.to_str()?.to_string()))
     } else {
         Err(PyValueError::new_err("Unsupported type for TOON encoding"))
     }
@@ -42,6 +57,7 @@ pub fn to_py_object(py: Python, val: &ToonValue) -> PyResult<PyObject> {
         ToonValue::Null => Ok(py.None()),
         ToonValue::Boolean(b) => Ok(b.into_py(py)),
         ToonValue::Integer(i) => Ok(i.into_py(py)),
+        ToonValue::BigInteger(bi) => Ok(bi.clone().into_py(py)),
         ToonValue::Float(f) => Ok(f.into_py(py)),
         ToonValue::String(s) => Ok(PyString::new_bound(py, s).into_py(py)),
         ToonValue::List(list) => {
@@ -173,6 +189,45 @@ mod tests {
                 .unwrap_err()
                 .to_string()
                 .contains("Unsupported type for TOON encoding"));
+        });
+    }
+
+    #[test]
+    fn test_recursion_depth_limit() {
+        let _ = &*INITIALIZED;
+        Python::with_gil(|py| {
+            let data = PyDict::new_bound(py);
+            let mut current = data.clone();
+            for _ in 0..(MAX_DEPTH + 10) {
+                // Go beyond the limit
+                let next_dict = PyDict::new_bound(py);
+                current.set_item("a", next_dict.clone()).unwrap();
+                current = next_dict;
+            }
+
+            let result = to_toon_value(&data);
+            assert!(result.is_err());
+            let err = result.unwrap_err();
+            assert!(err.to_string().contains("Maximum recursion depth exceeded"));
+        });
+    }
+
+    #[test]
+    fn test_conversion_bigint_roundtrip() {
+        let _ = &*INITIALIZED;
+        Python::with_gil(|py| {
+            let large_int_py = py.eval_bound("2**100", None, None).unwrap(); // Python's arbitrary precision int
+            let tv = to_toon_value(&large_int_py).unwrap();
+
+            if let ToonValue::BigInteger(ref bi) = tv {
+                assert_eq!(bi.to_string(), "1267650600228229401496703205376");
+            } else {
+                panic!("Expected BigInteger, got {:?}", tv);
+            }
+
+            let py_obj = to_py_object(py, &tv).unwrap();
+            let back_int: BigInt = py_obj.extract(py).unwrap();
+            assert_eq!(back_int.to_string(), "1267650600228229401496703205376");
         });
     }
 }

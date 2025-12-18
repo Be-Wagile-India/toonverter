@@ -12,6 +12,7 @@ pub enum TokenType {
     Colon,      // :
     Comma,      // ,
     Dash,       // -
+    Pipe,       // |
     Comment,    // #
     ArrayStart, // [
     ArrayEnd,   // ]
