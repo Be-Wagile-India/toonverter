@@ -376,6 +376,10 @@ module = [
     "click.*",
     "sklearn.*",
     "sentence_transformers.*",
+    "defusedxml.*",
+    "ijson.*",
+    "numpy.*",
+    "PIL.*",
 ]
 ignore_missing_imports = true
 

@@ -1,12 +1,13 @@
 """Integration tests for all CLI commands."""
 
 import json
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
 
 from toonverter.cli.main import cli
+from toonverter.core.exceptions import ConversionError, ToonConverterError
 
 
 class TestCLICommands:
@@ -415,3 +416,276 @@ class TestCLICommands:
             assert "✓ Converted" in result.output
             assert "Summary: 1 succeeded, 0 failed." in result.output
             mock_dir.assert_called_once_with(str(input_dir), True, str(output_dir))
+
+    # =========================================================================
+    # EXTENDED COVERAGE TESTS
+    # =========================================================================
+
+    def test_convert_streaming_unsupported_warning(self, runner, simple_json_file, tmp_path):
+        """Test warning when streaming is requested for unsupported formats."""
+        output_file = tmp_path / "output.xml"
+        result = runner.invoke(
+            cli,
+            [
+                "convert",
+                str(simple_json_file),
+                str(output_file),
+                "--from",
+                "json",
+                "--to",
+                "xml",
+                "--stream",
+            ],
+        )
+        assert "Warning: Streaming requested but formats may not fully support it" in result.output
+
+    def test_convert_streaming_not_implemented_error(self, runner, simple_json_file, tmp_path):
+        """Test error when streaming requested but convert_stream raises NotImplementedError."""
+        output_file = tmp_path / "output.toon"
+        with patch("toonverter.convert_stream", side_effect=NotImplementedError):
+            result = runner.invoke(
+                cli,
+                [
+                    "convert",
+                    str(simple_json_file),
+                    str(output_file),
+                    "--from",
+                    "json",
+                    "--to",
+                    "toon",
+                    "--stream",
+                ],
+            )
+            assert result.exit_code == 1
+            assert "Streaming is not supported for conversion" in result.output
+
+    def test_convert_standard_rich_import_error(self, runner, simple_json_file, tmp_path):
+        """Test standard convert path when rich is not available."""
+        output_file = tmp_path / "output.toon"
+        with patch.dict("sys.modules", {"rich.progress": None}):
+            result = runner.invoke(
+                cli,
+                [
+                    "convert",
+                    str(simple_json_file),
+                    str(output_file),
+                    "--from",
+                    "json",
+                    "--to",
+                    "toon",
+                ],
+            )
+            assert result.exit_code == 0
+            assert "✓ Converted" in result.output
+
+    def test_convert_failure_reporting(self, runner, simple_json_file, tmp_path):
+        """Test conversion failure reporting."""
+        output_file = tmp_path / "output.toon"
+        mock_result = MagicMock()
+        mock_result.success = False
+        mock_result.error = "Mocked Failure"
+
+        with patch("toonverter.convert", return_value=mock_result):
+            result = runner.invoke(
+                cli,
+                [
+                    "convert",
+                    str(simple_json_file),
+                    str(output_file),
+                    "--from",
+                    "json",
+                    "--to",
+                    "toon",
+                ],
+            )
+            assert result.exit_code == 1
+            assert "✗ Conversion failed: Mocked Failure" in result.output
+
+    def test_convert_toon_converter_error(self, runner, simple_json_file, tmp_path):
+        """Test ToonConverterError handling in convert."""
+        output_file = tmp_path / "output.toon"
+        with patch("toonverter.convert", side_effect=ConversionError("Toon Error")):
+            result = runner.invoke(
+                cli,
+                [
+                    "convert",
+                    str(simple_json_file),
+                    str(output_file),
+                    "--from",
+                    "json",
+                    "--to",
+                    "toon",
+                ],
+            )
+            assert result.exit_code == 1
+            assert "✗ Error: Toon Error" in result.output
+
+    def test_convert_unexpected_error(self, runner, simple_json_file, tmp_path):
+        """Test unexpected exception handling in convert."""
+        output_file = tmp_path / "output.toon"
+        with patch("toonverter.convert", side_effect=RuntimeError("Unexpected")):
+            result = runner.invoke(
+                cli,
+                [
+                    "convert",
+                    str(simple_json_file),
+                    str(output_file),
+                    "--from",
+                    "json",
+                    "--to",
+                    "toon",
+                ],
+            )
+            assert result.exit_code == 1
+            assert "✗ Unexpected Error: Unexpected" in result.output
+
+    def test_encode_unexpected_error(self, runner, simple_json_file):
+        """Test unexpected error in encode command."""
+        with patch("toonverter.load", side_effect=Exception("Load fail")):
+            result = runner.invoke(cli, ["encode", str(simple_json_file)])
+            assert result.exit_code == 1
+            assert "Unexpected Error" in result.output
+
+    def test_decode_stdout(self, runner, tmp_path):
+        """Test decode command printing to stdout."""
+        input_file = tmp_path / "test.toon"
+        input_file.write_text("a: 1")
+        result = runner.invoke(cli, ["decode", str(input_file), "--format", "json"])
+        assert result.exit_code == 0
+        assert '"a": 1' in result.output
+
+    def test_decode_error_handling(self, runner, tmp_path):
+        """Test error handling in decode command."""
+        input_file = tmp_path / "test.toon"
+        input_file.write_text("a: 1")
+        with patch("toonverter.load", side_effect=ToonConverterError("Decode error")):
+            result = runner.invoke(cli, ["decode", str(input_file)])
+            assert result.exit_code == 1
+            assert "✗ Error: Decode error" in result.output
+
+    def test_analyze_error_handling(self, runner, simple_json_file):
+        """Test error handling in analyze command."""
+        with patch("toonverter.load", side_effect=ToonConverterError("Analyze error")):
+            result = runner.invoke(cli, ["analyze", str(simple_json_file)])
+            assert result.exit_code == 1
+            assert "✗ Error: Analyze error" in result.output
+
+    def test_infer_stdout(self, runner, simple_json_file):
+        """Test infer command output to stdout."""
+        result = runner.invoke(cli, ["infer", str(simple_json_file)])
+        assert result.exit_code == 0
+        assert '"type": "array"' in result.output
+
+    def test_infer_unexpected_error(self, runner, simple_json_file):
+        """Test unexpected error in infer command."""
+        with patch("toonverter.load_stream", side_effect=Exception("Infer fail")):
+            result = runner.invoke(cli, ["infer", str(simple_json_file)])
+            assert result.exit_code == 1
+            assert "Unexpected Error" in result.output
+
+    def test_validate_unexpected_error(self, runner, simple_json_file, tmp_path):
+        """Test unexpected error in validate command."""
+        schema_file = tmp_path / "s.json"
+        schema_file.write_text("{}")
+        with patch("toonverter.load", side_effect=Exception("Validate fail")):
+            result = runner.invoke(cli, ["validate", str(simple_json_file), "-s", str(schema_file)])
+            assert result.exit_code == 1
+            assert "Unexpected Error" in result.output
+
+    def test_diff_json_format(self, runner, tmp_path):
+        """Test diff command with json format."""
+        f1 = tmp_path / "f1.json"
+        f2 = tmp_path / "f2.json"
+        f1.write_text("{}")
+        f2.write_text("{}")
+        result = runner.invoke(cli, ["diff", str(f1), str(f2), "--format", "json"])
+        assert result.exit_code == 0
+        assert '"match": true' in result.output
+
+    def test_diff_error_handling(self, runner, tmp_path):
+        """Test error handling in diff."""
+        f1 = tmp_path / "f1.json"
+        f2 = tmp_path / "f2.json"
+        f1.write_text("{}")
+        f2.write_text("{}")
+        with patch("toonverter.load", side_effect=ToonConverterError("Diff error")):
+            result = runner.invoke(cli, ["diff", str(f1), str(f2)])
+            assert result.exit_code == 1
+            assert "✗ Error: Diff error" in result.output
+
+    def test_compress_error_handling(self, runner, simple_json_file):
+        """Test error handling in compress."""
+        with patch("toonverter.load", side_effect=ToonConverterError("Compress error")):
+            result = runner.invoke(cli, ["compress", str(simple_json_file), "-o", "out"])
+            assert result.exit_code == 1
+            assert "✗ Error: Compress error" in result.output
+
+    def test_decompress_error_handling(self, runner, tmp_path):
+        """Test error handling in decompress."""
+        f = tmp_path / "c.json"
+        f.write_text("{}")
+        with patch("json.load", side_effect=ToonConverterError("Decompress error")):
+            result = runner.invoke(cli, ["decompress", str(f), "-o", "out"])
+            assert result.exit_code == 1
+            assert "✗ Error: Decompress error" in result.output
+
+    def test_deduplicate_stdout(self, runner, simple_json_file):
+        """Test deduplicate command to stdout."""
+        # Ensure input is a list for deduplicate to work expectedly
+        simple_json_file.write_text("[1, 1, 2]")
+        result = runner.invoke(cli, ["deduplicate", str(simple_json_file)])
+        assert result.exit_code == 0
+        assert "1," in result.output
+        assert "2" in result.output
+
+    def test_deduplicate_unexpected_error(self, runner, simple_json_file):
+        """Test unexpected error in deduplicate."""
+        with patch("toonverter.load", side_effect=Exception("Dedup fail")):
+            result = runner.invoke(cli, ["deduplicate", str(simple_json_file)])
+            assert result.exit_code == 1
+            assert "Unexpected Error" in result.output
+
+    def test_schema_merge_single_file_warning(self, runner, tmp_path):
+        """Test schema-merge with single file warning."""
+        f1 = tmp_path / "s1.json"
+        f1.write_text('{"type": "string"}')
+        result = runner.invoke(cli, ["schema-merge", str(f1)])
+        assert "Warning: Merging less than 2 files" in result.output
+
+    def test_schema_merge_error_handling(self, runner, tmp_path):
+        """Test error handling in schema-merge."""
+        f1 = tmp_path / "s1.json"
+        f1.write_text('{"type": "string"}')
+        f2 = tmp_path / "s2.json"
+        f2.write_text('{"type": "string"}')
+        with patch("json.load", side_effect=ToonConverterError("Merge error")):
+            result = runner.invoke(cli, ["schema-merge", str(f1), str(f2)])
+            assert result.exit_code == 1
+            assert "✗ Error: Merge error" in result.output
+
+    def test_batch_convert_json_not_implemented(self, runner, simple_json_file):
+        """Test batch-convert-json when Rust is missing."""
+        with patch(
+            "toonverter.convert_json_batch", side_effect=NotImplementedError("Rust missing")
+        ):
+            result = runner.invoke(cli, ["batch-convert-json", str(simple_json_file)])
+            assert result.exit_code == 1
+            assert "Ensure Rust extension is available" in result.output
+
+    def test_batch_convert_toon_unexpected_error(self, runner, simple_json_file):
+        """Test batch-convert-toon unexpected error."""
+        with patch("toonverter.convert_toon_batch", side_effect=Exception("Batch fail")):
+            result = runner.invoke(cli, ["batch-convert-toon", str(simple_json_file)])
+            assert result.exit_code == 1
+            assert "Unexpected Error" in result.output
+
+    def test_convert_dir_json_not_implemented(self, runner, tmp_path):
+        """Test convert-dir-json when Rust is missing."""
+        d = tmp_path / "dir"
+        d.mkdir()
+        with patch(
+            "toonverter.convert_json_directory", side_effect=NotImplementedError("Rust missing")
+        ):
+            result = runner.invoke(cli, ["convert-dir-json", str(d)])
+            assert result.exit_code == 1
+            assert "Ensure Rust extension is available" in result.output

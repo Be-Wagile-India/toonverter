@@ -7,3 +7,4 @@ The RAG module supports Retrieval Augmented Generation workflows.
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:

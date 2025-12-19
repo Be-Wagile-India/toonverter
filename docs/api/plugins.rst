@@ -7,3 +7,4 @@ The Plugins module handles extension loading.
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:

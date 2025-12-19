@@ -35,11 +35,13 @@
 ## 🚀 Key Features
 
 ### Core Capabilities
-- **Rust-Accelerated Core**: Optional Rust extension for native-speed encoding/decoding.
+- **Rust-Accelerated Core**: Optional Rust extension for native-speed encoding/decoding with **Rayon-powered multi-core parallelism** for large datasets.
+- **High-Performance Batch Processing**: Blazing fast conversion of multiple files or entire directories using native Rust implementation.
 - **True O(1) Memory Streaming**: Event-based decoder for processing terabyte-scale data with constant RAM usage.
 - **100% TOON v2.0 Spec Compliant**: All specification tests passing, including new Indefinite Arrays ``[*]``.
 - **30-60% Token Savings**: Verified with benchmarks on real-world data
 - **Multi-Format Support**: JSON, YAML, TOML, CSV, XML ↔ TOON
+- **Secure XML Support**: Protected against XXE attacks using `defusedxml`.
 - **Vision Optimization**: Reduce image token costs for multimodal models
 - **Semantic Deduplication**: Remove semantically identical content using embeddings
 - **Tabular Optimization**: Exceptional efficiency for DataFrame-like structures

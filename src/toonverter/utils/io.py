@@ -157,21 +157,21 @@ def _read_json_stream(file_path: str) -> Generator[Any, None, None]:
                     elif char == "}":
                         brace_count -= 1
 
-            # Check if a complete object is formed
-            if started and brace_count == 0:
-                json_str = "".join(buffer).strip()
-                # Remove trailing comma if present (common in arrays)
-                if json_str.endswith(","):
-                    json_str = json_str[:-1]
+                # Check if a complete object is formed within this line
+                if started and brace_count == 0:
+                    json_str = "".join(buffer).strip()
+                    # Remove trailing comma if present (common in arrays)
+                    if json_str.endswith(","):
+                        json_str = json_str[:-1]
 
-                try:
-                    yield json.loads(json_str)
-                except json.JSONDecodeError as e:
-                    warnings.warn(f"Skipping malformed JSON chunk: {e}", stacklevel=2)
+                    try:
+                        yield json.loads(json_str)
+                    except json.JSONDecodeError as e:
+                        warnings.warn(f"Skipping malformed JSON chunk: {e}", stacklevel=2)
 
-                # Reset for next object
-                buffer = []
-                started = False
+                    # Reset for next object
+                    buffer = []
+                    started = False
 
         # Handle any remaining buffer (e.g. single line objects without braces like strings/numbers in array?)
         # For now, we focus on objects as that's the primary failure mode.
