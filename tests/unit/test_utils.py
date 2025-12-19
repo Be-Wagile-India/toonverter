@@ -154,9 +154,8 @@ class TestFileIO:
 
         with mock.patch.dict("sys.modules", {"ijson": None}):
             items = list(load_stream(str(file_path)))
-            # If it yields the whole list as a single item, let's match that behavior for now
-            # since the fallback is a "heuristic".
-            assert items == [[{"key": "value with } bracket"}]]
+            # With json.load fallback, it correctly yields the item
+            assert items == [{"key": "value with } bracket"}]
 
 
 class TestFileValidation:

@@ -110,7 +110,23 @@ def _read_json_stream(file_path: str) -> Generator[Any, None, None]:
     except ImportError:
         pass
 
-    # Strategy 2: Brace-counting chunker (Fallback for pretty-printed JSON arrays)
+    # Strategy 2: Try standard json.load (Fallback for valid JSON files when ijson is missing)
+    # This handles compact arrays, primitives, and small files efficiently.
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                yield from data
+                return
+            else:
+                yield data
+                return
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        # File might be JSONL, malformed, or too large/complex for single load.
+        # Fall through to chunker.
+        pass
+
+    # Strategy 3: Brace-counting chunker (Fallback for JSONL or pretty-printed JSON arrays)
     # Handles multi-line objects by accumulating lines until braces balance.
 
     with path.open("r", encoding="utf-8") as f:
