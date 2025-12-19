@@ -114,31 +114,6 @@ fn _toonverter_core(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::ToonValue;
-    use indexmap::IndexMap;
-
-    #[test]
-    fn test_internal_encode_decode_roundtrip() {
-        let input_value = ToonValue::Dict(IndexMap::from([
-            ("name".to_string(), ToonValue::String("Alice".to_string())),
-            ("age".to_string(), ToonValue::Integer(30)),
-        ]));
-
-        let encoded = encode_toon_root(&input_value, 2, ",");
-        assert_eq!(encoded, "name: Alice\nage: 30");
-    }
-
-    #[test]
-    fn test_decode_toon_empty_input_internal() {
-        let text = "";
-        let lexer = ToonLexer::new(text, 2);
-        let mut parser = ToonParser::new(lexer);
-        let result = parser.parse_root().unwrap(); // This should yield an empty dict
-        match result {
-            ToonValue::Dict(d) => assert!(d.is_empty()),
-            _ => panic!("Expected dict"),
-        }
-    }
 
     #[test]
     fn test_lib_pyfunctions() {

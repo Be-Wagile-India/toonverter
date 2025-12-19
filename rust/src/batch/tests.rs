@@ -172,3 +172,43 @@ fn test_batch_mmap_error() {
     assert!(is_err_toon);
     assert!(msg_toon.contains("Mmap Error"));
 }
+
+#[test]
+fn test_batch_json_write_error() {
+    let mut file = NamedTempFile::new().unwrap();
+    write!(file, "{{\"key\": \"value\"}}").unwrap();
+    let path = file.path().to_str().unwrap().to_string();
+
+    let temp_dir = TempDir::new().unwrap();
+    let output_dir_str = temp_dir
+        .path()
+        .join("does_not_exist")
+        .to_str()
+        .unwrap()
+        .to_string();
+
+    let results = batch_convert_json(vec![path], Some(output_dir_str), 2, ",");
+    let (_, msg, is_err) = &results[0];
+    assert!(is_err);
+    assert!(msg.contains("Write Error"));
+}
+
+#[test]
+fn test_batch_toon_write_error() {
+    let mut file = NamedTempFile::new().unwrap();
+    write!(file, "key: value").unwrap();
+    let path = file.path().to_str().unwrap().to_string();
+
+    let temp_dir = TempDir::new().unwrap();
+    let output_dir_str = temp_dir
+        .path()
+        .join("does_not_exist")
+        .to_str()
+        .unwrap()
+        .to_string();
+
+    let results = batch_convert_toon(vec![path], Some(output_dir_str), 2);
+    let (_, msg, is_err) = &results[0];
+    assert!(is_err);
+    assert!(msg.contains("Write Error"));
+}
