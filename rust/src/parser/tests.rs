@@ -700,3 +700,16 @@ fn test_parse_primitives() {
     let mut parser = ToonParser::new(ToonLexer::new(text_null, 2));
     assert_eq!(parser.parse_value().unwrap(), ToonValue::Null);
 }
+
+#[test]
+fn test_parse_recursion_limit() {
+    let mut text = String::new();
+    for i in 0..110 {
+        text.push_str(&format!("{:indent$}k{}: {{\n", "", i, indent = i * 2));
+    }
+    let lexer = ToonLexer::new(&text, 2);
+    let mut parser = ToonParser::new(lexer);
+    let result = parser.parse_root();
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("Maximum recursion depth"));
+}

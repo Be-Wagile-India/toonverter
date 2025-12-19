@@ -4,8 +4,6 @@ This is the primary encoder that orchestrates all encoding logic
 according to the official TOON specification from github.com/toon-format/spec
 """
 
-from concurrent.futures import ThreadPoolExecutor
-from functools import partial
 from typing import Any
 
 from toonverter.core.config import (
@@ -187,15 +185,16 @@ class ToonEncoder:
         lines = self.array_enc.encode_root_array_list(arr, self)
         return "\n".join(lines)
 
-    def _encode_single_item(self, item_tuple: tuple[str, Any], depth: int) -> list[str]:
+    def _encode_single_item(
+        self, item_tuple: tuple[str, Any], depth: int, siblings: dict[str, Any] | None = None
+    ) -> list[str]:
         key, value = item_tuple
         indent = self.indent_mgr.indent(depth)
 
         # Key folding logic
-        # For parallelism, key_folder.should_fold_key needs context of the single item for now
-        # Re-evaluating the `obj` parameter in should_fold_key for this context.
-        # For a single item, `obj` should be {key: value} if context matters.
-        if self.key_folder.should_fold_key(key, value, {key: value}):
+        # Pass siblings to allow proper collision detection
+        context = siblings if siblings is not None else {key: value}
+        if self.key_folder.should_fold_key(key, value, context):
             can_fold, key_chain = self.key_folder.can_fold_chain({key: value})
             if can_fold:
                 folded_key = self.key_folder.fold_key_chain(key_chain)
@@ -239,19 +238,9 @@ class ToonEncoder:
 
         lines: list[str] = []
 
-        if len(obj) > self._parallelism_threshold:
-            # Parallel processing
-            with ThreadPoolExecutor() as executor:
-                # Use partial to pass `self` and `depth` to _encode_single_item
-                _encode_item_partial = partial(self._encode_single_item, depth=depth)
-                # executor.map expects a function and an iterable of items
-                # obj.items() yields (key, value) tuples, which _encode_single_item expects
-                for encoded_lines in executor.map(_encode_item_partial, obj.items()):
-                    lines.extend(encoded_lines)
-        else:
-            # Sequential processing
-            for item_tuple in obj.items():
-                lines.extend(self._encode_single_item(item_tuple, depth))
+        # Sequential processing
+        for item_tuple in obj.items():
+            lines.extend(self._encode_single_item(item_tuple, depth, obj))
 
         return lines
 

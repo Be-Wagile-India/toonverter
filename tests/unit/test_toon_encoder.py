@@ -8,21 +8,6 @@ from toonverter.core.spec import ToonEncodeOptions
 from toonverter.encoders.toon_encoder import ToonEncoder, encode
 
 
-# Mock the actual ThreadPoolExecutor to just run sequentially for testing
-class MockThreadPoolExecutor:
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def map(self, func, iterable):
-        return (func(item) for item in iterable)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-
 class TestToonEncoder:
     """Test ToonEncoder functionality."""
 
@@ -37,61 +22,46 @@ class TestToonEncoder:
         encoder = ToonEncoder(options=options)
         assert encoder._parallelism_threshold == 50
 
-    @mock.patch("toonverter.encoders.toon_encoder.ThreadPoolExecutor", new=MockThreadPoolExecutor)
-    def test_encode_object_uses_parallelism_for_large_objects(self):
-        """Test encode_object uses ThreadPoolExecutor for objects exceeding threshold."""
-        # Set a low threshold to trigger parallelism
+    def test_encode_object_correctness_for_large_objects(self):
+        """Test encode_object correctness for objects (formerly testing parallelism)."""
+        # Set a low threshold (though unused for parallelism now in Python)
         options = ToonEncodeOptions(parallelism_threshold=2)
         encoder = ToonEncoder(options=options)
 
-        large_obj = {"k1": 1, "k2": 2, "k3": 3}  # Size 3 > threshold 2
+        large_obj = {"k1": 1, "k2": 2, "k3": 3}
 
-        with mock.patch.object(
-            encoder, "_encode_single_item", wraps=encoder._encode_single_item
-        ) as mock_single_item:
-            encoded_output = encoder.encode_object(large_obj, 0)
+        encoded_output = encoder.encode_object(large_obj, 0)
+        expected_output = [
+            "k1: 1",
+            "k2: 2",
+            "k3: 3",
+        ]
+        assert encoded_output == expected_output
 
-            # Verify _encode_single_item was called for each item
-            assert mock_single_item.call_count == len(large_obj)
-
-            # Since ThreadPoolExecutor is mocked to run sequentially,
-            # we just check the output correctness
-            expected_output = [
-                "k1: 1",
-                "k2: 2",
-                "k3: 3",
-            ]
-            assert encoded_output == expected_output
-
-    def test_encode_object_no_parallelism_for_small_objects(self):
-        """Test encode_object does not use ThreadPoolExecutor for objects below threshold."""
-        # Set a threshold that prevents parallelism
+    def test_encode_object_correctness_for_small_objects(self):
+        """Test encode_object correctness for small objects."""
         options = ToonEncodeOptions(parallelism_threshold=10)
         encoder = ToonEncoder(options=options)
 
-        small_obj = {"k1": 1, "k2": 2}  # Size 2 < threshold 10
+        small_obj = {"k1": 1, "k2": 2}
 
-        with mock.patch("toonverter.encoders.toon_encoder.ThreadPoolExecutor") as mock_executor:
-            encoded_output = encoder.encode_object(small_obj, 0)
+        encoded_output = encoder.encode_object(small_obj, 0)
 
-            # Verify ThreadPoolExecutor was NOT called
-            mock_executor.assert_not_called()
-
-            expected_output = [
-                "k1: 1",
-                "k2: 2",
-            ]
-            assert encoded_output == expected_output
+        expected_output = [
+            "k1: 1",
+            "k2: 2",
+        ]
+        assert encoded_output == expected_output
 
     @mock.patch("toonverter.encoders.toon_encoder.ToonEncoder")
-    def test_encode_with_user_options_enables_parallelism(self, mock_toon_encoder):
-        """Test convenience encode function passes parallelism options to ToonEncoder and triggers parallel path."""
+    def test_encode_with_user_options_instantiation(self, mock_toon_encoder):
+        """Test convenience encode function passes options to ToonEncoder."""
         options = ToonEncodeOptions(parallelism_threshold=2)
         large_obj = {"k1": 1, "k2": 2, "k3": 3}
 
         # Configure the mock instance that will be returned by mock_toon_encoder()
         mock_encoder_instance = mock_toon_encoder.return_value
-        mock_encoder_instance.encode.return_value = "k1: 1\nk2: 2\nk3: 3"  # Mock the final output
+        mock_encoder_instance.encode.return_value = "k1: 1\nk2: 2\nk3: 3"
 
         # Call the convenience function
         encoded_output = encode(large_obj, options=options)
@@ -105,16 +75,14 @@ class TestToonEncoder:
         mock_encoder_instance.encode.assert_called_once_with(large_obj)
         assert encoded_output == "k1: 1\nk2: 2\nk3: 3"
 
-    def test_encode_with_user_options_no_parallelism(self):
-        """Test convenience encode function does not use parallelism with UserEncodeOptions."""
-        options = ToonEncodeOptions(parallelism_threshold=10)  # Set a high threshold
+    def test_encode_with_user_options_correctness(self):
+        """Test convenience encode function correctness."""
+        options = ToonEncodeOptions(parallelism_threshold=10)
         small_obj = {"k1": 1, "k2": 2}
 
-        with mock.patch("toonverter.encoders.toon_encoder.ThreadPoolExecutor") as mock_executor:
-            encoded_output = encode(small_obj, options=options)
-            mock_executor.assert_not_called()
-            expected_output = "k1: 1\nk2: 2"
-            assert encoded_output == expected_output
+        encoded_output = encode(small_obj, options=options)
+        expected_output = "k1: 1\nk2: 2"
+        assert encoded_output == expected_output
 
     @mock.patch.dict(os.environ, {"TOON_PARALLELISM_THRESHOLD": "1"})
     @mock.patch("toonverter.encoders.toon_encoder.ToonEncoder")
@@ -136,11 +104,9 @@ class TestToonEncoder:
         assert actual_output == expected_output
 
     @mock.patch.dict(os.environ, {"TOON_PARALLELISM_THRESHOLD": "100"})
-    def test_encode_does_not_use_parallelism_if_env_threshold_high(self):
-        """Test encode function does not use parallelism if environment threshold is high."""
+    def test_encode_correctness_with_env_vars(self):
+        """Test encode function correctness when environment variables are set."""
         large_obj = {"k1": 1, "k2": 2, "k3": 3}
-        with mock.patch("toonverter.encoders.toon_encoder.ThreadPoolExecutor") as mock_executor:
-            encoded_output = encode(large_obj, options=None)
-            mock_executor.assert_not_called()
-            expected_output = "k1: 1\nk2: 2\nk3: 3"
-            assert encoded_output == expected_output
+        encoded_output = encode(large_obj, options=None)
+        expected_output = "k1: 1\nk2: 2\nk3: 3"
+        assert encoded_output == expected_output

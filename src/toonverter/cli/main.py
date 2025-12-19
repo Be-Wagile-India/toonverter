@@ -77,7 +77,11 @@ def convert(
             except NotImplementedError:
                 # Fallback if stream not implemented for some combo
                 if stream:
-                    raise
+                    click.echo(
+                        f"✗ Error: Streaming is not supported for conversion from {from_format} to {to_format}.",
+                        err=True,
+                    )
+                    sys.exit(1)
                 # else continue to normal convert
 
         # Standard conversion

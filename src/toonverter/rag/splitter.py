@@ -50,24 +50,27 @@ class ToonHybridSplitter:
         Recursive visitor that decides whether to emit a node as a chunk
         or recurse deeper.
         """
-        # 1. Measure the node
-        node_str = self._serialize(node)
-        token_count = count_tokens(node_str, model=self.model_name)
+        # 1. Use fast heuristic for initial decision
+        estimated_tokens = self._estimate_size(node)
 
-        # 2. Base Case: If it fits, yield it (unless it's empty/trivial)
-        if token_count <= self.chunk_size:
-            if token_count >= self.min_chunk_size or not path:  # Always yield root if tiny
-                # Construct the context-enriched content
-                content_with_context = self._format_chunk(path, node)
-                yield Chunk(
-                    content=content_with_context,
-                    path=path,
-                    metadata=metadata,
-                    token_count=token_count,
-                )
-            return
+        # 2. Base Case: If it comfortably fits, yield it
+        # (Using a 10% safety margin for the heuristic)
+        if estimated_tokens <= self.chunk_size * 0.9:
+            node_str = self._serialize(node)
+            token_count = count_tokens(node_str, model=self.model_name)
 
-        # 3. Recursive Case: It's too big. Breakdown strategy depends on type.
+            if token_count <= self.chunk_size:
+                if token_count >= self.min_chunk_size or not path:
+                    content_with_context = self._format_chunk(path, node)
+                    yield Chunk(
+                        content=content_with_context,
+                        path=path,
+                        metadata=metadata,
+                        token_count=token_count,
+                    )
+                return
+
+        # 3. Recursive Case: It's too big or heuristic was borderline.
         if isinstance(node, dict):
             yield from self._process_container(node.items(), path, metadata, is_dict=True)
         elif isinstance(node, list):
@@ -75,8 +78,9 @@ class ToonHybridSplitter:
         elif isinstance(node, str):
             yield from self._split_long_string(node, path, metadata)
         else:
-            # Primitive that is somehow too huge (unlikely for int/float/bool)
-            # Just yield it to avoid crash, even if oversized.
+            # Primitive that is somehow too huge
+            node_str = self._serialize(node)
+            token_count = count_tokens(node_str, model=self.model_name)
             content = self._format_chunk(path, node)
             yield Chunk(content=content, path=path, metadata=metadata, token_count=token_count)
 
@@ -95,12 +99,11 @@ class ToonHybridSplitter:
             key_str = str(key)
             item_path = [*path, key_str]
 
-            # Measure this specific item
-            item_str = self._serialize(value)
-            item_tokens = count_tokens(item_str, model=self.model_name)
+            # Use heuristic for item measurement
+            item_tokens = self._estimate_size(value)
 
             # If this single item is HUGE, we must flush buffer and recurse on the item
-            if item_tokens > self.chunk_size:
+            if item_tokens > self.chunk_size * 0.9:
                 # Flush existing buffer if not empty
                 if buffer_size > 0:
                     yield self._create_chunk_from_buffer(buffer, path, metadata, buffer_size)
@@ -112,7 +115,6 @@ class ToonHybridSplitter:
                 continue
 
             # If adding this item exceeds buffer, flush first
-            # Heuristic: We estimate overhead of syntax (brackets, commas) as ~5 tokens
             if buffer_size + item_tokens + 5 > self.chunk_size:
                 yield self._create_chunk_from_buffer(buffer, path, metadata, buffer_size)
                 buffer = {} if is_dict else []
@@ -128,6 +130,22 @@ class ToonHybridSplitter:
         # Final flush
         if buffer_size > 0:
             yield self._create_chunk_from_buffer(buffer, path, metadata, buffer_size)
+
+    def _estimate_size(self, node: Any) -> int:
+        """Fast heuristic for token size estimation."""
+        if node is None:
+            return 1
+        if isinstance(node, (bool, int, float)):
+            return 2
+        if isinstance(node, str):
+            return max(1, len(node) // 3)
+        if isinstance(node, dict):
+            # 2 tokens overhead + sum of children
+            return 2 + sum(self._estimate_size(k) + self._estimate_size(v) for k, v in node.items())
+        if isinstance(node, list):
+            # 2 tokens overhead + sum of items
+            return 2 + sum(self._estimate_size(i) for i in node)
+        return len(str(node)) // 3
 
     def _create_chunk_from_buffer(
         self, buffer: Any, path: list[str], metadata: dict[str, Any], _size: int

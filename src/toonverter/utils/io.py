@@ -110,31 +110,73 @@ def _read_json_stream(file_path: str) -> Generator[Any, None, None]:
     except ImportError:
         pass
 
-    # Strategy 2: Line-based reading (JSONL / NDJSON)
-
-    # Also works as a fallback for simple pretty-printed JSON arrays if ijson is missing
+    # Strategy 2: Brace-counting chunker (Fallback for pretty-printed JSON arrays)
+    # Handles multi-line objects by accumulating lines until braces balance.
 
     with path.open("r", encoding="utf-8") as f:
+        buffer = []
+        brace_count = 0
+        in_string = False
+        escape = False
+        started = False
+
         for line in f:
-            clean_line = line.strip()
-
-            if not clean_line:
+            stripped = line.strip()
+            if not stripped:
                 continue
 
-            # Skip array brackets for pretty-printed JSON fallback
-
-            if clean_line in ("[", "]"):
+            # Simple heuristic for top-level array brackets
+            # If we haven't started an object and see '[', skip it
+            if not started and stripped == "[":
                 continue
+            # If we aren't in an object and see ']', we are done
+            if not started and stripped == "]":
+                break
 
-            # Remove trailing comma for pretty-printed JSON
+            buffer.append(line)
 
-            if clean_line.endswith(","):
-                clean_line = clean_line[:-1]
+            # Update state based on characters
+            for char in line:
+                if escape:
+                    escape = False
+                    continue
 
-            try:
-                yield json.loads(line)
-            except json.JSONDecodeError as e:
-                warnings.warn(f"Skipping malformed JSON line in {file_path}: {e}", stacklevel=2)
+                if char == "\\":
+                    escape = True
+                    continue
+
+                if char == '"':
+                    in_string = not in_string
+                    continue
+
+                if not in_string:
+                    if char == "{":
+                        if brace_count == 0:
+                            started = True
+                        brace_count += 1
+                    elif char == "}":
+                        brace_count -= 1
+
+            # Check if a complete object is formed
+            if started and brace_count == 0:
+                json_str = "".join(buffer).strip()
+                # Remove trailing comma if present (common in arrays)
+                if json_str.endswith(","):
+                    json_str = json_str[:-1]
+
+                try:
+                    yield json.loads(json_str)
+                except json.JSONDecodeError as e:
+                    warnings.warn(f"Skipping malformed JSON chunk: {e}", stacklevel=2)
+
+                # Reset for next object
+                buffer = []
+                started = False
+
+        # Handle any remaining buffer (e.g. single line objects without braces like strings/numbers in array?)
+        # For now, we focus on objects as that's the primary failure mode.
+        # Primitives in arrays are usually one per line or comma separated.
+        # This fallback is primarily for List[Dict].
 
 
 def load_stream(file_path: str, format: str | None = None) -> Generator[Any, None, None]:

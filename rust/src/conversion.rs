@@ -2,7 +2,7 @@ use indexmap::IndexMap;
 use num_bigint::BigInt;
 use pyo3::exceptions::{PyRecursionError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyString};
+use pyo3::types::{PyDict, PyList, PyString, PyTuple};
 
 use crate::ir::ToonValue;
 
@@ -49,6 +49,12 @@ fn to_toon_value_recursive(
     } else if let Ok(list) = obj.downcast::<PyList>() {
         let mut vec = Vec::with_capacity(list.len());
         for item in list {
+            vec.push(to_toon_value_recursive(&item, depth + 1, limit)?);
+        }
+        Ok(ToonValue::List(vec))
+    } else if let Ok(tuple) = obj.downcast::<PyTuple>() {
+        let mut vec = Vec::with_capacity(tuple.len());
+        for item in tuple {
             vec.push(to_toon_value_recursive(&item, depth + 1, limit)?);
         }
         Ok(ToonValue::List(vec))
@@ -165,16 +171,19 @@ mod tests {
     }
 
     #[test]
-    fn test_conversion_unsupported_python_tuple() {
+    fn test_conversion_tuple_support() {
         let _ = &*INITIALIZED;
         Python::with_gil(|py| {
             let tuple_obj = py.eval_bound("(1, 2, 3)", None, None).unwrap();
-            let result = to_toon_value(&tuple_obj, None);
-            assert!(result.is_err());
-            assert!(result
-                .unwrap_err()
-                .to_string()
-                .contains("Unsupported type for TOON encoding"));
+            let result = to_toon_value(&tuple_obj, None).unwrap();
+            assert_eq!(
+                result,
+                ToonValue::List(vec![
+                    ToonValue::Integer(1),
+                    ToonValue::Integer(2),
+                    ToonValue::Integer(3)
+                ])
+            );
         });
     }
 

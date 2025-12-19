@@ -71,6 +71,12 @@ impl<'a> ToonLexer<'a> {
                 break;
             }
         }
+        if spaces % self.indent_size != 0 {
+            return Err(format!(
+                "Indentation error: {} spaces found, expected multiple of {}",
+                spaces, self.indent_size
+            ));
+        }
         Ok(spaces / self.indent_size)
     }
 

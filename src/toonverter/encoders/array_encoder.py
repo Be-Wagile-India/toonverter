@@ -165,15 +165,14 @@ class ArrayEncoder:
         fields = list(arr[0].keys())
 
         # Header line: key[N]{field1,field2}: (with delimiter marker if not comma)
-        fields_str = self.delimiter.join(fields)
         delimiter_marker = "" if self.delimiter == "," else self.delimiter
+        fields_str = self.delimiter.join(fields)
         header = f"{indent}{key}[{length}{delimiter_marker}]{{{fields_str}}}:"
-
         lines = [header]
 
         # Data rows
         for item in arr:
-            values = [self._encode_value(item[field]) for field in fields]
+            values = [self._encode_value(item.get(field)) for field in fields]
             row = self.delimiter.join(values)
             lines.append(f"{row_indent}{row}")
 
@@ -286,7 +285,7 @@ class ArrayEncoder:
 
         # Data rows
         for item in arr:
-            values = [self._encode_value(item[field]) for field in fields]
+            values = [self._encode_value(item.get(field)) for field in fields]
             row = self.delimiter.join(values)
             lines.append(f"{row_indent}{row}")
 

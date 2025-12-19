@@ -8,6 +8,8 @@ use crate::tokens::{Token, TokenType};
 pub struct ToonParser<'a> {
     token_stream: ToonLexer<'a>,
     buffer: VecDeque<Token>,
+    recursion_depth: usize,
+    max_recursion_depth: usize,
 }
 
 type ParseResult<T> = Result<T, String>;
@@ -17,6 +19,25 @@ impl<'a> ToonParser<'a> {
         ToonParser {
             token_stream: lexer,
             buffer: VecDeque::new(),
+            recursion_depth: 0,
+            max_recursion_depth: 100,
+        }
+    }
+
+    fn enter_recursion(&mut self) -> ParseResult<()> {
+        self.recursion_depth += 1;
+        if self.recursion_depth > self.max_recursion_depth {
+            return Err(format!(
+                "Maximum recursion depth ({}) exceeded",
+                self.max_recursion_depth
+            ));
+        }
+        Ok(())
+    }
+
+    fn exit_recursion(&mut self) {
+        if self.recursion_depth > 0 {
+            self.recursion_depth -= 1;
         }
     }
 
@@ -126,6 +147,13 @@ impl<'a> ToonParser<'a> {
     }
 
     pub fn parse_value(&mut self) -> ParseResult<ToonValue> {
+        self.enter_recursion()?;
+        let result = self._parse_value_core();
+        self.exit_recursion();
+        result
+    }
+
+    fn _parse_value_core(&mut self) -> ParseResult<ToonValue> {
         // Consume leading Newline or Comment tokens
         while self.current()?.token_type == TokenType::Newline
             || self.current()?.token_type == TokenType::Comment

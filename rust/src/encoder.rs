@@ -10,6 +10,58 @@ struct ToonWriter<'a> {
     indent_level: usize,
 }
 
+fn format_dict_entry(
+    k: &str,
+    v: &ToonValue,
+    indent_level: usize,
+    indent_size: usize,
+    delimiter: &str,
+) -> Result<String, std::fmt::Error> {
+    let mut entry_buf = String::new();
+    let mut temp_val_buf = String::new();
+
+    let target_level = if let ToonValue::List(_) = v {
+        indent_level
+    } else {
+        indent_level + 1
+    };
+
+    {
+        let mut sub_writer = ToonWriter::new(&mut temp_val_buf, indent_size, delimiter);
+        sub_writer.with_indent(target_level, |w| w.encode_value(v))?;
+    }
+
+    // Indentation helper
+    let write_indent = |buf: &mut String, lvl: usize| {
+        for _ in 0..(lvl * indent_size) {
+            buf.push(' ');
+        }
+    };
+
+    if let ToonValue::List(_) = v {
+        if temp_val_buf.starts_with('[') {
+            write_indent(&mut entry_buf, indent_level);
+            write!(entry_buf, "{}{}", k, temp_val_buf)?;
+            return Ok(entry_buf);
+        }
+    }
+
+    write_indent(&mut entry_buf, indent_level);
+    write!(entry_buf, "{}:", k)?;
+
+    if temp_val_buf.starts_with('\n') || temp_val_buf.starts_with(' ') {
+        if !temp_val_buf.starts_with('\n') {
+            entry_buf.push('\n');
+        }
+        entry_buf.push_str(&temp_val_buf);
+    } else {
+        entry_buf.push(' ');
+        entry_buf.push_str(&temp_val_buf);
+    }
+
+    Ok(entry_buf)
+}
+
 impl<'a> ToonWriter<'a> {
     fn new(buf: &'a mut String, indent_size: usize, delimiter: &'a str) -> Self {
         Self {
@@ -123,45 +175,40 @@ impl<'a> ToonWriter<'a> {
                     return Ok(());
                 }
 
-                let mut first_item = true;
-                for (k, v) in map {
-                    if !first_item {
-                        self.buf.push('\n');
-                    }
-                    first_item = false;
+                if map.len() > 1000 {
+                    let indent_level = self.indent_level;
+                    let indent_size = self.indent_size;
+                    let delimiter = self.delimiter;
 
-                    let mut temp_val_buf = String::new();
-                    let target_level = if let ToonValue::List(_) = v {
-                        self.indent_level
-                    } else {
-                        self.indent_level + 1
-                    };
+                    let items: Vec<String> = map
+                        .par_iter()
+                        .map(|(k, v)| {
+                            format_dict_entry(k, v, indent_level, indent_size, delimiter)
+                                .expect("Failed to encode dict entry")
+                        })
+                        .collect();
 
-                    {
-                        let mut sub_writer =
-                            ToonWriter::new(&mut temp_val_buf, self.indent_size, self.delimiter);
-                        sub_writer.with_indent(target_level, |w| w.encode_value(v))?;
-                    }
-
-                    if let ToonValue::List(_) = v {
-                        if temp_val_buf.starts_with('[') {
-                            self.write_indent(self.indent_level);
-                            write!(self.buf, "{}{}", k, temp_val_buf)?;
-                            continue;
-                        }
-                    }
-
-                    self.write_indent(self.indent_level);
-                    write!(self.buf, "{}:", k)?;
-
-                    if temp_val_buf.starts_with('\n') || temp_val_buf.starts_with(' ') {
-                        if !temp_val_buf.starts_with('\n') {
+                    for (i, item) in items.iter().enumerate() {
+                        if i > 0 {
                             self.buf.push('\n');
                         }
-                        self.buf.push_str(&temp_val_buf);
-                    } else {
-                        self.buf.push(' ');
-                        self.buf.push_str(&temp_val_buf);
+                        self.buf.push_str(item);
+                    }
+                } else {
+                    let mut first_item = true;
+                    for (k, v) in map {
+                        if !first_item {
+                            self.buf.push('\n');
+                        }
+                        first_item = false;
+                        let item_str = format_dict_entry(
+                            k,
+                            v,
+                            self.indent_level,
+                            self.indent_size,
+                            self.delimiter,
+                        )?;
+                        self.buf.push_str(&item_str);
                     }
                 }
             }
@@ -561,5 +608,27 @@ mod tests {
         let tv = ToonValue::BigInteger(bi);
         let output = encode_test_value(&tv, 2, ",");
         assert_eq!(output, "100");
+    }
+
+    #[test]
+    fn test_encode_large_dict_parallel() {
+        let mut map = IndexMap::new();
+        // Create enough items to trigger parallelism (> 1000)
+        for i in 0..1500 {
+            map.insert(format!("key_{}", i), ToonValue::Integer(i));
+        }
+        let tv = ToonValue::Dict(map);
+
+        // Encode
+        let output = encode_test_value(&tv, 2, ",");
+
+        // Verify output structure
+        // It should contain all keys. Since IndexMap preserves order, we can check a few.
+        assert!(output.contains("key_0: 0"));
+        assert!(output.contains("key_1499: 1499"));
+
+        // Count lines to ensure we have all items
+        let line_count = output.lines().count();
+        assert_eq!(line_count, 1500);
     }
 }

@@ -44,9 +44,7 @@ class ContextOptimizer:
 
         current_size = self._measure(optimized_data)
 
-        # Run lightweight pre-pass only if:
-        #  - structure is over budget (common case)
-        #  - OR caller explicitly opted in via apply_lightweight_prepass
+        # 1. LIGHTWEIGHT PASS (truncate/round)
         if current_size > self.budget or self.apply_lightweight_prepass:
             candidates = self._scan_candidates(optimized_data)
             light_candidates = [c for c in candidates if c.action in ("round", "truncate")]
@@ -57,20 +55,19 @@ class ContextOptimizer:
                     return (c.original_size - c.degraded_size) * (1.1 - c.priority) * weight
 
                 light_candidates.sort(key=_light_score, reverse=True)
+                estimated_savings = 0
                 for cand in light_candidates:
                     self._apply_degradation(cand)
-                    savings = cand.original_size - cand.degraded_size
-                    current_size -= savings
-                    if current_size <= self.budget:
+                    estimated_savings += cand.original_size - cand.degraded_size
+                    # Only break if we are VERY confident we saved enough
+                    if current_size - estimated_savings <= self.budget * 0.9:
                         break
+                # Only re-measure once after the batch
                 current_size = self._measure(optimized_data)
 
-        # If within budget now, return (preserve no-op behaviour)
-        if current_size <= self.budget:
-            return optimized_data
-
-        # Full degradations pass (including prune)
-        for _ in range(10):
+        # 2. FULL DEGRADATIONS PASS (including prune)
+        # Process in batches to reduce re-measurements
+        for _ in range(5):  # Limit iterations
             if current_size <= self.budget:
                 break
 
@@ -88,12 +85,10 @@ class ContextOptimizer:
 
             candidates.sort(key=_score, reverse=True)
 
-            for cand in candidates:
-                self._apply_degradation(cand)
-                savings = cand.original_size - cand.degraded_size
-                current_size -= savings
-                if current_size <= self.budget:
-                    break
+            # Apply top 20% of candidates or at least 1
+            batch_size = max(1, len(candidates) // 5)
+            for i in range(batch_size):
+                self._apply_degradation(candidates[i])
 
             current_size = self._measure(optimized_data)
 
@@ -101,6 +96,20 @@ class ContextOptimizer:
 
     def _measure(self, data: Any) -> int:
         return self._counter.count_tokens(encode(data))
+
+    def _estimate_size(self, node: Any) -> int:
+        """Fast heuristic for token size estimation."""
+        if node is None:
+            return 1
+        if isinstance(node, (bool, int, float)):
+            return 2
+        if isinstance(node, str):
+            return max(1, len(node) // 3)
+        if isinstance(node, dict):
+            return 2 + sum(self._estimate_size(k) + self._estimate_size(v) for k, v in node.items())
+        if isinstance(node, list):
+            return 2 + sum(self._estimate_size(i) for i in node)
+        return len(str(node)) // 3
 
     def _scan_candidates(self, data: Any) -> list[DegradationCandidate]:
         candidates: list[DegradationCandidate] = []
@@ -175,11 +184,7 @@ class ContextOptimizer:
                 )
 
         if priority <= PriorityLevel.NORMAL.value:
-            try:
-                node_str = encode(node)
-                size = self._counter.count_tokens(node_str)  # Use self._counter here
-            except Exception:
-                size = 1
+            size = self._estimate_size(node)
 
             candidates.append(
                 DegradationCandidate(

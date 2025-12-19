@@ -146,36 +146,62 @@ class ExactDeduplicator:
             return candidates, []
 
         # Compute Embeddings
-        embeddings = self._model.encode(valid_texts, batch_size=32, show_progress_bar=False)  # type: ignore
-
-        # Compute Similarity Matrix
-        sim_matrix = cosine_similarity(embeddings)
+        embeddings = self._model.encode(valid_texts, batch_size=32, show_progress_bar=False)
 
         to_remove_indices = set()
         duplicates = []
 
-        # Iterate upper triangle
-        for i in range(len(valid_texts)):
-            if valid_indices[i] in to_remove_indices:
-                continue
+        # Use full matrix for small sets (maintains compatibility with existing tests/mocks)
+        # and memory-efficient batched approach for large sets.
+        from sklearn.metrics.pairwise import cosine_similarity  # noqa: PLC0415
 
-            for j in range(i + 1, len(valid_texts)):
-                if valid_indices[j] in to_remove_indices:
+        num_valid = len(valid_texts)
+
+        if num_valid <= 1000:
+            sim_matrix = cosine_similarity(embeddings)
+            for i in range(num_valid):
+                if valid_indices[i] in to_remove_indices:
+                    continue
+                for j in range(i + 1, num_valid):
+                    if valid_indices[j] in to_remove_indices:
+                        continue
+                    if sim_matrix[i][j] >= self.threshold:
+                        dup_real_idx = valid_indices[j]
+                        orig_real_idx = valid_indices[i]
+                        to_remove_indices.add(dup_real_idx)
+                        duplicates.append(
+                            DuplicateItem(
+                                original_index=orig_real_idx,
+                                duplicate_index=dup_real_idx,
+                                item=candidates[dup_real_idx],
+                            )
+                        )
+        else:
+            # Memory-efficient batched iteration for large sets
+            for i in range(num_valid):
+                if valid_indices[i] in to_remove_indices:
                     continue
 
-                similarity = sim_matrix[i][j]
-                if similarity >= self.threshold:
-                    dup_real_idx = valid_indices[j]
-                    orig_real_idx = valid_indices[i]
+                if i + 1 < num_valid:
+                    current_emb = embeddings[i : i + 1]
+                    remaining_embs = embeddings[i + 1 :]
+                    similarities = cosine_similarity(current_emb, remaining_embs)[0]
 
-                    to_remove_indices.add(dup_real_idx)
-                    duplicates.append(
-                        DuplicateItem(
-                            original_index=orig_real_idx,  # Index in candidates list
-                            duplicate_index=dup_real_idx,  # Index in candidates list
-                            item=candidates[dup_real_idx],
-                        )
-                    )
+                    for offset, sim in enumerate(similarities):
+                        j = i + 1 + offset
+                        if sim >= self.threshold:
+                            dup_real_idx = valid_indices[j]
+                            orig_real_idx = valid_indices[i]
+
+                            if dup_real_idx not in to_remove_indices:
+                                to_remove_indices.add(dup_real_idx)
+                                duplicates.append(
+                                    DuplicateItem(
+                                        original_index=orig_real_idx,
+                                        duplicate_index=dup_real_idx,
+                                        item=candidates[dup_real_idx],
+                                    )
+                                )
 
         # Reconstruct final list
         final_unique = []
@@ -375,21 +401,39 @@ class SemanticDeduplicator:
                 self._embedding_cache[text] = emb
 
         # Retrieve all embeddings from cache (now guaranteed to exist)
-        embeddings = [self._embedding_cache[t] for t in valid_texts]
+        import numpy as np  # noqa: PLC0415
 
-        # Calculate similarity matrix
-        similarity_matrix = cosine_similarity(embeddings)
+        embeddings = np.array([self._embedding_cache[t] for t in valid_texts])
 
         # Identify duplicates
+        from sklearn.metrics.pairwise import cosine_similarity  # noqa: PLC0415
+
         to_remove_indices_in_valid_items = set()
-        for i in range(len(valid_texts)):
-            if i in to_remove_indices_in_valid_items:
-                continue
-            for j in range(i + 1, len(valid_texts)):
-                if j in to_remove_indices_in_valid_items:
+
+        if len(valid_texts) <= 1000:
+            similarity_matrix = cosine_similarity(embeddings)
+            for i in range(len(valid_texts)):
+                if i in to_remove_indices_in_valid_items:
                     continue
-                if similarity_matrix[i][j] >= self.threshold:
-                    to_remove_indices_in_valid_items.add(j)  # Mark as duplicate
+                for j in range(i + 1, len(valid_texts)):
+                    if j in to_remove_indices_in_valid_items:
+                        continue
+                    if similarity_matrix[i][j] >= self.threshold:
+                        to_remove_indices_in_valid_items.add(j)
+        else:
+            # Memory-efficient approach for large lists
+            for i in range(len(valid_texts)):
+                if i in to_remove_indices_in_valid_items:
+                    continue
+
+                if i + 1 < len(valid_texts):
+                    current_emb = embeddings[i : i + 1]
+                    remaining_embs = embeddings[i + 1 :]
+                    similarities = cosine_similarity(current_emb, remaining_embs)[0]
+
+                    for offset, sim in enumerate(similarities):
+                        if sim >= self.threshold:
+                            to_remove_indices_in_valid_items.add(i + 1 + offset)
 
         # Reconstruct the list, keeping only unique items
         new_items = []

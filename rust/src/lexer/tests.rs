@@ -73,6 +73,19 @@ fn test_lexer_error_unterminated_string() {
 }
 
 #[test]
+fn test_lexer_error_invalid_indentation() {
+    let text = "root:\n   child: val"; // 3 spaces, indent size 2
+    let mut lexer = ToonLexer::new(text, 2);
+    // First line tokens ok
+    assert!(lexer.next().unwrap().is_ok()); // root
+    assert!(lexer.next().unwrap().is_ok()); // :
+    assert!(lexer.next().unwrap().is_ok()); // \n
+                                            // Next token should be error
+    let err = lexer.next().unwrap().unwrap_err();
+    assert!(err.contains("Indentation error"));
+}
+
+#[test]
 fn test_lexer_all_tokens() {
     let text = "[]{},:- -123 # comment";
     let tokens = get_tokens(text);
