@@ -61,7 +61,6 @@ fn decode_toon(py: Python, text: &str, indent_size: Option<usize>) -> PyResult<P
         }
 
         let indent = indent_size.unwrap_or(2);
-        // Release GIL for lexing and parsing
         let parse_result = py.allow_threads(|| {
             catch_unwind(AssertUnwindSafe(|| {
                 let lexer = ToonLexer::new(text, indent);
@@ -95,7 +94,6 @@ fn encode_toon(
     recursion_depth_limit: Option<usize>,
 ) -> PyResult<String> {
     let result = catch_unwind(AssertUnwindSafe(|| {
-        // Need GIL for conversion from Python object to IR
         let ir = to_toon_value(&obj, recursion_depth_limit).map_err(PyErr::from)?;
 
         let options = ToonEncodeOptions {
@@ -103,7 +101,6 @@ fn encode_toon(
             delimiter: delimiter.unwrap_or_else(|| ",".to_string()),
         };
 
-        // Release GIL for encoding string generation
         let encode_result = py.allow_threads(move || {
             catch_unwind(AssertUnwindSafe(|| {
                 let request = ToonEncoderRequest {
@@ -202,7 +199,7 @@ fn encode_from_rows(
         let mut row_data = Vec::with_capacity(count);
 
         for row in rows {
-            let list_row = row.downcast::<PyList>()?; // Or tuple? Assuming List for now
+            let list_row = row.downcast::<PyList>()?;
             let mut row_vals = Vec::with_capacity(list_row.len());
             for item in list_row {
                 row_vals.push(to_toon_value(&item, None).map_err(PyErr::from)?);
@@ -233,7 +230,6 @@ fn encode_from_rows(
     }
 }
 
-/// Batch convert JSON files.
 #[pyfunction]
 #[pyo3(signature = (paths, output_dir=None, indent_size=None, delimiter=None))]
 fn convert_json_batch(
@@ -253,7 +249,6 @@ fn convert_json_batch(
     }
 }
 
-/// Batch convert TOON files to JSON.
 #[pyfunction]
 #[pyo3(signature = (paths, output_dir=None, indent_size=None))]
 fn convert_toon_batch(
@@ -271,7 +266,6 @@ fn convert_toon_batch(
     }
 }
 
-/// Batch convert JSON files in a directory.
 #[pyfunction]
 #[pyo3(signature = (dir_path, recursive=false, output_dir=None, indent_size=None, delimiter=None))]
 fn convert_json_directory(
@@ -294,17 +288,35 @@ fn convert_json_directory(
     }
 }
 
+/// Trigger a panic to verify containment. For testing purposes only.
+#[pyfunction]
+fn trigger_panic(_py: Python, msg: String) -> PyResult<()> {
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        panic!("{}", msg);
+    }));
+    match result {
+        Ok(_) => Ok(()),
+        Err(panic) => Err(handle_panic(panic)),
+    }
+}
+
 #[pymodule]
 fn _toonverter_core(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add("CONTRACT_VERSION", CONTRACT_VERSION)?;
-    m.add_function(wrap_pyfunction!(decode_toon, m)?)?;
-    m.add_function(wrap_pyfunction!(encode_toon, m)?)?;
-    m.add_function(wrap_pyfunction!(encode_from_pandas, m)?)?;
-    m.add_function(wrap_pyfunction!(encode_from_rows, m)?)?;
-    m.add_function(wrap_pyfunction!(convert_json_batch, m)?)?;
-    m.add_function(wrap_pyfunction!(convert_toon_batch, m)?)?;
-    m.add_function(wrap_pyfunction!(convert_json_directory, m)?)?;
-    Ok(())
+    catch_unwind(AssertUnwindSafe(|| {
+        m.add("CONTRACT_VERSION", CONTRACT_VERSION)?;
+        m.add_function(wrap_pyfunction!(decode_toon, m)?)?;
+        m.add_function(wrap_pyfunction!(encode_toon, m)?)?;
+        m.add_function(wrap_pyfunction!(encode_from_pandas, m)?)?;
+        m.add_function(wrap_pyfunction!(encode_from_rows, m)?)?;
+        m.add_function(wrap_pyfunction!(convert_json_batch, m)?)?;
+        m.add_function(wrap_pyfunction!(convert_toon_batch, m)?)?;
+        m.add_function(wrap_pyfunction!(convert_json_directory, m)?)?;
+
+        m.add_function(wrap_pyfunction!(trigger_panic, m)?)?;
+
+        Ok(())
+    }))
+    .map_err(handle_panic)?
 }
 
 #[cfg(test)]
