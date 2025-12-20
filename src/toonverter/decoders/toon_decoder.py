@@ -7,7 +7,12 @@ the official TOON v2.0 specification.
 from typing import Any
 
 from toonverter.core.config import RECURSION_DEPTH_LIMIT, USE_RUST_DECODER, rust_core
-from toonverter.core.exceptions import DecodingError, ValidationError
+from toonverter.core.exceptions import (
+    DecodingError,
+    InternalError,
+    ProcessingError,
+    ValidationError,
+)
 from toonverter.core.spec import (
     ArrayForm,
     Delimiter,
@@ -74,6 +79,9 @@ class ToonDecoder:
         if USE_RUST_DECODER and self.options.strict and self.options.type_inference:
             try:
                 return rust_core.decode_toon(data_str, self.options.indent_size)
+            except (ValidationError, ProcessingError, InternalError):
+                # Strict contract: Re-raise specific Rust errors
+                raise
             except ValueError as e:
                 # Map Rust/PyO3 ValueError to our DecodingError
                 msg = f"Failed to decode TOON data (Rust): {e}"

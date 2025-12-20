@@ -12,7 +12,12 @@ from toonverter.core.config import (
     USE_RUST_ENCODER,
     rust_core,
 )
-from toonverter.core.exceptions import EncodingError, ValidationError
+from toonverter.core.exceptions import (
+    EncodingError,
+    InternalError,
+    ProcessingError,
+    ValidationError,
+)
 from toonverter.core.spec import ArrayForm, Delimiter, RootForm, ToonEncodeOptions, ToonValue
 from toonverter.core.types import EncodeOptions
 
@@ -104,6 +109,9 @@ class ToonEncoder:
                         delimiter=self.options.delimiter.value,
                         recursion_depth_limit=RECURSION_DEPTH_LIMIT,
                     )
+                except (ValidationError, ProcessingError, InternalError):
+                    # Strict contract: Re-raise specific Rust errors
+                    raise
                 except ValueError as e:
                     # Fallback on error or raise?
                     # Since we want to rely on Rust if enabled, let's verify if it covers all cases.

@@ -1,15 +1,15 @@
 use indexmap::IndexMap;
 use num_bigint::BigInt;
-use pyo3::exceptions::{PyRecursionError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyString, PyTuple};
 
+use crate::error::ToonverterError;
 use crate::ir::ToonValue;
 
 pub fn to_toon_value(
     obj: &Bound<'_, PyAny>,
     recursion_depth_limit: Option<usize>,
-) -> PyResult<ToonValue> {
+) -> Result<ToonValue, ToonverterError> {
     let limit = recursion_depth_limit.unwrap_or(200);
     to_toon_value_recursive(obj, 0, limit)
 }
@@ -18,10 +18,10 @@ fn to_toon_value_recursive(
     obj: &Bound<'_, PyAny>,
     depth: usize,
     limit: usize,
-) -> PyResult<ToonValue> {
+) -> Result<ToonValue, ToonverterError> {
     if depth > limit {
-        return Err(PyRecursionError::new_err(
-            "Maximum recursion depth exceeded during TOON conversion",
+        return Err(ToonverterError::ProcessingError(
+            "Maximum recursion depth exceeded during TOON conversion".to_string(),
         ));
     }
 
@@ -41,7 +41,9 @@ fn to_toon_value_recursive(
     } else if let Ok(dict) = obj.downcast::<PyDict>() {
         let mut map = IndexMap::new();
         for (k, v) in dict {
-            let k_str = k.extract::<String>()?;
+            let k_str = k.extract::<String>().map_err(|e| {
+                ToonverterError::InvalidInput(format!("Dict keys must be strings: {}", e))
+            })?;
             let v_val = to_toon_value_recursive(&v, depth + 1, limit)?;
             map.insert(k_str, v_val);
         }
@@ -59,7 +61,9 @@ fn to_toon_value_recursive(
         }
         Ok(ToonValue::List(vec))
     } else {
-        Err(PyValueError::new_err("Unsupported type for TOON encoding"))
+        Err(ToonverterError::InvalidInput(
+            "Unsupported type for TOON encoding".to_string(),
+        ))
     }
 }
 

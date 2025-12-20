@@ -3,10 +3,33 @@ use std::fmt::Write;
 
 use crate::ir::ToonValue;
 
+#[derive(Clone, Debug)]
+pub struct ToonEncodeOptions {
+    pub indent_size: usize,
+    pub delimiter: String,
+}
+
+impl Default for ToonEncodeOptions {
+    fn default() -> Self {
+        Self {
+            indent_size: 2,
+            delimiter: ",".to_string(),
+        }
+    }
+}
+
+pub struct ToonEncoderRequest<'a> {
+    pub value: &'a ToonValue,
+    pub options: &'a ToonEncodeOptions,
+}
+
+pub struct ToonEncoderResponse {
+    pub toon_string: String,
+}
+
 struct ToonWriter<'a> {
     buf: &'a mut String,
-    indent_size: usize,
-    delimiter: &'a str,
+    options: &'a ToonEncodeOptions,
     indent_level: usize,
 }
 
@@ -14,8 +37,7 @@ fn format_dict_entry(
     k: &str,
     v: &ToonValue,
     indent_level: usize,
-    indent_size: usize,
-    delimiter: &str,
+    options: &ToonEncodeOptions,
 ) -> Result<String, std::fmt::Error> {
     let mut entry_buf = String::new();
     let mut temp_val_buf = String::new();
@@ -27,13 +49,13 @@ fn format_dict_entry(
     };
 
     {
-        let mut sub_writer = ToonWriter::new(&mut temp_val_buf, indent_size, delimiter);
+        let mut sub_writer = ToonWriter::new(&mut temp_val_buf, options);
         sub_writer.with_indent(target_level, |w| w.encode_value(v))?;
     }
 
     // Indentation helper
     let write_indent = |buf: &mut String, lvl: usize| {
-        for _ in 0..(lvl * indent_size) {
+        for _ in 0..(lvl * options.indent_size) {
             buf.push(' ');
         }
     };
@@ -63,11 +85,10 @@ fn format_dict_entry(
 }
 
 impl<'a> ToonWriter<'a> {
-    fn new(buf: &'a mut String, indent_size: usize, delimiter: &'a str) -> Self {
+    fn new(buf: &'a mut String, options: &'a ToonEncodeOptions) -> Self {
         Self {
             buf,
-            indent_size,
-            delimiter,
+            options,
             indent_level: 0,
         }
     }
@@ -84,7 +105,7 @@ impl<'a> ToonWriter<'a> {
     }
 
     fn write_indent(&mut self, level: usize) {
-        for _ in 0..(level * self.indent_size) {
+        for _ in 0..(level * self.options.indent_size) {
             self.buf.push(' ');
         }
     }
@@ -110,21 +131,21 @@ impl<'a> ToonWriter<'a> {
             }
             ToonValue::List(list) => {
                 let len = list.len();
-                let delimiter_char = if self.delimiter == "," {
+                let delimiter_char = if self.options.delimiter == "," {
                     ""
                 } else {
-                    self.delimiter
+                    &self.options.delimiter
                 };
 
                 write!(self.buf, "[{}]{}:", len, delimiter_char)?;
                 if !list.is_empty() {
                     write!(self.buf, " ")?;
-                    let mut first = true;
+                    let mut first_item = true;
                     for v in list {
-                        if !first {
-                            write!(self.buf, "{}", self.delimiter)?;
+                        if !first_item {
+                            write!(self.buf, "{}", self.options.delimiter)?;
                         }
-                        first = false;
+                        first_item = false;
                         self.encode_inline(v)?;
                     }
                 }
@@ -161,7 +182,7 @@ impl<'a> ToonWriter<'a> {
                     .chars()
                     .any(|c| matches!(c, ':' | ' ' | '\n' | '[' | ']' | '{' | '}' | ','))
                     || s.is_empty()
-                    || s.contains(self.delimiter);
+                    || s.contains(&self.options.delimiter);
 
                 if is_reserved || is_number || has_special_chars {
                     write!(self.buf, "{:?}", s)?;
@@ -177,13 +198,12 @@ impl<'a> ToonWriter<'a> {
 
                 if map.len() > 1000 {
                     let indent_level = self.indent_level;
-                    let indent_size = self.indent_size;
-                    let delimiter = self.delimiter;
+                    let options = self.options.clone();
 
                     let items: Vec<String> = map
                         .par_iter()
                         .map(|(k, v)| {
-                            format_dict_entry(k, v, indent_level, indent_size, delimiter)
+                            format_dict_entry(k, v, indent_level, &options)
                                 .expect("Failed to encode dict entry")
                         })
                         .collect();
@@ -201,13 +221,7 @@ impl<'a> ToonWriter<'a> {
                             self.buf.push('\n');
                         }
                         first_item = false;
-                        let item_str = format_dict_entry(
-                            k,
-                            v,
-                            self.indent_level,
-                            self.indent_size,
-                            self.delimiter,
-                        )?;
+                        let item_str = format_dict_entry(k, v, self.indent_level, self.options)?;
                         self.buf.push_str(&item_str);
                     }
                 }
@@ -219,7 +233,7 @@ impl<'a> ToonWriter<'a> {
 
                 for item in list.iter() {
                     match item {
-                        ToonValue::Dict(_) => {}
+                        ToonValue::Dict(_) => {} // Continue checking
                         _ => {
                             is_tabular = false;
                             break;
@@ -249,10 +263,10 @@ impl<'a> ToonWriter<'a> {
                 if is_tabular && !list.is_empty() {
                     if let ToonValue::Dict(first_dict) = &list[0] {
                         let fields: Vec<String> = first_dict.keys().cloned().collect();
-                        let delimiter_char = if self.delimiter == "," {
+                        let delimiter_char = if self.options.delimiter == "," {
                             ""
                         } else {
-                            self.delimiter
+                            &self.options.delimiter
                         };
 
                         write!(
@@ -260,21 +274,20 @@ impl<'a> ToonWriter<'a> {
                             "[{}]{}{{{}}}:",
                             len,
                             delimiter_char,
-                            fields.join(self.delimiter)
+                            fields.join(&self.options.delimiter)
                         )?;
                         self.buf.push('\n');
 
                         // Capture needed values for closure
                         let indent_level = self.indent_level;
-                        let indent_size = self.indent_size;
-                        let delimiter = self.delimiter;
+                        let options = self.options.clone();
 
                         let rows: Vec<String> = list
                             .par_iter()
                             .map(|item| {
                                 let mut row_buf = String::new();
                                 // Manual indent writing since we are in a closure
-                                for _ in 0..((indent_level + 1) * indent_size) {
+                                for _ in 0..((indent_level + 1) * options.indent_size) {
                                     row_buf.push(' ');
                                 }
 
@@ -282,16 +295,12 @@ impl<'a> ToonWriter<'a> {
                                     let mut first_field = true;
                                     for f in &fields {
                                         if !first_field {
-                                            row_buf.push_str(delimiter);
+                                            row_buf.push_str(&options.delimiter);
                                         }
                                         first_field = false;
                                         if let Some(v) = d.get(f) {
                                             // Create temporary writer for inline value
-                                            let mut w = ToonWriter::new(
-                                                &mut row_buf,
-                                                indent_size,
-                                                delimiter,
-                                            );
+                                            let mut w = ToonWriter::new(&mut row_buf, &options);
                                             w.encode_inline(v)
                                                 .expect("Failed to write inline value");
                                         } else {
@@ -300,7 +309,7 @@ impl<'a> ToonWriter<'a> {
                                     }
                                     row_buf
                                 } else {
-                                    String::new()
+                                    String::new() // Should not happen if is_tabular is true
                                 }
                             })
                             .collect();
@@ -315,10 +324,10 @@ impl<'a> ToonWriter<'a> {
                         .all(|item| !matches!(item, ToonValue::Dict(_) | ToonValue::List(_)));
 
                     if all_primitive {
-                        let delimiter_char = if self.delimiter == "," {
+                        let delimiter_char = if self.options.delimiter == "," {
                             ""
                         } else {
-                            self.delimiter
+                            &self.options.delimiter
                         };
                         write!(self.buf, "[{}]{}:", len, delimiter_char)?;
                         if !list.is_empty() {
@@ -326,7 +335,7 @@ impl<'a> ToonWriter<'a> {
                             let mut first_item = true;
                             for item in list {
                                 if !first_item {
-                                    write!(self.buf, "{}", self.delimiter)?;
+                                    write!(self.buf, "{}", self.options.delimiter)?;
                                 }
                                 first_item = false;
                                 self.encode_value(item)?;
@@ -349,20 +358,190 @@ impl<'a> ToonWriter<'a> {
     }
 }
 
-pub fn encode_toon_root(value: &ToonValue, indent_size: usize, delimiter: &str) -> String {
+pub fn encode_toon_root(request: ToonEncoderRequest) -> ToonEncoderResponse {
     let mut buf = String::with_capacity(4096);
     {
-        let mut writer = ToonWriter::new(&mut buf, indent_size, delimiter);
+        let mut writer = ToonWriter::new(&mut buf, request.options);
         writer
-            .encode_value(value)
+            .encode_value(request.value)
             .expect("Failed to write to string buffer");
     }
 
-    if let ToonValue::Dict(_) = value {
+    if let ToonValue::Dict(_) = request.value {
         if buf.starts_with('\n') {
             buf.remove(0);
         }
     }
+    ToonEncoderResponse {
+        toon_string: buf.trim_end().to_string(),
+    }
+}
+
+pub fn encode_tabular_columns(
+    count: usize,
+    columns: Vec<String>,
+    data: Vec<Vec<ToonValue>>,
+    indent_size: usize,
+    delimiter: &str,
+) -> String {
+    if count == 0 {
+        return "[0]:".to_string();
+    }
+    let mut buf = String::with_capacity(count * columns.len() * 10);
+    let delimiter_char = if delimiter == "," { "" } else { delimiter };
+
+    write!(
+        buf,
+        "[{}]{}{{{}}}:",
+        count,
+        delimiter_char,
+        columns.join(delimiter)
+    )
+    .unwrap();
+    buf.push('\n');
+
+    // Create a temporary options struct for the writers
+    // This function still takes primitives for FFI simplicity, but uses the struct internally for writers
+    let options = ToonEncodeOptions {
+        indent_size,
+        delimiter: delimiter.to_string(),
+    };
+
+    let indent_str = " ".repeat(indent_size);
+
+    // Parallel processing for large datasets
+    if count > 1000 {
+        let rows: Vec<String> = (0..count)
+            .into_par_iter()
+            .map(|i| {
+                let mut row_buf = String::new();
+                row_buf.push_str(&indent_str);
+                let mut first_col = true;
+                for col in &data {
+                    if !first_col {
+                        row_buf.push_str(delimiter);
+                    }
+                    first_col = false;
+                    let val = &col[i];
+                    // Temporary writer for value
+                    let mut temp_val = String::new();
+                    let mut writer = ToonWriter::new(&mut temp_val, &options);
+                    writer.encode_inline(val).unwrap();
+                    row_buf.push_str(&temp_val);
+                }
+                row_buf
+            })
+            .collect();
+
+        for row in rows {
+            buf.push_str(&row);
+            buf.push('\n');
+        }
+    } else {
+        let mut col_iters: Vec<_> = data.iter().map(|c| c.iter()).collect();
+        for _ in 0..count {
+            buf.push_str(&indent_str);
+            let mut first_col = true;
+            for iter in &mut col_iters {
+                if !first_col {
+                    buf.push_str(delimiter);
+                }
+                first_col = false;
+                let val = iter.next().expect("Data length mismatch");
+                let mut writer = ToonWriter::new(&mut buf, &options);
+                writer.encode_inline(val).unwrap();
+            }
+            buf.push('\n');
+        }
+    }
+
+    buf.trim_end().to_string()
+}
+
+pub fn encode_tabular_rows(
+    count: usize,
+    columns: Vec<String>,
+    rows: Vec<Vec<ToonValue>>,
+    indent_size: usize,
+    delimiter: &str,
+) -> String {
+    if count == 0 {
+        return "[0]:".to_string();
+    }
+    let mut buf = String::with_capacity(count * columns.len() * 10);
+    let delimiter_char = if delimiter == "," { "" } else { delimiter };
+
+    write!(
+        buf,
+        "[{}]{}{{{}}}:",
+        count,
+        delimiter_char,
+        columns.join(delimiter)
+    )
+    .unwrap();
+    buf.push('\n');
+
+    let options = ToonEncodeOptions {
+        indent_size,
+        delimiter: delimiter.to_string(),
+    };
+
+    let indent_str = " ".repeat(indent_size);
+
+    if count > 1000 {
+        let encoded_rows: Vec<String> = rows
+            .par_iter()
+            .map(|row| {
+                let mut row_buf = String::new();
+                row_buf.push_str(&indent_str);
+                let mut first_col = true;
+                for val in row {
+                    if !first_col {
+                        row_buf.push_str(delimiter);
+                    }
+                    first_col = false;
+                    let mut temp_val = String::new();
+                    let mut writer = ToonWriter::new(&mut temp_val, &options);
+                    writer.encode_inline(val).unwrap();
+                    row_buf.push_str(&temp_val);
+                }
+                // Handle missing columns with nulls if row is short (though usually it matches)
+                for _ in 0..(columns.len().saturating_sub(row.len())) {
+                    if !first_col {
+                        row_buf.push_str(delimiter);
+                    }
+                    row_buf.push_str("null");
+                }
+                row_buf
+            })
+            .collect();
+
+        for r in encoded_rows {
+            buf.push_str(&r);
+            buf.push('\n');
+        }
+    } else {
+        for row in rows {
+            buf.push_str(&indent_str);
+            let mut first_col = true;
+            for val in &row {
+                if !first_col {
+                    buf.push_str(delimiter);
+                }
+                first_col = false;
+                let mut writer = ToonWriter::new(&mut buf, &options);
+                writer.encode_inline(val).unwrap();
+            }
+            for _ in 0..(columns.len().saturating_sub(row.len())) {
+                if !first_col {
+                    buf.push_str(delimiter);
+                }
+                buf.push_str("null");
+            }
+            buf.push('\n');
+        }
+    }
+
     buf.trim_end().to_string()
 }
 
@@ -372,10 +551,18 @@ mod tests {
     use indexmap::IndexMap;
     use num_bigint::BigInt;
 
+    fn get_test_options(indent_size: usize, delimiter: &str) -> ToonEncodeOptions {
+        ToonEncodeOptions {
+            indent_size,
+            delimiter: delimiter.to_string(),
+        }
+    }
+
     fn encode_test_value(value: &ToonValue, indent_size: usize, delimiter: &str) -> String {
         let mut buf = String::new();
+        let options = get_test_options(indent_size, delimiter);
         {
-            let mut writer = ToonWriter::new(&mut buf, indent_size, delimiter);
+            let mut writer = ToonWriter::new(&mut buf, &options);
             writer
                 .encode_value(value)
                 .expect("Failed to encode for test");
@@ -385,8 +572,9 @@ mod tests {
 
     fn encode_inline_test(value: &ToonValue, delimiter: &str) -> String {
         let mut buf = String::new();
+        let options = get_test_options(2, delimiter);
         {
-            let mut writer = ToonWriter::new(&mut buf, 2, delimiter);
+            let mut writer = ToonWriter::new(&mut buf, &options);
             writer
                 .encode_inline(value)
                 .expect("Failed to encode inline");
@@ -561,8 +749,13 @@ mod tests {
         let mut map = IndexMap::new();
         map.insert("key".to_string(), ToonValue::String("value".to_string()));
         let tv = ToonValue::Dict(map);
-        let output = encode_toon_root(&tv, 2, ",");
-        assert_eq!(output, "key: value");
+        let options = get_test_options(2, ",");
+        let request = ToonEncoderRequest {
+            value: &tv,
+            options: &options,
+        };
+        let output = encode_toon_root(request);
+        assert_eq!(output.toon_string, "key: value");
     }
 
     #[test]
@@ -630,5 +823,81 @@ mod tests {
         // Count lines to ensure we have all items
         let line_count = output.lines().count();
         assert_eq!(line_count, 1500);
+    }
+
+    #[test]
+    fn test_encode_tabular_columns_small() {
+        let columns = vec!["a".to_string(), "b".to_string()];
+        let data = vec![
+            vec![ToonValue::Integer(1), ToonValue::Integer(2)],
+            vec![ToonValue::Integer(3), ToonValue::Integer(4)],
+        ];
+        let output = encode_tabular_columns(2, columns, data, 2, ",");
+        assert_eq!(output, "[2]{a,b}:\n  1,3\n  2,4");
+    }
+
+    #[test]
+    fn test_encode_tabular_columns_large_parallel() {
+        let count = 1500;
+        let columns = vec!["id".to_string(), "val".to_string()];
+        let col1 = (0..count).map(|i| ToonValue::Integer(i as i64)).collect();
+        let col2 = (0..count)
+            .map(|i| ToonValue::String(format!("v{}", i)))
+            .collect();
+        let data = vec![col1, col2];
+
+        let output = encode_tabular_columns(count, columns, data, 2, ",");
+        assert!(output.starts_with("[1500]{id,val}:\n"));
+        assert!(output.contains("  0,v0\n"));
+        assert!(output.contains("  1499,v1499"));
+        assert_eq!(output.lines().count(), count + 1);
+    }
+
+    #[test]
+    fn test_encode_tabular_rows_small() {
+        let columns = vec!["a".to_string(), "b".to_string()];
+        let rows = vec![
+            vec![ToonValue::Integer(1), ToonValue::Integer(2)],
+            vec![ToonValue::Integer(3), ToonValue::Integer(4)],
+        ];
+        let output = encode_tabular_rows(2, columns, rows, 2, ",");
+        assert_eq!(output, "[2]{a,b}:\n  1,2\n  3,4");
+    }
+
+    #[test]
+    fn test_encode_tabular_rows_large_parallel() {
+        let count = 1500;
+        let columns = vec!["a".to_string(), "b".to_string()];
+        let rows = (0..count)
+            .map(|i| vec![ToonValue::Integer(i as i64), ToonValue::Integer(i as i64)])
+            .collect();
+
+        let output = encode_tabular_rows(count, columns, rows, 2, ",");
+        assert!(output.starts_with("[1500]{a,b}:\n"));
+        assert!(output.contains("  0,0\n"));
+        assert!(output.contains("  1499,1499"));
+        assert_eq!(output.lines().count(), count + 1);
+    }
+
+    #[test]
+    fn test_encode_tabular_rows_mismatch_padding() {
+        let columns = vec!["a".to_string(), "b".to_string()];
+        // Row 2 only has one element
+        let rows = vec![
+            vec![ToonValue::Integer(1), ToonValue::Integer(2)],
+            vec![ToonValue::Integer(3)],
+        ];
+        let output = encode_tabular_rows(2, columns, rows, 2, ",");
+        assert_eq!(output, "[2]{a,b}:\n  1,2\n  3,null");
+    }
+
+    #[test]
+    fn test_encode_tabular_empty() {
+        let columns = vec!["a".to_string()];
+        let output = encode_tabular_columns(0, columns.clone(), vec![], 2, ",");
+        assert_eq!(output, "[0]:");
+
+        let output_rows = encode_tabular_rows(0, columns, vec![], 2, ",");
+        assert_eq!(output_rows, "[0]:");
     }
 }

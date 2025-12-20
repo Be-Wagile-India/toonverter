@@ -3,7 +3,9 @@
 from collections.abc import Iterator
 from typing import Any
 
+from toonverter.core.config import _RUST_AVAILABLE, rust_core
 from toonverter.core.exceptions import ConversionError
+from toonverter.core.spec import ToonEncodeOptions
 from toonverter.core.types import EncodeOptions
 from toonverter.encoders import encode
 from toonverter.encoders.stream_encoder import StreamList, ToonStreamEncoder
@@ -104,11 +106,25 @@ def pandas_to_toon(
         if kwargs.get("include_index"):
             df = df.reset_index()
 
-        # Convert DataFrame to list of dicts (optimal for tabular TOON encoding)
-        orient = kwargs.get("orient", "records")
-        data = df.to_dict(orient=orient)
-
         options = options or EncodeOptions.tabular()
+        toon_options = _convert_options(options) or ToonEncodeOptions()
+
+        # Handle orient and other pandas export options
+        orient = kwargs.get("orient", "records")
+
+        # Use optimized Rust path if available and orient is records
+        if _RUST_AVAILABLE and hasattr(rust_core, "encode_from_pandas") and orient == "records":
+            # Convert to dict of lists (column-oriented), which is faster than records
+            data_dict = df.to_dict(orient="list")
+            # Get actual delimiter character from the Enum
+            delimiter = str(toon_options.delimiter)
+
+            return rust_core.encode_from_pandas(
+                data_dict, indent_size=toon_options.indent_size, delimiter=delimiter
+            )
+
+        # Fallback for other orientations or if Rust is missing
+        data = df.to_dict(orient=orient)
         return encode(data, options)
     except Exception as e:
         msg = f"Failed to convert DataFrame to TOON: {e}"

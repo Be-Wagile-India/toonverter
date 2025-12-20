@@ -44,6 +44,12 @@ except ImportError:
     _RUST_AVAILABLE = False
 
 
+# Expose Contract Version if available
+RUST_CONTRACT_VERSION: str | None = None
+if _RUST_AVAILABLE and _toonverter_core:
+    RUST_CONTRACT_VERSION = getattr(_toonverter_core, "CONTRACT_VERSION", None)
+
+
 def _load_toml_config() -> dict[str, Any]:
     """Load configuration from toonverter.toml in the current directory."""
     config: dict[str, Any] = {}

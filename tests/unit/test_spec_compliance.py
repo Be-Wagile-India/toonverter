@@ -446,9 +446,10 @@ class TestSpecEdgeCases:
         # Invalid escape sequence should raise an error
         from toonverter.core.exceptions import (
             DecodingError,
+            ProcessingError,
         )  # Assuming this is the correct exception
 
-        with pytest.raises(DecodingError, match="Invalid escape"):
+        with pytest.raises((DecodingError, ProcessingError), match="Invalid escape"):
             decoder_backend.decode('bad: "hello\\xworld"')
 
 

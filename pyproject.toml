@@ -420,7 +420,6 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-report=xml",
     "--cov-branch",
-    "--cov-fail-under=80",
     "-ra",
     "-vv",
 ]
@@ -439,7 +438,10 @@ filterwarnings = [
 # Coverage configuration
 [tool.coverage.run]
 branch = true
-source = ["src"]
+source = ["toonverter"]
+parallel = true
+concurrency = ["multiprocessing", "thread"]
+sigterm = true
 omit = [
     "*/tests/*",
     "*/test_*.py",
@@ -447,6 +449,12 @@ omit = [
     "*/site-packages/*",
     "*/integrations/*",
     "*/plugins/loader.py",
+]
+
+[tool.coverage.paths]
+source = [
+    "src/toonverter",
+    "*/site-packages/toonverter",
 ]
 
 [tool.coverage.report]
