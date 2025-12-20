@@ -41,24 +41,23 @@ jobs:
           pip install -e ".[all]"
 
       # 🔒 MANDATORY ENFORCEMENT: prove compiled Rust extension is loaded
-      - name: Assert Rust backend is active (NO FALLBACK)
+      - name: Assert Rust extension is loaded (NO FALLBACK)
         run: |
           python - << 'EOF'
+          # This import MUST succeed if the Rust extension is built and loaded
+          from toonverter import _toonverter_core
+
+          # Call a Rust-backed function to ensure execution, not just import
+          result = _toonverter_core.encode_toon({"ci": "check"}, indent_size=None)
+          assert isinstance(result, str), "❌ Rust encode_toon did not return string"
+
+          # Contract version must be exposed
           import toonverter
-
-          # Must succeed only if Rust backend is loaded
-          try:
-              toonverter.convert({"a": 1}, format="toon")
-          except Exception as e:
-              raise AssertionError(
-                  "❌ Rust backend not active or fallback occurred"
-              ) from e
-
-          # Contract version must exist
           assert hasattr(toonverter, "CONTRACT_VERSION"), "❌ Contract version missing"
 
-          print("✅ Rust backend is active and contract version present")
+          print("✅ Rust extension loaded and executing correctly")
           EOF
+
 
       - name: Lint with ruff
         run: |
