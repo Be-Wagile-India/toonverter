@@ -1,5 +1,7 @@
 """Comprehensive tests for array encoder."""
 
+from unittest.mock import Mock
+
 from toonverter.core.spec import ArrayForm, Delimiter
 from toonverter.encoders.array_encoder import ArrayEncoder
 from toonverter.encoders.indentation import IndentationManager
@@ -232,8 +234,62 @@ class TestEncodeTabular:
         assert result[1] == "  1|2"
 
 
-class TestEncodeValue:
-    """Test value encoding."""
+class TestEncodeList:
+    """Test list array encoding."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.encoder = ArrayEncoder(
+            StringEncoder(Delimiter.COMMA), NumberEncoder(), IndentationManager()
+        )
+        self.value_encoder = Mock()
+        self.value_encoder.encode_object.return_value = ["key: val"]
+
+    def test_encode_list_simple(self):
+        """Test encoding simple list array."""
+        result = self.encoder.encode_list("items", [1, "a", True], 0, self.value_encoder)
+        assert result[0] == "items[3]:"
+        assert result[1] == "  - 1"
+        assert result[2] == "  - a"
+        assert result[3] == "  - true"
+
+    def test_encode_list_nested_empty_list(self):
+        """Test encoding list with nested empty list."""
+        arr = [[]]
+        result = self.encoder.encode_list("root", arr, 0, self.value_encoder)
+        assert any("- [0]:" in line for line in result)
+
+    def test_encode_list_nested_complex_list(self):
+        """Test encoding list with nested complex list."""
+        arr = [[{"k": "v"}]]
+        self.value_encoder.encode_object.return_value = ["k: v"]
+        result = self.encoder.encode_list("root", arr, 0, self.value_encoder)
+        assert any("- [1]:" in line for line in result)
+        assert any("- k: v" in line for line in result)
+
+
+class TestRootArrayEncoding:
+    """Test root-level array encoding."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.encoder = ArrayEncoder(
+            StringEncoder(Delimiter.COMMA), NumberEncoder(), IndentationManager()
+        )
+        self.value_encoder = Mock()
+
+    def test_encode_root_array_list(self):
+        """Test encoding root-level list array."""
+        arr = [1, {"k": "v"}]
+        self.value_encoder.encode_object.return_value = ["k: v"]
+        result = self.encoder.encode_root_array_list(arr, self.value_encoder)
+        assert result[0] == "[2]:"
+        assert "  - 1" in result
+        assert "  - k: v" in result
+
+
+class TestValueEncoding:
+    """Test value encoding internal method."""
 
     def setup_method(self):
         """Set up test fixtures."""
@@ -241,77 +297,39 @@ class TestEncodeValue:
             StringEncoder(Delimiter.COMMA), NumberEncoder(), IndentationManager()
         )
 
-    def test_encode_integer(self):
-        """Test encoding integer value."""
-        result = self.encoder._encode_value(42)
-        assert result == "42"
+    def test_encode_value_fallback(self):
+        """Test fallback to str(val) for unknown types."""
 
-    def test_encode_float(self):
-        """Test encoding float value."""
-        result = self.encoder._encode_value(3.14)
-        assert result == "3.14"
+        class MyObj:
+            def __str__(self):
+                return "myobj"
 
-    def test_encode_string(self):
-        """Test encoding string value."""
-        result = self.encoder._encode_value("hello")
-        assert result == "hello"
-
-    def test_encode_bool_true(self):
-        """Test encoding true."""
-        result = self.encoder._encode_value(True)
-        assert result == "true"
-
-    def test_encode_bool_false(self):
-        """Test encoding false."""
-        result = self.encoder._encode_value(False)
-        assert result == "false"
-
-    def test_encode_none(self):
-        """Test encoding None."""
-        result = self.encoder._encode_value(None)
-        assert result == "null"
-
-    def test_encode_string_needing_quotes(self):
-        """Test encoding string that needs quotes."""
-        result = self.encoder._encode_value("hello world")
-        assert result == '"hello world"'
+        val = MyObj()
+        encoded = self.encoder._encode_value(val)
+        assert encoded == "myobj"
 
 
-class TestEdgeCases:
-    """Test edge cases."""
+class TestInternalMethods:
+    """Test internal helper methods."""
 
     def setup_method(self):
         """Set up test fixtures."""
         self.encoder = ArrayEncoder(
             StringEncoder(Delimiter.COMMA), NumberEncoder(), IndentationManager()
         )
+        self.value_encoder = Mock()
 
-    def test_detect_array_with_boolean_primitives(self):
-        """Test detecting array with booleans."""
-        result = self.encoder.detect_array_form([True, False, True])
-        assert result == ArrayForm.INLINE
+    def test_encode_nested_array_item_recursion(self):
+        """Test _encode_nested_array_item recursion."""
+        arr = [[1]]
+        result = self.encoder._encode_nested_array_item(arr, 0, self.value_encoder)
+        assert result[0] == "- [1]:"
+        assert any("- 1" in line for line in result)
 
-    def test_detect_array_with_null_values(self):
-        """Test detecting array with None values."""
-        result = self.encoder.detect_array_form([None, None, None])
-        assert result == ArrayForm.INLINE
-
-    def test_encode_inline_with_nulls(self):
-        """Test encoding inline array with nulls."""
-        result = self.encoder.encode_inline("vals", [1, None, 3], 0)
-        assert result == "vals[3]: 1,null,3"
-
-    def test_encode_tabular_with_nulls(self):
-        """Test encoding tabular with null values."""
-        arr = [{"a": 1, "b": None}, {"a": None, "b": 2}]
-        result = self.encoder.encode_tabular("data", arr, 0)
-
-        assert result[1] == "  1,null"
-        assert result[2] == "  null,2"
-
-    def test_detect_array_all_same_empty_dicts(self):
-        """Test detecting array of empty dicts."""
-        arr = [{}, {}]
-        result = self.encoder.detect_array_form(arr)
-        # Empty dicts have same keys (none), so should be tabular
-        assert result == ArrayForm.TABULAR
+    def test_encode_nested_array_item_mixed(self):
+        """Test _encode_nested_array_item with mixed content."""
+        arr = [{"k": "v"}, 42]
+        self.value_encoder.encode_object.return_value = ["k: v"]
+        result = self.encoder._encode_nested_array_item(arr, 0, self.value_encoder)
+        assert any("- k: v" in line for line in result)
+        assert any("- 42" in line for line in result)

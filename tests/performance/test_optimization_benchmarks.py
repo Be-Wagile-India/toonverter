@@ -78,22 +78,10 @@ class TestDeduplicationPerformance:
     """Benchmark Semantic Deduplication."""
 
     def setup_method(self):
-        # We'll mock the embedding generation to avoid benchmarking the heavy ML model itself,
-        # unless we want to benchmark the full pipeline.
-        # For a unit-level benchmark, we might want to test the logic overhead.
-        # However, for an "optimization" benchmark, the user likely cares about the full cost.
-        # We will use a small model or skip if too slow/heavy for standard CI.
-        # Let's assume we want to benchmark the real thing if available.
-        pass
-
-    def test_deduplicate_list(self, benchmark):
-        """Benchmark deduplication of text list."""
-        if not HAS_DEDUPLICATION:
-            return
-
-        deduplicator = SemanticDeduplicator(threshold=0.9)
+        # Pre-instantiate to measure processing time, not model load time per benchmark iteration
+        self.deduplicator = SemanticDeduplicator(threshold=0.9)
         # Create a list with semantic duplicates
-        data = {
+        self.data = {
             "phrases": [
                 "Hello world",
                 "Hi there world",  # distinct
@@ -104,17 +92,13 @@ class TestDeduplicationPerformance:
             * 50
         }
 
-        # This will load the model (once) and then run
-        # To avoid benchmarking model load time, we should probably instantiate in setup
-        # but the model load is part of the first-run cost.
-        # Let's instantiate locally to keep it isolated, or cache it.
-        # Benchmark will run strictly the loop if we pass the function.
-
-        # Pre-instantiate to measure processing time, not model load time
-        deduplicator = SemanticDeduplicator()
+    def test_deduplicate_list(self, benchmark):
+        """Benchmark deduplication of text list."""
+        if not HAS_DEDUPLICATION:
+            return
 
         def run_dedup():
-            return deduplicator.optimize(data)
+            return self.deduplicator.optimize(self.data)
 
         result = benchmark(run_dedup)
-        assert len(result["phrases"]) < len(data["phrases"])
+        assert len(result["phrases"]) < len(self.data["phrases"])

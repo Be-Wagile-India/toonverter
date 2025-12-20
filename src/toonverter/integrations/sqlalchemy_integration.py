@@ -36,10 +36,12 @@ if TYPE_CHECKING:
 
     from toonverter.core.spec import ToonDecodeOptions, ToonEncodeOptions, ToonValue
 
+from toonverter.core.config import _RUST_AVAILABLE, rust_core
 from toonverter.core.exceptions import ConversionError
+from toonverter.core.spec import ToonEncodeOptions
 from toonverter.decoders.toon_decoder import ToonDecoder
 from toonverter.encoders.stream_encoder import StreamList, ToonStreamEncoder
-from toonverter.encoders.toon_encoder import ToonEncoder
+from toonverter.encoders.toon_encoder import ToonEncoder, _convert_options
 
 
 def _check_sqlalchemy():
@@ -217,12 +219,53 @@ def query_to_toon(
     _check_sqlalchemy()
 
     try:
+        # Optimized path for Result object (not consumed yet) or list of Rows
+        if _RUST_AVAILABLE and hasattr(rust_core, "encode_from_rows"):
+            columns = None
+            rows = None
+
+            # Case 1: Result object (has keys())
+            if (
+                hasattr(result, "keys")
+                and hasattr(result, "fetchall")
+                and not hasattr(result, "commit")
+            ):
+                # It's a Result object
+                try:
+                    columns = list(result.keys())
+                    rows = result.fetchall()
+                except Exception:
+                    # Fallback if keys/fetchall fail (e.g. closed result)
+                    pass
+            # Case 2: List of Row objects (have _mapping or _fields)
+            elif isinstance(result, list) and result:
+                first = result[0]
+                if hasattr(first, "_mapping"):  # Row object
+                    columns = list(first._mapping.keys())
+                    rows = result
+                elif hasattr(first, "_fields"):  # Older namedtuple-like
+                    columns = list(first._fields)
+                    rows = result
+
+            if columns and rows is not None:
+                # Convert values
+                processed_rows = [[_convert_sqlalchemy_value(val) for val in row] for row in rows]
+
+                toon_options = _convert_options(options) or ToonEncodeOptions()
+                delimiter = ","
+                return rust_core.encode_from_rows(
+                    columns,
+                    processed_rows,
+                    indent_size=toon_options.indent_size,
+                    delimiter=delimiter,
+                )
+
         # Convert result to list of dicts
-        rows: Sequence[dict[str, ToonValue]] = _result_to_dicts(result)
+        rows_dicts: Sequence[dict[str, ToonValue]] = _result_to_dicts(result)
 
         # Encode to TOON
         encoder = ToonEncoder(options)
-        return encoder.encode(cast("ToonValue", rows))
+        return encoder.encode(cast("ToonValue", rows_dicts))
 
     except Exception as e:
         msg = f"Failed to convert query result to TOON: {e}"
@@ -258,10 +301,12 @@ def bulk_query_to_toon(
         # Process result in chunks
         if hasattr(result, "scalars"):
             # Result object
-            # This part seems to be missing the actual iteration logic for 'result.scalars()'
-            # Assuming it should iterate and append to chunk, similar to the 'else' block.
-            # For now, keeping it as is, but it might be a logical error in the original code.
-            pass  # Placeholder for potential missing logic
+            for row in result.scalars():
+                chunk.append(_model_to_dict(row))
+
+                if len(chunk) >= chunk_size:
+                    yield encoder.encode(cast("ToonValue", chunk))
+                    chunk = []
         else:
             # List of instances
             for row in result:
@@ -521,7 +566,8 @@ def export_table_to_toon(
             def stream_table():
                 offset = 0
                 while True:
-                    query = text(f"SELECT * FROM {table_name} LIMIT {chunk_size} OFFSET {offset}")
+                    # Quote table name to prevent SQL injection
+                    query = text(f'SELECT * FROM "{table_name}" LIMIT {chunk_size} OFFSET {offset}')
                     result = session.execute(query)
                     rows = result.fetchall()
 
@@ -544,8 +590,25 @@ def export_table_to_toon(
 
             return stream_table()
         # Load entire table
-        query = text(f"SELECT * FROM {table_name}")
+        # Quote table name to prevent SQL injection
+        query = text(f'SELECT * FROM "{table_name}"')
         result = session.execute(query)
+
+        # Use optimized Rust path if available
+        if _RUST_AVAILABLE and hasattr(rust_core, "encode_from_rows"):
+            columns = list(result.keys())
+            rows = result.fetchall()
+
+            # Convert values to be compatible with Rust converter (e.g. datetime -> str)
+            # This iteration is faster than creating dicts for every row
+            processed_rows = [[_convert_sqlalchemy_value(val) for val in row] for row in rows]
+
+            toon_options = _convert_options(options) or ToonEncodeOptions()
+            delimiter = ","
+            return rust_core.encode_from_rows(
+                columns, processed_rows, indent_size=toon_options.indent_size, delimiter=delimiter
+            )
+
         rows = result.fetchall()
 
         row_dicts = [

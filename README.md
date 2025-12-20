@@ -11,8 +11,8 @@
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](http://mypy-lang.org/)
 [![TOON Spec v2.0](https://img.shields.io/badge/TOON%20Spec-v2.0%20✓-success.svg)](https://github.com/toon-format/spec)
-[![Tests](https://img.shields.io/badge/tests-563%20passing-success.svg)](tests/)
-[![Coverage](https://img.shields.io/badge/coverage-81.03%25-brightgreen.svg)](htmlcov/index.html)
+[![Tests](https://img.shields.io/badge/tests-1082%20passing-success.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-90.05%25-brightgreen.svg)](htmlcov/index.html)
 
 **Token-Optimized Object Notation (TOON) v2.0** - The most comprehensive Python library for TOON format, featuring **100% spec compliance**, 10 framework integrations, and production-ready tools for reducing LLM token usage by 30-60%.
 
@@ -22,7 +22,7 @@
 
 | Benefit                | Impact | Example |
 |------------------------|--------|---------|
-| ** Faster Processing** | Smaller payloads = faster responses | 200ms → 80ms average latency |
+| ** Faster Processing** | Smaller payloads = faster responses (up to 5x faster with Rust) | 200ms → 80ms average latency |
 | ** Better Context**    | More data in same token limit | Fit 10 docs instead of 6 in context |
 | ** Works Everywhere**  | 10 framework integrations | LangChain, Pandas, FastAPI, SQLAlchemy, MCP |
 | ** Easy to Use**       | 2 lines of code to get started | `import toonverter as toon; toon.encode(data)` |
@@ -35,9 +35,13 @@
 ## 🚀 Key Features
 
 ### Core Capabilities
-- **100% TOON v2.0 Spec Compliant**: All 26 specification tests passing
+- **Rust-Accelerated Core**: Optional Rust extension for native-speed encoding/decoding with **Rayon-powered multi-core parallelism** for large datasets.
+- **High-Performance Batch Processing**: Blazing fast conversion of multiple files or entire directories using native Rust implementation.
+- **True O(1) Memory Streaming**: Event-based decoder for processing terabyte-scale data with constant RAM usage.
+- **100% TOON v2.0 Spec Compliant**: All specification tests passing, including new Indefinite Arrays ``[*]``.
 - **30-60% Token Savings**: Verified with benchmarks on real-world data
 - **Multi-Format Support**: JSON, YAML, TOML, CSV, XML ↔ TOON
+- **Secure XML Support**: Protected against XXE attacks using `defusedxml`.
 - **Vision Optimization**: Reduce image token costs for multimodal models
 - **Semantic Deduplication**: Remove semantically identical content using embeddings
 - **Tabular Optimization**: Exceptional efficiency for DataFrame-like structures
@@ -59,6 +63,18 @@
 
 
 ## Installation
+
+### Rust Acceleration (Optional)
+
+`toonverter` includes an optional Rust extension for significant performance boosts in encoding and decoding. It is **enabled by default** if detected.
+
+To install with Rust acceleration:
+
+```bash
+pip install toonverter[rust]
+```
+
+This will attempt to compile and link the Rust extension. Ensure you have a Rust toolchain (e.g., `rustup`) installed.
 
 ### Basic Installation
 
@@ -117,6 +133,8 @@ pip install toonverter[all]  # All integrations + CLI
 ```bash
 git clone https://github.com/yourusername/toonverter.git
 cd toonverter
+# Install the Rust extension (if desired)
+maturin develop
 pip install -e ".[all]"
 make install-dev  # Install dev dependencies
 ```
@@ -236,7 +254,7 @@ result = diff(old_ver, new_ver)
 print(f"Found {len(result.changes)} changes")
 ```
 
-#### Smart Compression
+### Smart Compression
 Apply Smart Dictionary Compression (SDC) for maximum efficiency.
 
 ```python
@@ -249,7 +267,21 @@ compressed = compress(large_data)
 original = decompress(compressed)
 ```
 
-#### Context Optimization
+#### Rust Acceleration Configuration
+The Rust encoder and decoder are enabled by default if the Rust extension is installed. You can control their behavior using environment variables or `toonverter.toml`:
+
+- **Environment Variables**:
+  - `TOON_USE_RUST_ENCODER=false` to disable Rust encoder.
+  - `TOON_USE_RUST_DECODER=false` to disable Rust decoder. (Enable with caution if specific issues are encountered with indented list parsing.)
+
+- **`toonverter.toml` or `pyproject.toml`**:
+  ```toml
+  [core]
+  use_rust_encoder = true  # Enabled by default
+  use_rust_decoder = true  # Enabled by default
+  ```
+
+### Context Optimization
 Intelligently prune, truncate, or round data to fit within a strict token budget.
 
 ```python
@@ -471,25 +503,6 @@ docs = wrapper.mget_json(["doc:1", "doc:2", "doc:3"])
 # - compress: Find most efficient format
 ```
 
-### CLI Usage
-
-```bash
-# Convert files
-toonverter convert data.json data.toon --from json --to toon
-
-# Encode to TOON
-toonverter encode data.json --output data.toon
-
-# Decode from TOON
-toonverter decode data.toon --output data.json --format json
-
-# Analyze token usage
-toonverter analyze data.json --compare json toon
-
-# List supported formats
-toonverter formats
-```
-
 ## TOON Format Specification v2.0
 
 TOON (Token-Optimized Object Notation) is designed for maximum token efficiency while maintaining readability.
@@ -518,11 +531,10 @@ Hello World
 # 1. Inline Array - primitives on one line
 tags[3]: python,llm,optimization
 
-# 2. Tabular Array - uniform objects with primitives only
-users[3]{name,age,city}:
-  Alice,30,NYC
-  Bob,25,LA
-  Charlie,35,SF
+# 2. Tabular Array - uniform objects with primitives or inline arrays/objects
+users[2]{name,roles,metadata}:
+  Alice,[2]: admin,user,{active:true,created:"2024-01-01"}
+  Bob,[1]: user,{active:false,created:"2024-01-02"}
 
 # 3. List Array - complex/mixed structures
 items[2]:
@@ -533,6 +545,13 @@ items[2]:
     price: 29.99
     nested:
       key: value
+
+# 4. Indefinite Array - for infinite generators or unknown lengths
+stream[*]:
+  - 1
+  - 2
+  - 3
+  - ...
 ```
 
 ### String Quoting Rules
@@ -611,9 +630,99 @@ Only 5 escape sequences are allowed:
 
 *Actual savings vary by data structure. Tabular data sees 40-60% savings.*
 
+```python
+import toonverter as toon
+
+data = {
+    "products": [
+        {"id": 1, "name": "Laptop", "price": 1200.00, "in_stock": True},
+        {"id": 2, "name": "Mouse", "price": 25.00, "in_stock": False},
+        {"id": 3, "name": "Keyboard", "price": 75.00, "in_stock": True}
+    ],
+    "category": "Electronics",
+    "last_updated": "2023-10-26"
+}
+report = toon.analyze(data, compare_formats=['json', 'toon'])
+
+print(f"JSON tokens: {report.token_counts['json']}")
+print(f"TOON tokens: {report.token_counts['toon']}")
+print(f"Best format: {report.best_format}")
+print(f"Token savings: {report.max_savings_percentage:.1f}%")
+# Expected Output (may vary slightly based on tiktoken version and model):
+# JSON tokens: 104
+# TOON tokens: 46
+# Best format: toon
+# Token savings: 55.7%
+```
+
 For full specification details, see [TOON v2.0 Spec](https://github.com/toon-format/spec).
 
 ## Advanced Features
+
+### Memory-Efficient Streaming
+
+Process massive TOON datasets with near-zero memory footprint using the `StreamDecoder`. This is ideal for log streams, terabyte-scale datasets, or LLM responses that are still being generated.
+
+```python
+import toonverter as toon
+
+# 1. Item-by-Item Streaming (O(1) Memory per item)
+# Reconstructs full objects one-by-one from a root array
+with open("massive_data.toon", "r") as f:
+    decoder = toon.StreamDecoder()
+    for item in decoder.items(f):
+        process(item)  # Only one item in memory at a time
+
+# 2. Low-Level Event Streaming (True O(1) Constant Memory)
+# Yields raw parsing events (START_OBJECT, KEY, VALUE, etc.)
+# Best for deeply nested structures that exceed RAM
+for event, value in decoder.items(f, events=True):
+    if event == toon.ParserEvent.KEY:
+        print(f"Found field: {value}")
+
+# 3. Indefinite Stream Encoding
+# Encode infinite generators using the [*] indefinite array syntax
+from toonverter.encoders.stream_encoder import StreamList, ToonStreamEncoder
+import itertools
+
+infinite_gen = itertools.count(start=1)
+stream_data = StreamList(iterator=infinite_gen, length=None)
+
+encoder = ToonStreamEncoder()
+for chunk in encoder.iterencode(stream_data):
+    sys.stdout.write(chunk)
+```
+
+### High-Performance Batch Processing
+
+Use the Rust-accelerated batch API to process millions of files in parallel with constant memory usage. This is 7-50x faster than standard loops.
+
+```python
+import toonverter as toon
+
+# 1. Memory Mode (Returns dict of results)
+# Best for small-to-medium batches (<500MB)
+results = toon.convert_json_batch(
+    ["data/file1.json", "data/file2.json"]
+)
+# results = [('data/file1.json', 'name: Alice', False), ...]
+
+# 2. Disk Streaming Mode (Writes files directly)
+# Best for massive datasets (Terabytes) - Constant Memory
+# Writes .toon files to 'output_dir'
+results = toon.convert_json_batch(
+    ["data/large1.json", "data/large2.json"],
+    output_dir="./output"
+)
+
+# 3. Directory Auto-Scan
+# Recursively finds and converts all .json files
+results = toon.convert_json_directory(
+    "./data_folder",
+    recursive=True,
+    output_dir="./output"
+)
+```
 
 ### Custom Format Adapters
 
@@ -703,7 +812,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Install**: `pip install toonverter`
 - **Import**: `import toonverter as toon`
-- **CLI**: `toonverter --help`
+- **CLI Usage Guide**: See [`USAGE.md`](USAGE.md)
 - **Test**: `python3 -m pytest tests/`
 - **Examples**: See `examples/` directory
 

@@ -27,19 +27,12 @@ class StreamLexer:
         self.indent_size = indent_size
         self.current_line = 0
         self.current_indent = 0
-        # We assume standard ToonLexer logic for line tokenization
-        # We can reuse the logic by instantiating a dummy ToonLexer or static methods?
-        # ToonLexer methods are instance methods but don't use much state except for error reporting.
-        # Let's inherit or compose?
-        # Inheritance is tricky because __init__ differs.
-        # Composition: we delegate line parsing.
-        self._line_lexer = ToonLexer("")  # Dummy, we will use its _tokenize_line method if possible
-        # Actually, _tokenize_line is dependent on self for raising errors?
-        # It raises ValueError directly.
-        # But _scan_quoted_string uses `line_num` passed as arg.
+        # Delegate line parsing to ToonLexer logic
+        self._line_lexer = ToonLexer("")
 
     def tokenize(self) -> Iterator[Token]:
         """Yield tokens one by one."""
+        self.current_indent = 0
         for line in self.source:
             # Handle potential trailing newlines from file reading
             line_content = line.rstrip("\n")
@@ -61,9 +54,9 @@ class StreamLexer:
                         value=None,
                         line=self.current_line,
                         column=0,
-                        indent_level=indent_level,
+                        indent_level=self.current_indent + 1,
                     )
-                self.current_indent = indent_level
+                    self.current_indent += 1
 
             elif indent_level < self.current_indent:
                 for _ in range(self.current_indent - indent_level):
@@ -72,24 +65,18 @@ class StreamLexer:
                         value=None,
                         line=self.current_line,
                         column=0,
-                        indent_level=indent_level,
+                        indent_level=self.current_indent - 1,
                     )
-                self.current_indent = indent_level
+                    self.current_indent -= 1
 
-            # Tokenize line content
-            # We reuse ToonLexer's private methods if possible, or duplicate logic.
-            # Duplicating is safer to avoid state issues, and the logic is simple enough.
-            # But adhering to "DRY", let's try to use ToonLexer.
-
-            # ToonLexer._tokenize_line is stateless regarding the Lexer instance
-            # (it uses args for line_num etc).
-            # So we can reuse it.
+            # Reuse ToonLexer's stateless line tokenization
             stripped = line_content.strip()
             if stripped == "-":
                 stripped = "- "
 
-            line_tokens = self._line_lexer._tokenize_line(stripped, self.current_line, indent_level)
-            yield from line_tokens
+            yield from self._line_lexer._tokenize_line(
+                stripped, self.current_line, self.current_indent
+            )
 
             # Add newline token
             yield Token(
@@ -97,21 +84,21 @@ class StreamLexer:
                 value=None,
                 line=self.current_line,
                 column=len(line_content),
-                indent_level=indent_level,
+                indent_level=self.current_indent,
             )
 
             self.current_line += 1
 
         # Add final dedents
         while self.current_indent > 0:
+            self.current_indent -= 1
             yield Token(
                 type=TokenType.DEDENT,
                 value=None,
                 line=self.current_line,
                 column=0,
-                indent_level=0,
+                indent_level=self.current_indent,
             )
-            self.current_indent -= 1
 
         # Add EOF token
         yield Token(

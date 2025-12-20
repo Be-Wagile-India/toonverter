@@ -6,7 +6,18 @@ according to the official TOON specification from github.com/toon-format/spec
 
 from typing import Any
 
-from toonverter.core.exceptions import EncodingError, ValidationError
+from toonverter.core.config import (
+    PARALLELISM_THRESHOLD,
+    RECURSION_DEPTH_LIMIT,
+    USE_RUST_ENCODER,
+    rust_core,
+)
+from toonverter.core.exceptions import (
+    EncodingError,
+    InternalError,
+    ProcessingError,
+    ValidationError,
+)
 from toonverter.core.spec import ArrayForm, Delimiter, RootForm, ToonEncodeOptions, ToonValue
 from toonverter.core.types import EncodeOptions
 
@@ -44,6 +55,12 @@ class ToonEncoder:
         """
         self.options = options or ToonEncodeOptions()
 
+        self._parallelism_threshold = (
+            self.options.parallelism_threshold
+            if self.options.parallelism_threshold is not None
+            else PARALLELISM_THRESHOLD
+        )
+
         # Initialize sub-encoders
         self.str_enc = StringEncoder(self.options.delimiter)
         self.num_enc = NumberEncoder()
@@ -77,6 +94,34 @@ class ToonEncoder:
                     budget=self.options.token_budget, policy=self.options.optimization_policy
                 )
                 data = optimizer.optimize(data)
+
+            # Try Rust encoder if available and options allow
+            # Rust encoder now supports custom indent and delimiter
+            if (
+                USE_RUST_ENCODER
+                and self.options.key_folding == "none"
+                and self.options.optimization_policy is None
+            ):
+                try:
+                    return rust_core.encode_toon(
+                        data,
+                        indent_size=self.options.indent_size,
+                        delimiter=self.options.delimiter.value,
+                        recursion_depth_limit=RECURSION_DEPTH_LIMIT,
+                    )
+                except (ValidationError, ProcessingError, InternalError):
+                    # Strict contract: Re-raise specific Rust errors
+                    raise
+                except ValueError as e:
+                    # Fallback on error or raise?
+                    # Since we want to rely on Rust if enabled, let's verify if it covers all cases.
+                    # Currently Rust encoder is partial (simple/nested), might fail on complex tabular/list detection mismatch.
+                    # Let's fallback to Python if Rust fails for now, or raise EncodingError.
+                    msg = f"Failed to encode data (Rust): {e}"
+                    raise EncodingError(msg) from e
+                except Exception:
+                    # Fallback to Python if unexpected error
+                    pass
 
             return self._encode_root(data)
         except (TypeError, ValueError, RecursionError) as e:
@@ -148,6 +193,39 @@ class ToonEncoder:
         lines = self.array_enc.encode_root_array_list(arr, self)
         return "\n".join(lines)
 
+    def _encode_single_item(
+        self, item_tuple: tuple[str, Any], depth: int, siblings: dict[str, Any] | None = None
+    ) -> list[str]:
+        key, value = item_tuple
+        indent = self.indent_mgr.indent(depth)
+
+        # Key folding logic
+        # Pass siblings to allow proper collision detection
+        context = siblings if siblings is not None else {key: value}
+        if self.key_folder.should_fold_key(key, value, context):
+            can_fold, key_chain = self.key_folder.can_fold_chain({key: value})
+            if can_fold:
+                folded_key = self.key_folder.fold_key_chain(key_chain)
+                final_value = self.key_folder.get_folded_value({key: value}, key_chain)
+                value_str = self._encode_value(final_value)
+                return [f"{indent}{folded_key}: {value_str}"]
+
+        # Regular key-value encoding
+        if isinstance(value, dict):
+            # Nested object
+            if not value:
+                return [f"{indent}{key}: {{}}"]
+            return [f"{indent}{key}:", *self.encode_object(value, depth + 1)]
+        if isinstance(value, list):
+            # Array - detect form and encode
+            if not value:
+                return [f"{indent}{key}[0]:"]
+            return self._encode_array(key, value, depth)
+
+        # Primitive value
+        value_str = self._encode_value(value)
+        return [f"{indent}{key}: {value_str}"]
+
     def encode_object(self, obj: dict[str, Any], depth: int) -> list[str]:
         """Encode object with indentation.
 
@@ -167,40 +245,10 @@ class ToonEncoder:
             return []
 
         lines: list[str] = []
-        indent = self.indent_mgr.indent(depth)
 
-        # Process each key-value pair
-        for key, value in obj.items():
-            # Check if this key can be folded
-            if self.key_folder.should_fold_key(key, value, obj):
-                can_fold, key_chain = self.key_folder.can_fold_chain({key: value})
-                if can_fold:
-                    folded_key = self.key_folder.fold_key_chain(key_chain)
-                    final_value = self.key_folder.get_folded_value({key: value}, key_chain)
-                    # Encode as single line
-                    value_str = self._encode_value(final_value)
-                    lines.append(f"{indent}{folded_key}: {value_str}")
-                    continue
-
-            # Regular key-value encoding
-            if isinstance(value, dict):
-                # Nested object
-                lines.append(f"{indent}{key}:")
-                nested_lines = self.encode_object(value, depth + 1)
-                lines.extend(nested_lines)
-
-            elif isinstance(value, list):
-                # Array - detect form and encode
-                if not value:
-                    lines.append(f"{indent}{key}[0]:")
-                else:
-                    array_lines = self._encode_array(key, value, depth)
-                    lines.extend(array_lines)
-
-            else:
-                # Primitive value
-                value_str = self._encode_value(value)
-                lines.append(f"{indent}{key}: {value_str}")
+        # Sequential processing
+        for item_tuple in obj.items():
+            lines.extend(self._encode_single_item(item_tuple, depth, obj))
 
         return lines
 

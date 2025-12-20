@@ -55,21 +55,15 @@ def test_stream_processing():
 
 @pytest.fixture
 def mock_sentence_transformer():
-    # Patch both the library (for local imports) and the module attribute (for global imports)
-    with (
-        patch("sentence_transformers.SentenceTransformer") as mock_lib,
-        patch("toonverter.analysis.deduplication.SentenceTransformer", new=mock_lib),
-    ):
+    # Patch the library directly since it is imported lazily
+    with patch("sentence_transformers.SentenceTransformer") as mock_lib:
         yield mock_lib
 
 
 @pytest.fixture
 def mock_cosine_similarity():
-    # Patch both the library (for local imports) and the module attribute (for global imports)
-    with (
-        patch("sklearn.metrics.pairwise.cosine_similarity") as mock_lib,
-        patch("toonverter.analysis.deduplication.cosine_similarity", new=mock_lib),
-    ):
+    # Patch the library directly
+    with patch("sklearn.metrics.pairwise.cosine_similarity") as mock_lib:
         yield mock_lib
 
 

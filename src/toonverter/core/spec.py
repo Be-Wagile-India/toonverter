@@ -60,6 +60,7 @@ class ArrayForm(Enum):
     INLINE = "inline"  # [N]: val1,val2,val3
     TABULAR = "tabular"  # [N]{field1,field2}:
     LIST = "list"  # [N]:\n  - item
+    INDEFINITE = "indefinite"  # [*]:\n  - item
 
 
 # Root document forms
@@ -134,6 +135,7 @@ class ToonEncodeOptions:
     strict: bool = True
     token_budget: int | None = None
     optimization_policy: OptimizationPolicy | None = None
+    parallelism_threshold: int | None = None
 
     def __post_init__(self) -> None:
         """Validate options."""
@@ -152,10 +154,12 @@ class ToonDecodeOptions:
     Attributes:
         strict: Enable strict validation of lengths and fields (default: True)
         type_inference: Automatically infer types from strings (default: True)
+        indent_size: Number of spaces per indentation level (default: 2)
     """
 
     strict: bool = True
     type_inference: bool = True
+    indent_size: int = DEFAULT_INDENT_SIZE
 
 
 @dataclass
@@ -165,20 +169,20 @@ class ArrayHeader:
     Represents the header line of an array: [length]{fields}:
 
     Attributes:
-        length: Declared array length
+        length: Declared array length (None for indefinite *)
         fields: Field names for tabular arrays (None for inline/list)
         delimiter: Delimiter used in this array
-        form: Array form (inline, tabular, or list)
+        form: Array form (inline, tabular, list, or indefinite)
     """
 
-    length: int
+    length: int | None
     fields: list[str] | None = None
     delimiter: Delimiter = DEFAULT_DELIMITER
     form: ArrayForm = ArrayForm.LIST
 
     def validate_row_count(self, actual_count: int) -> None:
         """Validate that row count matches declared length."""
-        if self.length != actual_count:
+        if self.length is not None and self.length != actual_count:
             msg = f"Array length mismatch: declared {self.length}, got {actual_count}"
             raise ValueError(msg)
 

@@ -24,7 +24,7 @@ Every TOON document has one of three root forms:
 
 Key-value pairs, one per line:
 
-.. code-block:: yaml
+.. code-block:: text
 
    name: Alice
    age: 30
@@ -35,7 +35,7 @@ Key-value pairs, one per line:
 
 Collection with length annotation:
 
-.. code-block:: yaml
+.. code-block:: text
 
    [3]:
      - Alice
@@ -47,9 +47,22 @@ Collection with length annotation:
 
 Single value (string, number, boolean, null):
 
-.. code-block:: yaml
+.. code-block:: text
 
    Hello World
+
+4. Indefinite Array Form
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+For infinite generators or streams where length is unknown upfront, using the ``*`` marker:
+
+.. code-block:: text
+
+   [*]:
+     - 1
+     - 2
+     - 3
+     - ...
 
 Three Array Forms
 -----------------
@@ -61,7 +74,7 @@ Arrays can be encoded in three different forms depending on their content:
 
 For primitive values on a single line:
 
-.. code-block:: yaml
+.. code-block:: text
 
    tags[3]: python,llm,optimization
 
@@ -72,31 +85,30 @@ For primitive values on a single line:
 2. Tabular Array
 ^^^^^^^^^^^^^^^^
 
-For uniform objects with primitive values:
+For uniform objects where values can be primitives, inline arrays, or brace-enclosed inline objects:
 
-.. code-block:: yaml
+.. code-block:: text
 
-   users[3]{name,age,city}:
-     Alice,30,NYC
-     Bob,25,LA
-     Charlie,35,SF
+   users[2]{name,roles,metadata}:
+     Alice,[2]: admin,user,{active:true,created:"2024-01-01"}
+     Bob,[1]: user,{active:false,created:"2024-01-02"}
 
 **Requirements**:
 - All elements must be objects
 - All objects must have the same keys
-- All values must be primitives (no nested objects/arrays)
+- Values can be primitives, inline arrays, or brace-enclosed inline objects. Nested objects or list arrays are not directly supported as values (they must be inline).
 
 **Benefits**:
 - Highest compression ratio (40-60% savings)
-- CSV-like efficiency
-- Perfect for DataFrame-like data
+- CSV-like efficiency with richer data types
+- Perfect for DataFrame-like data with nested attributes
 
 3. List Array
 ^^^^^^^^^^^^^
 
 For complex or mixed structures:
 
-.. code-block:: yaml
+.. code-block:: text
 
    items[2]:
      - name: Item1
@@ -112,10 +124,49 @@ For complex or mixed structures:
 - Supports nested objects and arrays
 - Each item starts with ``-`` marker
 
-**Inline Objects**:
+4. Indefinite Array
+^^^^^^^^^^^^^^^^^^^
+
+For infinite generators or data streams where length cannot be pre-calculated:
+
+.. code-block:: text
+
+   stream[*]:
+     - 1
+     - 2
+     - 3
+
+**Requirements**:
+- Marker ``*`` indicates unknown length
+- Supports both List and Tabular forms
+- Continues until indentation level changes or EOF
+
+5. Compact Single-Column Array (Implicit Schema)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A special concise form for arrays of single-key objects:
+
+.. code-block:: text
+
+   # Equivalent to [{id: 1}, {id: 2}, {id: 3}]
+   ids[3]: 1, 2, 3
+
+**Requirements**:
+- Header contains a single identifier inside brackets (e.g., ``[id]``)
+- Values are provided inline (comma-separated)
+- Automatically wraps each value into an object with the specified key
+
+**Inline Objects (Brace-enclosed)**:
+Objects can be expressed inline using braces `{key: value, ...}`. This is particularly useful as a value within tabular arrays or other inline contexts.
+
+.. code-block:: text
+
+   metadata: {created: "2024-01-01", active: true}
+
+**Inline Objects (Hyphen-prefixed)**:
 First field on dash line, remaining fields indented:
 
-.. code-block:: yaml
+.. code-block:: text
 
    users[2]:
      - name: Alice
@@ -130,21 +181,21 @@ Strings need quotes in these cases:
 
 1. **Empty or Whitespace-Only**
 
-   .. code-block:: yaml
+   .. code-block:: text
 
       empty: ""
       spaces: "   "
 
 2. **Leading or Trailing Whitespace**
 
-   .. code-block:: yaml
+   .. code-block:: text
 
       text: "  leading"
       text: "trailing  "
 
 3. **Reserved Words**
 
-   .. code-block:: yaml
+   .. code-block:: text
 
       value: "true"    # Would be parsed as boolean without quotes
       value: "false"
@@ -152,7 +203,7 @@ Strings need quotes in these cases:
 
 4. **Numeric-Looking Strings**
 
-   .. code-block:: yaml
+   .. code-block:: text
 
       id: "123"        # Would be parsed as number without quotes
       code: "3.14"
@@ -160,7 +211,7 @@ Strings need quotes in these cases:
 
 5. **Special Characters**
 
-   .. code-block:: yaml
+   .. code-block:: text
 
       path: "test:value"    # Contains colon
       expr: "test[0]"       # Contains brackets
@@ -170,7 +221,7 @@ Strings need quotes in these cases:
 
 6. **Hyphen at Start**
 
-   .. code-block:: yaml
+   .. code-block:: text
 
       value: "-test"
       value: "-"
@@ -180,7 +231,7 @@ Strings need quotes in these cases:
 
    The delimiter varies based on context (comma by default):
 
-   .. code-block:: yaml
+   .. code-block:: text
 
       text: "a,b,c"    # Comma delimiter
       text: "a\\tb\\tc"  # Tab delimiter
@@ -189,7 +240,7 @@ Strings need quotes in these cases:
 Strings That Don't Need Quotes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code-block:: yaml
+.. code-block:: text
 
    # Simple strings
    name: hello
@@ -211,7 +262,7 @@ Numbers must follow canonical form rules:
 Valid Numbers
 ^^^^^^^^^^^^^
 
-.. code-block:: yaml
+.. code-block:: text
 
    count: 42
    price: 19.99
@@ -223,7 +274,7 @@ Normalization Rules
 
 These are normalized (not allowed in strict mode):
 
-.. code-block:: yaml
+.. code-block:: text
 
    # 1.0 → 1 (remove unnecessary decimal)
    # 1e5 → 100000 (no exponential notation)
@@ -242,7 +293,7 @@ Comma (Default)
 
 No marker needed:
 
-.. code-block:: yaml
+.. code-block:: text
 
    a: 1
    b: 2
@@ -255,7 +306,7 @@ Tab
 
 Marked with ``{TAB}`` at document start:
 
-.. code-block:: yaml
+.. code-block:: text
 
    {TAB}
    a: 1	b: 2	c: 3
@@ -267,7 +318,7 @@ Pipe
 
 Marked with ``{PIPE}`` at document start:
 
-.. code-block:: yaml
+.. code-block:: text
 
    {PIPE}
    a: 1|b: 2|c: 3
@@ -319,7 +370,7 @@ Rules
 Example
 ^^^^^^^
 
-.. code-block:: yaml
+.. code-block:: text
 
    user:
      name: Alice
@@ -337,7 +388,7 @@ Type Annotations
 
 Optional type annotations using pipe syntax:
 
-.. code-block:: yaml
+.. code-block:: text
 
    count: 100|int
    price: 19.99|float
@@ -350,7 +401,7 @@ Optional type annotations using pipe syntax:
 Complete Example
 ----------------
 
-.. code-block:: yaml
+.. code-block:: text
 
    # User database (TOON format)
 

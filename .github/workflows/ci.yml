@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, "feature/*"]
   pull_request:
-    branches: [main, develop]
+    branches: ["*"]
 
 jobs:
   test:
@@ -14,6 +14,13 @@ jobs:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
 
+    # Enforce strict Rust usage and failure on fallback
+    env:
+      TOON_STRICT_RUST_BUILD: "true"
+      TOON_USE_RUST_ENCODER: "true"
+      TOON_USE_RUST_DECODER: "true"
+      RUST_BACKTRACE: "1"
+
     steps:
       - uses: actions/checkout@v4
 
@@ -22,11 +29,37 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[all]"
           pip install -r requirements-dev.txt
+          # Install the project in editable mode, triggering maturin via pyproject.toml
+          # This explicitly builds the Rust extension and makes it available to Python
+          pip install -e ".[all]"
+
+      # 🔒 MANDATORY ENFORCEMENT: prove compiled Rust extension is loaded
+      - name: Assert Rust extension is loaded (NO FALLBACK)
+        run: |
+          python - << 'EOF'
+          from toonverter import _toonverter_core
+
+          # Call a Rust-backed function to ensure execution
+          result = _toonverter_core.encode_toon({"ci": "check"}, indent_size=None)
+          assert isinstance(result, str), "❌ Rust encode_toon did not return string"
+
+          # Contract version must exist in Rust module (source of truth)
+          assert hasattr(
+              _toonverter_core, "CONTRACT_VERSION"
+          ), "❌ Rust CONTRACT_VERSION missing"
+
+          print(
+              "✅ Rust extension loaded, executed, and contract version present:",
+              _toonverter_core.CONTRACT_VERSION
+          )
+          EOF
 
       - name: Lint with ruff
         run: |
@@ -38,12 +71,37 @@ jobs:
 
       - name: Type check with mypy
         run: |
-          # Only check core modules (skip integrations with optional deps)
-          mypy src/toonverter/core src/toonverter/encoders src/toonverter/decoders src/toonverter/analysis src/toonverter/utils || true
+          mypy src/toonverter
+
+      - name: Verify FFI Contract
+        # Run contract tests first to ensure safety boundary guarantees
+        # Fails immediately if Rust panics or contract is violated
+        run: |
+          pytest -v tests/integration/test_ffi_contract.py
 
       - name: Test with pytest
         run: |
-          pytest tests/unit tests/performance --cov=toonverter --cov-report=xml --cov-report=term-missing
+          pytest -m "not slow" tests/unit tests/performance \
+            --cov=toonverter \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-context=test
+
+      - name: Run Rust tests
+        run: |
+          cargo test --manifest-path rust/Cargo.toml --no-default-features -- --test-threads=1
+
+      - name: Install cargo-tarpaulin
+        run: |
+          cargo install cargo-tarpaulin
+
+      - name: Run Rust coverage
+        run: |
+          cargo tarpaulin \
+            --manifest-path rust/Cargo.toml \
+            --no-default-features \
+            --workspace \
+            --fail-under 80
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -52,26 +110,41 @@ jobs:
           flags: unittests
           name: codecov-umbrella
 
-  build:
-    name: Build package
+  build-wheels:
+    name: Build wheels on Ubuntu
     runs-on: ubuntu-latest
-    needs: test
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Build wheels
+        uses: PyO3/maturin-action@v1
         with:
-          python-version: "3.12"
+          args: --release --out dist
+          sccache: 'true'
+          manylinux: auto
 
-      - name: Install build dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install build twine
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-ubuntu-latest
+          path: dist
 
-      - name: Build package
-        run: python -m build
+  sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
 
-      - name: Check package
-        run: twine check dist/*
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        uses: PyO3/maturin-action@v1
+        with:
+          command: sdist
+          args: --out dist
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: dist

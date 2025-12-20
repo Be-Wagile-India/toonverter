@@ -9,13 +9,14 @@ from typing import Any
 
 from toonverter.core.exceptions import DecodingError
 from toonverter.core.spec import RootForm, ToonDecodeOptions
+from toonverter.decoders.event_parser import ParserEvent, ToonEventParser
 from toonverter.decoders.lexer import Token, TokenType
 from toonverter.decoders.stream_lexer import StreamLexer
 from toonverter.decoders.toon_decoder import ToonDecoder
 
 
 class PeekableIterator:
-    """Iterator wrapper that allows peeking ahead."""
+    # ... (existing PeekableIterator implementation) ...
 
     def __init__(self, iterator: Iterator[Token]) -> None:
         self.iterator = iterator
@@ -50,6 +51,109 @@ class StreamDecoder:
     def __init__(self, options: ToonDecodeOptions | None = None) -> None:
         self.options = options or ToonDecodeOptions()
         self.chunk_decoder = ToonDecoder(self.options)
+
+    def items(self, stream: Iterator[str], events: bool = False) -> Iterator[Any]:
+        """Yield items from a root array one by one.
+
+        Args:
+            stream: Iterator of TOON lines.
+            events: If True, yield (ParserEvent, value) pairs instead of full objects.
+                    This is the most memory-efficient mode.
+
+        Yields:
+            Decoded items or parsing events.
+        """
+        lexer = StreamLexer(stream, indent_size=self.options.indent_size)
+        parser = ToonEventParser(lexer.tokenize())
+
+        parser_events = parser.parse()
+
+        try:
+            # Skip START_DOCUMENT
+            ev, _ = next(parser_events)
+
+            # Root must be START_ARRAY for item-by-item streaming
+            ev, val = next(parser_events)
+            if ev == ParserEvent.START_ARRAY:
+                if events:
+                    yield (ev, val)
+                    yield from parser_events
+                else:
+                    yield from self._yield_full_items(parser_events)
+            elif ev == ParserEvent.VALUE:
+                # Root primitive
+                yield val
+            elif ev == ParserEvent.START_OBJECT:
+                # Root object - yield as single item if not in events mode
+                if events:
+                    yield (ev, val)
+                    yield from parser_events
+                else:
+                    # Reconstruct full root object
+                    yield self._reconstruct_item(ev, val, parser_events)
+        except StopIteration:
+            pass
+
+    def _yield_full_items(self, events: Iterator[tuple[ParserEvent, Any]]) -> Iterator[Any]:
+        """Reconstruct top-level items from events."""
+        for event, value in events:
+            if event == ParserEvent.END_ARRAY:
+                break
+
+            # Reconstruct one full item
+            item = self._reconstruct_item(event, value, events)
+            yield item
+
+    def _reconstruct_item(
+        self, first_event: ParserEvent, first_value: Any, events: Iterator[tuple[ParserEvent, Any]]
+    ) -> Any:
+        """Helper to reconstruct a single complex item from event stream."""
+        if first_event == ParserEvent.VALUE:
+            return first_value
+
+        stack: list[Any] = []
+        current_key: str | None = None
+
+        # Initialize stack with first container
+        if first_event == ParserEvent.START_OBJECT:
+            stack.append({})
+        elif first_event == ParserEvent.START_ARRAY:
+            stack.append([])
+        else:
+            return first_value  # Should not happen for KEY/VALUE
+
+        for event, value in events:
+            if event == ParserEvent.START_OBJECT:
+                stack.append({})
+            elif event == ParserEvent.START_ARRAY:
+                stack.append([])
+            elif event == ParserEvent.KEY:
+                current_key = value
+            elif event == ParserEvent.VALUE:
+                target = stack[-1]
+                if isinstance(target, dict):
+                    if current_key is None:
+                        # Should not happen in valid TOON, but for robustness:
+                        continue
+                    target[current_key] = value
+                    current_key = None
+                else:
+                    target.append(value)
+            elif event in (ParserEvent.END_OBJECT, ParserEvent.END_ARRAY):
+                finished = stack.pop()
+                if not stack:
+                    return finished
+
+                target = stack[-1]
+                if isinstance(target, dict):
+                    if current_key is not None:
+                        target[current_key] = finished
+                        current_key = None
+                else:
+                    target.append(finished)
+
+        # If we reach here, doc ended prematurely
+        return stack[0] if stack else None
 
     def decode_stream(self, stream: Iterator[str]) -> Iterator[Any]:
         """Decode a stream of TOON lines.
@@ -99,15 +203,18 @@ class StreamDecoder:
 
         # 2. Length
         length_token = next(tokens)
-        if length_token.type != TokenType.NUMBER:
+        length: int | None = None
+        if length_token.type == TokenType.NUMBER:
+            length = int(length_token.value)  # type: ignore
+        elif length_token.type == TokenType.STAR:
+            length = None
+        else:
             # Maybe empty array []?
             # If ARRAY_END comes next
             if length_token.type == TokenType.ARRAY_END:
                 return  # Empty array
-            msg = "Expected array length"
+            msg = "Expected array length or '*'"
             raise DecodingError(msg)
-
-        length = int(length_token.value)  # type: ignore
 
         # 3. Skip to Colon (handling fields/delimiters)
         while True:
@@ -120,7 +227,7 @@ class StreamDecoder:
         # 4. Parse Items
         items_yielded = 0
 
-        while items_yielded < length:
+        while length is None or items_yielded < length:
             t_peeked = tokens.peek()
             if t_peeked is None or t_peeked.type == TokenType.EOF:
                 break
@@ -180,23 +287,9 @@ class StreamDecoder:
                 if t.type == TokenType.DASH:
                     break  # Next item
 
-                # DEDENT check: strict inequality for robustness?
-                # If we drop BELOW the start indent, we are out.
+                # DEDENT check: Stop when dedenting below start indent (end of block).
                 if t.type == TokenType.DEDENT and t.indent_level < start_indent:
                     break
-
-                # If we hit DEDENT that returns us TO start_indent (e.g. closing a nested block),
-                # we keep going? No, if start_indent is the item level, and we DEDENT *to* it,
-                # it means we just finished a child block. We are still *in* the item?
-                # Wait. The item IS the block.
-                # If the item started at indent 1.
-                # A nested object goes to indent 2.
-                # DEDENT to 1 means end of nested object.
-                # We are back at item level.
-                # Should we stop?
-                # If the item IS an object, it ends when we dedent back to list level (0).
-
-                # Correct logic: We stop when we dedent to < start_indent.
 
                 # Inline array item separator
                 if t.type == TokenType.COMMA:
@@ -238,15 +331,5 @@ class StreamDecoder:
             # Just whitespace/newlines? Return None?
             return None
 
-        # Detect form again?
-        # We can just use _parse_value(depth=0) because ToonDecoder logic
-        # calculates relative depth or uses absolute checks.
-
-        # Actually, we should try to parse the *root* of this chunk.
-        # If it looks like an object (starts with key:), parse object.
-        # If array, parse array.
-        # If primitive, parse primitive.
-
-        # Simplest hack: wrap logic
-        # We rely on _parse_value which handles dispatch.
+        # Use _parse_value(depth=0) to dispatch to correct parsing method
         return self.chunk_decoder._parse_value(depth=0)
