@@ -44,20 +44,22 @@ jobs:
       - name: Assert Rust extension is loaded (NO FALLBACK)
         run: |
           python - << 'EOF'
-          # This import MUST succeed if the Rust extension is built and loaded
           from toonverter import _toonverter_core
 
-          # Call a Rust-backed function to ensure execution, not just import
+          # Call a Rust-backed function to ensure execution
           result = _toonverter_core.encode_toon({"ci": "check"}, indent_size=None)
           assert isinstance(result, str), "❌ Rust encode_toon did not return string"
 
-          # Contract version must be exposed
-          import toonverter
-          assert hasattr(toonverter, "CONTRACT_VERSION"), "❌ Contract version missing"
+          # Contract version must exist in Rust module (source of truth)
+          assert hasattr(
+              _toonverter_core, "CONTRACT_VERSION"
+          ), "❌ Rust CONTRACT_VERSION missing"
 
-          print("✅ Rust extension loaded and executing correctly")
+          print(
+              "✅ Rust extension loaded, executed, and contract version present:",
+              _toonverter_core.CONTRACT_VERSION
+          )
           EOF
-
 
       - name: Lint with ruff
         run: |
