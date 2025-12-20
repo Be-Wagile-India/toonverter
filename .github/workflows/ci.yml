@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, "feature/*"]
   pull_request:
-    branches: [main, develop]
+    branches: ["*"]
 
 jobs:
   test:
@@ -13,6 +13,13 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
+
+    # Enforce strict Rust usage and failure on fallback
+    env:
+      TOON_STRICT_RUST_BUILD: "true"
+      TOON_USE_RUST_ENCODER: "true"
+      TOON_USE_RUST_DECODER: "true"
+      RUST_BACKTRACE: "1"
 
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +37,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
           # Install the project in editable mode, triggering maturin via pyproject.toml
+          # This explicitly builds the Rust extension and makes it available to Python
           pip install -e ".[all]"
+
+      # 🔒 MANDATORY ENFORCEMENT: prove compiled Rust extension is loaded
+      - name: Assert Rust extension is loaded (NO FALLBACK)
+        run: |
+          python - << 'EOF'
+          import toonverter
+          # Must exist only if the compiled Rust module is loaded
+          assert hasattr(toonverter, "_rust"), "❌ Rust extension not loaded (fallback detected)"
+          assert hasattr(toonverter, "CONTRACT_VERSION"), "❌ Contract version missing"
+          print("✅ Rust extension loaded:", toonverter._rust)
+          EOF
 
       - name: Lint with ruff
         run: |
@@ -44,9 +63,19 @@ jobs:
         run: |
           mypy src/toonverter
 
+      - name: Verify FFI Contract
+        # Run contract tests first to ensure safety boundary guarantees
+        # Fails immediately if Rust panics or contract is violated
+        run: |
+          pytest -v tests/integration/test_ffi_contract.py
+
       - name: Test with pytest
         run: |
-          pytest -m "not slow" tests/unit tests/performance --cov=toonverter --cov-report=xml --cov-report=term-missing --cov-context=test
+          pytest -m "not slow" tests/unit tests/performance \
+            --cov=toonverter \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-context=test
 
       - name: Run Rust tests
         run: |
@@ -58,7 +87,11 @@ jobs:
 
       - name: Run Rust coverage
         run: |
-          cargo tarpaulin --manifest-path rust/Cargo.toml --no-default-features --workspace --fail-under 80
+          cargo tarpaulin \
+            --manifest-path rust/Cargo.toml \
+            --no-default-features \
+            --workspace \
+            --fail-under 80
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -90,9 +123,10 @@ jobs:
   sdist:
     name: Build source distribution
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
