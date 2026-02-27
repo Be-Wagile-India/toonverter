@@ -79,6 +79,23 @@ Listing Formats
    print(toon.list_formats())
    # Output: ['csv', 'json', 'toml', 'toon', 'xml', 'yaml']
 
+High-Performance Batch Processing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For processing millions of files, use the Rust-accelerated batch functions. These functions utilize parallel processing and memory-mapped I/O for maximum performance.
+
+.. code-block:: python
+
+   import toonverter as toon
+
+   # Batch convert JSON to TOON (in-memory)
+   # Returns list of (path, content, is_error)
+   results = toon.convert_json_batch(["file1.json", "file2.json"])
+
+   # Batch convert directory to TOON (streaming to disk)
+   # Writes .toon files to ./output directory, avoiding memory issues
+   toon.convert_json_directory("./data", recursive=True, output_dir="./output")
+
 Object-Oriented API
 -------------------
 

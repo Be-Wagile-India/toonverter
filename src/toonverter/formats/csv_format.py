@@ -112,7 +112,11 @@ class CsvFormatAdapter(BaseFormatAdapter):
             elif value.lower() in ("true", "false"):
                 result[key] = value.lower() == "true"
             elif value.isdigit() or (value.startswith("-") and value[1:].isdigit()):
-                result[key] = int(value)
+                # Check for leading zeros (unless it's just "0")
+                if len(value) > 1 and value.startswith("0") and "." not in value:
+                    result[key] = value
+                else:
+                    result[key] = int(value)
             elif self._is_float(value):
                 result[key] = float(value)
             else:

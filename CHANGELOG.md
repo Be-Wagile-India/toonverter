@@ -7,34 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned
-- Additional framework integrations
-- Performance optimizations
-- Enhanced CLI features
-
-## [## [Unreleased]] - 2025-01-17
-
 ### Added
+- **High-Performance Batch Processing**: New CLI commands `batch-convert-json`, `batch-convert-toon`, and `convert-dir-json` using Rust for blazing fast multi-file conversion.
+- **Rayon Parallelism**: Rust encoder now uses Rayon for multi-core parallel processing of large dictionaries (>1000 items).
+- **Secure XML Support**: Integrated `defusedxml` to protect against XXE attacks during XML parsing.
+- **Enhanced Error Handling**: Introduced structured `ToonError` enum in Rust for better error propagation to Python.
 - GitHub Pages documentation deployment workflow
 - AUTHORS.md file with contributor information
 - Comprehensive test coverage verification
 - Documentation for all 10 framework integrations
 
 ### Changed
+- **Rust Core Refactoring**: Decomposed monolithic parser and encoder logic for improved maintainability and robustness.
+- **Improved Test Coverage**: Rust test coverage increased to over 82% with new edge case tests.
+- **Python Type Stubs**: Updated `_toonverter_core.pyi` to fully match Rust API signatures, including batch processing arguments.
+- **Safety Limits**: Enforced recursion depth limits (100) in both Rust parser and Python decoder to prevent stack overflows.
+- **Performance Heuristics**: Optimized size estimation in `ContextOptimizer` and `ToonHybridSplitter` to avoid redundant serializations.
+- **Deduplication Optimization**: Memory-efficient row-by-row processing for large datasets in Semantic/Exact Deduplicators.
+- **JSON Streaming Fallback**: Robust brace-counting chunker for multi-line JSON arrays when `ijson` is not available.
+- **Documentation**: Updated architecture documentation to reflect internal Rust improvements.
 - Updated documentation URLs to GitHub Pages
 - Improved README with logo and better formatting
 - Enhanced Sphinx documentation configuration
+- **Python Decoder now supports brace-enclosed inline objects (`{key: value, ...}`) within tabular and list arrays, aligning with Rust encoder output.**
+- **Python Decoder's inline array parsing improved to correctly handle implicit nulls in strict mode.**
 
 ### Fixed
+- **Symbol Collision Safety**: Fixed potential collision bugs in Smart Dictionary Compression and Key Folding.
+- **Stability**: Resolved `KeyError` crashes in `ArrayEncoder` during tabular encoding of objects with missing keys.
+- **Scalability**: Optimized $O(N^2)$ bottlenecks in the Optimizer, Splitter, and Deduplicator.
 - PyPI package links now correctly point to Be-Wagile-India repository
 - Documentation build configuration optimized
 - Missing documentation files added
-
-## [## [Unreleased]] - 2025-01-17
-
-### Fixed
-- Package metadata and repository links
-- Documentation configuration
+- Python Decoder: Resolved bug where mixed-nesting of arrays and objects in tabular data caused `DecodingError` due to lack of brace-enclosed object parsing.
+- Python Decoder: Corrected assertion for inline array length mismatch test in strict mode.
 
 ## [1.0.0] - 2025-01-17
 

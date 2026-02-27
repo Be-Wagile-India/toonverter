@@ -4,10 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 
-# Optimization Policy needs to be forward referenced or imported carefully to avoid circular deps if it imports types
-# But OptimizationPolicy is in optimization/policy.py which shouldn't depend on types.py
-# However, to be safe, we use 'Any' or string forward ref if needed, but python handles imports.
-# Ideally we import it.
+# Optimization Policy needs to be forward referenced to avoid circular deps
 try:
     from toonverter.optimization.policy import OptimizationPolicy
 except ImportError:

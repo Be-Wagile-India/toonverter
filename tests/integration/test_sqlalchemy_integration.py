@@ -6,16 +6,18 @@ import pytest
 # Skip if SQLAlchemy not installed
 pytest.importorskip("sqlalchemy")
 
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, create_engine
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, MetaData, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 
 from toonverter import decode
+from toonverter.core.exceptions import ConversionError
 from toonverter.integrations.sqlalchemy_integration import (
     bulk_insert_from_toon,
+    export_table_to_toon,
     query_to_toon,
+    schema_to_toon,
     sqlalchemy_to_toon,
-    table_to_toon,
 )
 
 
@@ -155,11 +157,33 @@ class TestSQLAlchemyBulkOperations:
         assert users[0].name == "Alice"
 
     def test_schema_export(self):
-        """Test schema export to TOON."""
-        schema = Base.metadata.tables["users"]
-        # Fix: Use table_to_toon for Table object
-        toon = table_to_toon(schema)
+        """Test schema export."""
+        metadata = MetaData()
+        metadata.reflect(bind=self.engine)
 
-        assert "name" in toon
-        assert "age" in toon
-        assert "String" in toon or "INTEGER" in toon
+        toon = schema_to_toon(metadata)
+        assert "users" in toon
+        assert "posts" in toon
+        assert "columns" in toon
+        assert "foreign_keys" in toon
+
+    def test_table_name_sql_injection(self):
+        """Test that table name SQL injection is prevented."""
+        # Attempt to inject SQL via table name
+        # If vulnerable, this might dump the users table or execute arbitrary SQL
+        # If secure (quoted), it will look for a table literally named 'users" OR 1=1 --'
+        malicious_table_name = 'users" OR 1=1 --'
+
+        # Expect an error because the table with the literal malicious name doesn't exist
+        # We catch the underlying DB error or SQLAlchemy error
+        with pytest.raises(ConversionError) as exc_info:
+            export_table_to_toon(malicious_table_name, self.session)
+
+        # The error message should indicate the table wasn't found (or similar DB error)
+        # rather than successfully executing the injection.
+        # Specific error message depends on the DB backend (sqlite here),
+        # but generally it will complain about the table not existing.
+        assert (
+            "no such table" in str(exc_info.value).lower()
+            or "operationalerror" in str(exc_info.value).lower()
+        )

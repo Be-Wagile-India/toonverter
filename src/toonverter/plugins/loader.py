@@ -1,5 +1,6 @@
 """Plugin loader using entry points."""
 
+import warnings
 from importlib.metadata import entry_points  # type: ignore
 
 from toonverter.core.exceptions import PluginError
@@ -13,7 +14,7 @@ def load_plugins() -> list[str]:
         List of loaded plugin names
 
     Raises:
-        PluginError: If plugin loading fails
+        PluginError: If plugin discovery fails
     """
     loaded = []
 
@@ -32,12 +33,10 @@ def load_plugins() -> list[str]:
 
                 loaded.append(plugin.name)
             except Exception as e:
-                msg = f"Failed to load plugin '{ep.name}': {e}"
-                raise PluginError(msg) from e
+                # Log error but continue loading other plugins
+                warnings.warn(f"Failed to load plugin '{ep.name}': {e}", stacklevel=2)
 
     except Exception as e:
-        if isinstance(e, PluginError):
-            raise
         msg = f"Failed to discover plugins: {e}"
         raise PluginError(msg) from e
 

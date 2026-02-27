@@ -7,3 +7,4 @@ The Core module contains fundamental interfaces, types, and registry.
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:

@@ -4,6 +4,16 @@ import xml.etree.ElementTree as ET
 from typing import Any
 from xml.dom import minidom
 
+
+# Secure XML parsing
+try:
+    import defusedxml.ElementTree as SecureET
+
+    XML_SECURE = True
+except ImportError:
+    SecureET = ET  # type: ignore
+    XML_SECURE = False
+
 from toonverter.core.exceptions import DecodingError, EncodingError
 from toonverter.core.types import DecodeOptions, EncodeOptions
 
@@ -103,9 +113,10 @@ class XmlFormatAdapter(BaseFormatAdapter):
             DecodingError: If decoding fails
         """
         try:
-            root = ET.fromstring(data_str)
+            # Use secure parser if available
+            root = SecureET.fromstring(data_str)
             return self._from_xml_element(root, options)
-        except ET.ParseError as e:
+        except Exception as e:
             if options and not options.strict:
                 return data_str
             msg = f"Failed to decode XML: {e}"

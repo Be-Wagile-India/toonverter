@@ -39,7 +39,7 @@ Real Benefits for Your LLM Applications
    30-60% token reduction = $1000/mo → $400/mo on API costs
 
 **Faster Processing**
-   Smaller payloads = faster responses (200ms → 80ms average latency)
+   Smaller payloads = faster responses (up to 5x faster with Rust, 200ms → 80ms average latency)
 
 **Better Context**
    More data in same token limit (Fit 10 docs instead of 6 in context)
@@ -69,9 +69,14 @@ Features
 --------
 
 Core Capabilities
+
 ^^^^^^^^^^^^^^^^^
 
-* **100% TOON v2.0 Spec Compliant**: All 26 specification tests passing
+
+
+*   **Rust-Accelerated Core**: Optional Rust extension for native-speed encoding/decoding.
+
+*   **100% TOON v2.0 Spec Compliant**: All 26 specification tests passing
 * **30-60% Token Savings**: Verified with benchmarks on real-world data
 * **Multi-Format Support**: JSON, YAML, TOML, CSV, XML ↔ TOON
 * **Tabular Optimization**: Exceptional efficiency for DataFrame-like structures
@@ -103,6 +108,10 @@ Installation
 
 .. code-block:: bash
 
+   # Install with Rust acceleration (recommended for performance)
+   pip install toonverter[rust]
+
+   # Or, for Python-only version
    pip install toonverter
 
 Basic Usage
@@ -142,6 +151,7 @@ Contents
    guides/quick_start
    guides/toon_format
    guides/configuration
+   guides/streaming
    guides/deduplication
    guides/schema_tools
 

@@ -3,12 +3,6 @@ Integrations API
 
 This module provides integration with popular frameworks and libraries.
 
-.. automodule:: toonverter.integrations
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :noindex:
-
 .. _api/integrations:pandas integration:
 
 Pandas Integration
@@ -68,24 +62,6 @@ MCP Integration
 LlamaIndex Integration
 ----------------------
 .. automodule:: toonverter.integrations.llamaindex_integration
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. _api/integrations:haystack integration:
-
-Haystack Integration
---------------------
-.. automodule:: toonverter.integrations.haystack_integration
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. _api/integrations:dspy integration:
-
-DSPy Integration
-----------------
-.. automodule:: toonverter.integrations.dspy_integration
    :members:
    :undoc-members:
    :show-inheritance:

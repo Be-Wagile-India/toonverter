@@ -3,7 +3,9 @@
 from collections.abc import Iterator
 from typing import Any
 
+from toonverter.core.config import _RUST_AVAILABLE, rust_core
 from toonverter.core.exceptions import ConversionError
+from toonverter.core.spec import ToonEncodeOptions
 from toonverter.core.types import EncodeOptions
 from toonverter.encoders import encode
 from toonverter.encoders.stream_encoder import StreamList, ToonStreamEncoder
@@ -64,13 +66,15 @@ def pandas_to_toon_stream(
         raise ConversionError(msg) from e
 
 
-def pandas_to_toon(df: "pd.DataFrame", options: EncodeOptions | None = None, **kwargs: Any) -> str:
+def pandas_to_toon(
+    df: "pd.DataFrame | pd.Series", options: EncodeOptions | None = None, **kwargs: Any
+) -> str:
     """Convert pandas DataFrame to TOON format.
 
     This uses the optimized tabular encoding for maximum efficiency.
 
     Args:
-        df: DataFrame to convert
+        df: DataFrame or Series to convert
         options: Encoding options (defaults to tabular preset)
         **kwargs: Additional pandas export options:
             - orient: format for to_dict (default: "records")
@@ -102,18 +106,32 @@ def pandas_to_toon(df: "pd.DataFrame", options: EncodeOptions | None = None, **k
         if kwargs.get("include_index"):
             df = df.reset_index()
 
-        # Convert DataFrame to list of dicts (optimal for tabular TOON encoding)
-        orient = kwargs.get("orient", "records")
-        data = df.to_dict(orient=orient)
-
         options = options or EncodeOptions.tabular()
+        toon_options = _convert_options(options) or ToonEncodeOptions()
+
+        # Handle orient and other pandas export options
+        orient = kwargs.get("orient", "records")
+
+        # Use optimized Rust path if available and orient is records
+        if _RUST_AVAILABLE and hasattr(rust_core, "encode_from_pandas") and orient == "records":
+            # Convert to dict of lists (column-oriented), which is faster than records
+            data_dict = df.to_dict(orient="list")
+            # Get actual delimiter character from the Enum
+            delimiter = str(toon_options.delimiter)
+
+            return rust_core.encode_from_pandas(
+                data_dict, indent_size=toon_options.indent_size, delimiter=delimiter
+            )
+
+        # Fallback for other orientations or if Rust is missing
+        data = df.to_dict(orient=orient)
         return encode(data, options)
     except Exception as e:
         msg = f"Failed to convert DataFrame to TOON: {e}"
         raise ConversionError(msg) from e
 
 
-def toon_to_pandas(toon_str: str, as_series: bool = False) -> "pd.DataFrame | pd.Series":
+def toon_to_pandas(toon_str: str, as_series: bool = False) -> Any:
     """Convert TOON format to pandas DataFrame.
 
     Args:
@@ -121,7 +139,7 @@ def toon_to_pandas(toon_str: str, as_series: bool = False) -> "pd.DataFrame | pd
         as_series: Return as Series if possible (default: False)
 
     Returns:
-        pandas DataFrame or Series
+        pandas DataFrame or Series (or scalar if single value and as_series is True)
 
     Raises:
         ImportError: If pandas is not installed

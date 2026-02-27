@@ -65,7 +65,12 @@ class ArrayEncoder:
         is_tabular = True
         tabular_keys: tuple[str, ...] | None = None
 
-        for i, item in enumerate(arr):
+        # Heuristic limit: scan at most 1000 items
+        # If an array is huge, checking 1000 is enough to confidently detect format
+        scan_limit = 1000
+        items_to_scan = arr[:scan_limit]
+
+        for i, item in enumerate(items_to_scan):
             # Check Primitive (for Inline)
             if is_inline:
                 if not self._is_primitive(item):
@@ -160,15 +165,14 @@ class ArrayEncoder:
         fields = list(arr[0].keys())
 
         # Header line: key[N]{field1,field2}: (with delimiter marker if not comma)
-        fields_str = self.delimiter.join(fields)
         delimiter_marker = "" if self.delimiter == "," else self.delimiter
+        fields_str = self.delimiter.join(fields)
         header = f"{indent}{key}[{length}{delimiter_marker}]{{{fields_str}}}:"
-
         lines = [header]
 
         # Data rows
         for item in arr:
-            values = [self._encode_value(item[field]) for field in fields]
+            values = [self._encode_value(item.get(field)) for field in fields]
             row = self.delimiter.join(values)
             lines.append(f"{row_indent}{row}")
 
@@ -205,7 +209,8 @@ class ArrayEncoder:
                 item_lines = value_encoder.encode_object(item, depth + 2)
                 if item_lines:
                     # First line with "- " prefix at depth+1
-                    lines.append(f"{item_indent}- {item_lines[0]}")
+                    # Strip leading whitespace from the first line since "- " provides the indentation
+                    lines.append(f"{item_indent}- {item_lines[0].lstrip()}")
                     # Rest of lines already at depth+2 from encode_object
                     lines.extend(item_lines[1:])
             elif isinstance(item, list):
@@ -280,7 +285,7 @@ class ArrayEncoder:
 
         # Data rows
         for item in arr:
-            values = [self._encode_value(item[field]) for field in fields]
+            values = [self._encode_value(item.get(field)) for field in fields]
             row = self.delimiter.join(values)
             lines.append(f"{row_indent}{row}")
 
@@ -308,9 +313,9 @@ class ArrayEncoder:
 
         for item in arr:
             if isinstance(item, dict):
-                item_lines = value_encoder.encode_object(item, 1)
+                item_lines = value_encoder.encode_object(item, 2)
                 if item_lines:
-                    lines.append(f"{item_indent}- {item_lines[0]}")
+                    lines.append(f"{item_indent}- {item_lines[0].lstrip()}")
                     lines.extend(item_lines[1:])
             else:
                 encoded = self._encode_value(item)
@@ -381,9 +386,9 @@ class ArrayEncoder:
         for item in arr:
             if isinstance(item, dict):
                 # Nested dict
-                item_lines = value_encoder.encode_object(item, depth + 1)
+                item_lines = value_encoder.encode_object(item, depth + 2)
                 if item_lines:
-                    lines.append(f"{nested_item_indent}- {item_lines[0]}")
+                    lines.append(f"{nested_item_indent}- {item_lines[0].lstrip()}")
                     lines.extend(item_lines[1:])
             elif isinstance(item, list):
                 # Double-nested array - recursion

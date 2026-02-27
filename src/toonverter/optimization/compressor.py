@@ -35,10 +35,21 @@ class SmartCompressor:
         symbol_map = {}
         reverse_map = {}
 
-        for i, string in enumerate(candidates):
-            sym = f"{self.prefix}{i}"
+        # Collect all strings in data to avoid collisions
+        all_strings = set(counts.keys())
+
+        symbol_idx = 0
+        for string in candidates:
+            # Find next available symbol that doesn't exist in original data
+            while True:
+                sym = f"{self.prefix}{symbol_idx}"
+                if sym not in all_strings:
+                    break
+                symbol_idx += 1
+
             symbol_map[string] = sym
             reverse_map[sym] = string
+            symbol_idx += 1
 
         compressed_payload = self._replace(data, symbol_map)
 

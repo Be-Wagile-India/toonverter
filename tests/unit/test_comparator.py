@@ -1,10 +1,13 @@
 """Tests for format comparator."""
 
+from unittest import mock
+
 import pytest
 
 from toonverter.analysis.comparator import FormatComparator, compare
-from toonverter.core.exceptions import FormatNotSupportedError
+from toonverter.core.exceptions import FormatNotSupportedError, TokenCountError
 from toonverter.core.registry import registry
+from toonverter.core.types import EncodeOptions, TokenAnalysis
 from toonverter.formats.json_format import JsonFormatAdapter
 from toonverter.formats.toon_format import ToonFormatAdapter
 from toonverter.formats.yaml_format import YamlFormatAdapter
@@ -69,10 +72,27 @@ class TestFormatComparator:
         for analysis in report.analyses:
             assert worst_analysis.token_count >= analysis.token_count
 
+    def test_compare_formats_empty_formats_list(self):
+        """Test compare_formats with an empty list of formats."""
+        data = {"name": "Alice"}
+        report = self.comparator.compare_formats(data, [])
+        assert report is not None
+        assert len(report.analyses) == 0
+        assert report.best_format == ""
+        assert report.worst_format == ""
+        assert report.recommendations == []
+
+    def test_compare_formats_propagates_token_count_error(self):
+        """Test compare_formats propagates TokenCountError from TiktokenCounter.analyze."""
+        data = {"name": "Alice"}
+        formats = ["json"]
+        with mock.patch.object(self.comparator.counter, "analyze") as mock_analyze:
+            mock_analyze.side_effect = TokenCountError("Test token counting error")
+            with pytest.raises(TokenCountError, match="Test token counting error"):
+                self.comparator.compare_formats(data, formats)
+
     def test_compare_formats_with_encode_options(self):
         """Test compare_formats with encoding options."""
-        from toonverter.core.types import EncodeOptions
-
         data = {"key": "value"}
         options = {"json": EncodeOptions(indent=2), "yaml": EncodeOptions(compact=True)}
 
@@ -149,18 +169,53 @@ class TestFormatComparator:
         # Should include TOON-specific recommendation
         assert any("TOON format provides optimal" in rec for rec in recommendations)
 
-    def test_recommendations_tabular_data_detection(self):
-        """Test recommendations detect tabular data."""
-        from toonverter.core.types import TokenAnalysis
-
+    def test_recommendations_no_toon_analysis(self):
+        """Test recommendations when TOON analysis is not present."""
         analyses = [
             TokenAnalysis(format="json", token_count=100),
-            TokenAnalysis(format="toon", token_count=60),  # 60% of JSON
+            TokenAnalysis(format="yaml", token_count=80),
         ]
-
         recommendations = self.comparator._generate_recommendations(analyses)
-        # Should include tabular data recommendation since TOON is < 70% of JSON
+        assert "TOON format provides optimal" not in "".join(recommendations)
+        assert "tabular" not in "".join(recommendations)
+
+    def test_recommendations_no_json_analysis(self):
+        """Test recommendations when JSON analysis is not present."""
+        analyses = [
+            TokenAnalysis(format="toon", token_count=50),
+            TokenAnalysis(format="yaml", token_count=80),
+        ]
+        recommendations = self.comparator._generate_recommendations(analyses)
+        assert "tabular" not in "".join(recommendations)
+
+    def test_recommendations_tabular_data_detection_boundary(self):
+        """Test recommendations detect tabular data at the 0.7 threshold."""
+        analyses = [
+            TokenAnalysis(format="json", token_count=100),
+            TokenAnalysis(format="toon", token_count=70),  # Exactly 70% of JSON
+        ]
+        recommendations = self.comparator._generate_recommendations(analyses)
         assert any("tabular" in rec.lower() for rec in recommendations)
+
+    def test_recommendations_worst_token_count_zero(self):
+        """Test recommendations when worst_token_count is zero (edge case)."""
+        analyses = [
+            TokenAnalysis(format="json", token_count=0),
+            TokenAnalysis(format="toon", token_count=0),
+        ]
+        recommendations = self.comparator._generate_recommendations(analyses)
+        # Should not raise ZeroDivisionError and still provide recommendations
+        assert isinstance(recommendations, list)
+        assert len(recommendations) > 0
+
+    def test_recommendations_single_format(self):
+        """Test recommendations with only one format in analyses."""
+        analyses = [
+            TokenAnalysis(format="json", token_count=100),
+        ]
+        recommendations = self.comparator._generate_recommendations(analyses)
+        assert "Use 'json' format for optimal token efficiency (100 tokens)" in recommendations
+        assert not any("saves" in rec for rec in recommendations)
 
 
 class TestCompareFunction:
@@ -194,10 +249,15 @@ class TestCompareFunction:
 
     def test_compare_with_encode_options(self):
         """Test compare function with encoding options."""
-        from toonverter.core.types import EncodeOptions
-
         data = {"key": "value"}
         options = {"json": EncodeOptions(indent=4)}
 
         report = compare(data, ["json"], encode_options=options)
         assert report is not None
+
+    def test_compare_propagates_token_count_error(self):
+        """Test compare function propagates TokenCountError from FormatComparator initialization."""
+        with mock.patch("toonverter.analysis.comparator.FormatComparator") as mock_comparator:
+            mock_comparator.side_effect = TokenCountError("Comparator init error")
+            with pytest.raises(TokenCountError, match="Comparator init error"):
+                compare({"test": "data"}, ["json"])

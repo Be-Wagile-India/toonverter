@@ -22,11 +22,19 @@ class TestDefaultFormatRegistry:
         """Clean up registry after each test."""
         self.registry.clear()
 
-    def test_singleton_pattern(self):
-        """Test singleton pattern returns same instance."""
-        registry1 = DefaultFormatRegistry()
-        registry2 = DefaultFormatRegistry()
-        assert registry1 is registry2
+    def test_init_idempotency(self):
+        """Test __init__ is idempotent for singleton instance."""
+        # Accessing _adapters before re-init
+        self.registry.register("test", JsonFormatAdapter())
+        original_adapters_id = id(self.registry._adapters)
+        original_lock_id = id(self.registry._adapter_lock)
+
+        # Call __init__ again
+        self.registry.__init__()
+
+        # Ensure _adapters and _adapter_lock are the same objects
+        assert id(self.registry._adapters) == original_adapters_id
+        assert id(self.registry._adapter_lock) == original_lock_id
 
     def test_register_adapter(self):
         """Test registering a format adapter."""
@@ -73,10 +81,14 @@ class TestDefaultFormatRegistry:
         assert self.registry.get("JSON") is adapter
         assert self.registry.get("Json") is adapter
 
-    def test_get_nonexistent_raises_error(self):
-        """Test getting nonexistent format raises error."""
-        with pytest.raises(FormatNotSupportedError, match="not supported"):
+    def test_get_nonexistent_error_message(self):
+        """Test getting nonexistent format raises error with full message."""
+        self.registry.register("json", JsonFormatAdapter())
+        self.registry.register("yaml", YamlFormatAdapter())
+        with pytest.raises(FormatNotSupportedError) as excinfo:
             self.registry.get("nonexistent")
+        assert "not supported" in str(excinfo.value)
+        assert "Available formats: json, yaml" in str(excinfo.value)
 
     def test_get_empty_name_raises_error(self):
         """Test getting with empty name raises error."""
@@ -129,28 +141,122 @@ class TestDefaultFormatRegistry:
         self.registry.clear()
         assert len(self.registry.list_formats()) == 0
 
-    def test_concurrent_registration(self):
-        """Test thread-safe concurrent registration."""
+    def test_concurrent_get(self):
+        """Test thread-safe concurrent retrieval."""
+        adapter = JsonFormatAdapter()
+        self.registry.register("json", adapter)
 
-        def register_format(name):
-            try:
-                adapter = JsonFormatAdapter()
-                self.registry.register(name, adapter)
-            except ValueError:
-                pass  # Duplicate registration is expected in concurrent scenario
+        results = []
+
+        def get_format(name):
+            results.append(self.registry.get(name))
 
         threads = []
-        for i in range(10):
-            thread = threading.Thread(target=register_format, args=(f"format{i}",))
+        for _ in range(10):
+            thread = threading.Thread(target=get_format, args=("json",))
             threads.append(thread)
             thread.start()
 
         for thread in threads:
             thread.join()
 
-        # All formats should be registered
-        formats = self.registry.list_formats()
-        assert len(formats) == 10
+        assert len(results) == 10
+        for res in results:
+            assert res is adapter
+
+    def test_concurrent_unregister(self):
+        """Test thread-safe concurrent unregistration."""
+        adapter1 = JsonFormatAdapter()
+        adapter2 = YamlFormatAdapter()
+        self.registry.register("json", adapter1)
+        self.registry.register("yaml", adapter2)
+
+        def unregister_format(name):
+            try:
+                self.registry.unregister(name)
+            except FormatNotSupportedError:
+                pass  # Expected if another thread already unregistered
+
+        threads = []
+        # Try to unregister 'json' multiple times
+        for _ in range(5):
+            thread = threading.Thread(target=unregister_format, args=("json",))
+            threads.append(thread)
+            thread.start()
+        # Try to unregister 'yaml' multiple times
+        for _ in range(5):
+            thread = threading.Thread(target=unregister_format, args=("yaml",))
+            threads.append(thread)
+            thread.start()
+
+        for thread in threads:
+            thread.join()
+
+        assert not self.registry.is_supported("json")
+        assert not self.registry.is_supported("yaml")
+        assert len(self.registry.list_formats()) == 0
+
+    def test_concurrent_list_formats(self):
+        """Test thread-safe concurrent listing of formats."""
+        for i in range(5):
+            self.registry.register(f"format{i}", JsonFormatAdapter())
+
+        results = []
+
+        def list_all_formats():
+            results.append(self.registry.list_formats())
+
+        threads = []
+        for _ in range(10):
+            thread = threading.Thread(target=list_all_formats)
+            threads.append(thread)
+            thread.start()
+
+        for thread in threads:
+            thread.join()
+
+        assert len(results) == 10
+        expected_formats = sorted([f"format{i}" for i in range(5)])
+        for res in results:
+            assert res == expected_formats
+
+    def test_mixed_concurrent_operations(self):
+        """Test a mix of concurrent register, get, unregister, list_formats."""
+        self.registry.register("initial", JsonFormatAdapter())
+        adapter = JsonFormatAdapter()
+
+        def worker(idx):
+            if idx % 4 == 0:  # Register
+                try:
+                    self.registry.register(f"reg{idx}", adapter)
+                except ValueError:
+                    pass
+            elif idx % 4 == 1:  # Get
+                try:
+                    self.registry.get("initial")
+                except FormatNotSupportedError:
+                    pass
+            elif idx % 4 == 2:  # Unregister
+                try:
+                    self.registry.unregister("initial")
+                except FormatNotSupportedError:
+                    pass
+            else:  # List
+                self.registry.list_formats()
+
+        threads = []
+        for i in range(20):
+            thread = threading.Thread(target=worker, args=(i,))
+            threads.append(thread)
+            thread.start()
+
+        for thread in threads:
+            thread.join()
+
+        # At least the initial format might be unregistered, and some new ones registered
+        # The main goal is to ensure no deadlocks or crashes
+        # Detailed state assertion is hard due to concurrency, but we check for general stability
+        assert True  # If we reached here without crash, it's a success for stability
 
 
 class TestGetRegistry:

@@ -17,6 +17,10 @@ class DecodingError(ToonConverterError):
     """Raised when decoding from TOON format fails."""
 
 
+class ToonDecodeError(DecodingError):
+    """Raised for specific errors during TOON decoding process."""
+
+
 class ValidationError(ToonConverterError):
     """Raised when input validation fails."""
 
@@ -35,3 +39,11 @@ class TokenCountError(ToonConverterError):
 
 class FileOperationError(ToonConverterError):
     """Raised when file read/write operations fail."""
+
+
+class ProcessingError(ToonConverterError):
+    """Raised when a general processing error occurs."""
+
+
+class InternalError(ToonConverterError):
+    """Raised when an internal error occurs (e.g., in the Rust core)."""

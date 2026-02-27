@@ -44,6 +44,20 @@ git remote add upstream https://github.com/yourusername/toon-converter.git
 
 ## Development Setup
 
+### Rust Toolchain (Optional)
+
+If you plan to contribute to the Rust core, you'll need the Rust toolchain:
+
+- [rustup](https://rustup.rs/) for managing Rust versions.
+- [maturin](https://pypi.org/project/maturin/) for building Rust-Python extensions.
+
+```bash
+# Install rustup (if not already installed)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+# Install maturin
+pip install maturin
+```
+
 ### Install Development Dependencies
 
 ```bash
@@ -57,6 +71,9 @@ make install-dev
 # Or manually:
 pip install -e ".[all]"
 pip install -r requirements-dev.txt
+
+# Build and install the Rust extension (if contributing to Rust)
+maturin develop
 
 # Install pre-commit hooks
 pre-commit install
@@ -145,6 +162,15 @@ git push origin feature/your-feature-name
 
 ## Coding Standards
 
+### Rust Style Guide
+
+If contributing to the Rust core, please adhere to these standards:
+
+- **Formatting**: Enforced with `rustfmt`. Run `cargo fmt` before committing.
+- **Linting**: Enforced with `clippy`. Run `cargo clippy -- -D warnings` to catch common issues.
+- **Safety**: Prefer safe Rust. Use `unsafe` blocks only when absolutely necessary and with clear justification and comments.
+- **Error Handling**: Use `Result` and `PyResult` for fallible operations. Avoid `unwrap()` and `expect()` in library code.
+
 ### Python Style Guide
 
 We follow PEP 8 with these specifications:
@@ -231,6 +257,20 @@ raise Exception("Conversion failed")
 - **Minimum**: 95% overall coverage
 - **Public API**: 100% coverage required
 - **Critical Paths**: 100% coverage required
+
+### Rust Tests
+
+If you're modifying the Rust core, run Rust's own tests:
+
+```bash
+cargo test
+```
+
+These are fast, isolated tests for the Rust logic.
+
+### Python Tests
+
+We use `pytest` for Python tests.
 
 ### Writing Tests
 
@@ -328,13 +368,16 @@ make serve-docs  # View at http://localhost:8000
 
 ### Before Submitting
 
-1. ✓ All tests pass (`make test`)
-2. ✓ Code is formatted (`make format`)
-3. ✓ Linting passes (`make lint`)
-4. ✓ Type checking passes (`make type-check`)
-5. ✓ Pre-commit hooks pass (`pre-commit run --all-files`)
-6. ✓ Documentation is updated
-7. ✓ CHANGELOG.md is updated
+1. ✓ All Python tests pass (`make test`)
+2. ✓ All Rust tests pass (`cargo test`)
+3. ✓ Python code is formatted (`make format`)
+4. ✓ Rust code is formatted (`cargo fmt`)
+5. ✓ Python linting passes (`make lint`)
+6. ✓ Rust linting passes (`cargo clippy -- -D warnings`)
+7. ✓ Python type checking passes (`make type-check`)
+8. ✓ Pre-commit hooks pass (`pre-commit run --all-files`)
+9. ✓ Documentation is updated
+10. ✓ CHANGELOG.md is updated
 
 ### Submit Pull Request
 

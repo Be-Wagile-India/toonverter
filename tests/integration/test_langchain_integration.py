@@ -133,9 +133,9 @@ class TestLangChainMessages:
 
         # Build sample messages
         msgs = [
-            HumanMessage(content="Hello", additional_kwargs={"mood": "curious"}),  # type: ignore
-            AIMessage(content="Hi there!", additional_kwargs={"confidence": 0.95}),  # type: ignore
-            SystemMessage(content="System notice"),  # type: ignore
+            HumanMessage(content="Hello", additional_kwargs={"mood": "curious"}),
+            AIMessage(content="Hi there!", additional_kwargs={"confidence": 0.95}),
+            SystemMessage(content="System notice"),
         ]
 
         toon = messages_to_toon(msgs)

@@ -4,7 +4,7 @@ Facade API
 The Facade API provides simple functions for common tasks - the recommended API for 90% of users.
 
 .. automodule:: toonverter
-   :members: encode, decode, convert, analyze, load, save, list_formats, is_supported, deduplicate, compress, decompress, diff, infer_schema, validate_schema, optimize_vision
+   :members: encode, decode, convert, analyze, load, save, list_formats, is_supported, deduplicate, compress, decompress, diff, infer_schema, validate_schema, optimize_vision, convert_json_batch, convert_toon_batch, convert_json_directory
    :undoc-members:
    :exclude-members: Analyzer, Converter, Decoder, Encoder, ComparisonReport, ConversionResult, DecodeOptions, EncodeOptions, TokenAnalysis, SchemaField, DiffResult, FormatComparator, TiktokenCounter, ConversionError, DecodingError, EncodingError, FormatNotSupportedError, ToonConverterError, ValidationError, ToonDecoder, ToonEncoder, SchemaInferrer, SchemaValidator, Plugin
 
@@ -16,6 +16,9 @@ These functions provide a simple interface to toonverter's functionality:
 * ``encode(data, to_format='toon')`` - Encode data to a format
 * ``decode(data_str, from_format='toon')`` - Decode data from a format
 * ``convert(source, target, from_format, to_format)`` - Convert files between formats
+* ``convert_json_batch(paths, output_dir)`` - Batch convert JSON to TOON (Rust-accelerated)
+* ``convert_toon_batch(paths, output_dir)`` - Batch convert TOON to JSON (Rust-accelerated)
+* ``convert_json_directory(dir_path, recursive, output_dir)`` - Recursively convert directory (Rust-accelerated)
 * ``analyze(data, compare_formats)`` - Analyze token usage across formats
 * ``deduplicate(data, ...)`` - Remove semantic duplicates from data
 * ``infer_schema(data)`` - Generate schema from data

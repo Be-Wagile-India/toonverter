@@ -32,6 +32,7 @@ extensions = [
     "sphinx.ext.coverage",
     "sphinx_autodoc_typehints",
     "myst_parser",
+    "sphinxcontrib.mermaid",
 ]
 
 # Napoleon settings for Google/NumPy style docstrings

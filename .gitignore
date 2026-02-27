@@ -153,3 +153,13 @@ benchmark_results/
 
 # Gemini
 .gemini
+
+# Rust
+rust/target/
+coverage-rust/
+
+# Coverage
+coverage.json
+
+# Benchmarks
+.benchmarks/

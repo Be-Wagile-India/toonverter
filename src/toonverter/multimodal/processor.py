@@ -106,11 +106,7 @@ class SmartImageProcessor:
             new_h = (height // tile_size) * tile_size
 
         if new_w != width or new_h != height:
-            # Maintain aspect ratio logic would be complex here for arbitrary snaps.
-            # For safety, we simply resize if we decided to snap dimensions.
-            # But blind resize might distort.
-            # Better strategy: Resize strictly maintaining aspect ratio to fit within the *smaller* grid.
-
+            # Resize strictly maintaining aspect ratio to fit within the smaller grid.
             target_w = (width // tile_size) * tile_size
 
             # If dimensions are close to grid, force resize

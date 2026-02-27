@@ -1,0 +1,8 @@
+[core]
+use_rust_decoder = true
+use_rust_encoder = true
+# Set to `true` to raise an ImportError if a Rust extension (decoder or encoder) is enabled
+# but not available, instead of silently falling back to Python.
+strict_rust_build = false
+parallelism_threshold = 1000
+recursion_depth_limit = 200
